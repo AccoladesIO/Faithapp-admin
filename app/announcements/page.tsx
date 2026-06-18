@@ -5,6 +5,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
+import { withAuth } from "@/utils/auth/with-auth";
 import {
     Megaphone,
     FileText,
@@ -35,7 +36,7 @@ interface ScheduledAnnouncement {
     createdAt: string;
 }
 
-export default function AnnouncementsPage() {
+export default withAuth(function AnnouncementsPage() {
     const [announcements, setAnnouncements] = useState<ScheduledAnnouncement[]>([]);
     const [title, setTitle] = useState("");
     const [targetAudience, setTargetAudience] = useState<"all" | "workers" | "members">("all");
@@ -373,4 +374,4 @@ export default function AnnouncementsPage() {
             </div>
         </div>
     );
-}
+})

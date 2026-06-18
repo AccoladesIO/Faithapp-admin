@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { withAuth } from "@/utils/auth/with-auth";
+
 import {
     CalendarCheck,
     Search,
@@ -78,7 +80,7 @@ const INITIAL_ATTENDANCE: AttendanceRecord[] = [
 type SortKey = "rank" | "name" | "rate" | "punctuality";
 type SortOrder = "asc" | "desc";
 
-export default function AttendancePage() {
+export default withAuth(function AttendancePage() {
     const [attendance] = useState<AttendanceRecord[]>(INITIAL_ATTENDANCE);
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -368,4 +370,4 @@ export default function AttendancePage() {
             </div>
         </div>
     );
-}
+})

@@ -1,34 +1,26 @@
-"use client"
+"use client";
 
-import React, { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { LoadingScreen } from '@/components/layout/loading'
-import { authService } from '@/utils/auth/auth'
-import LoginPage from '@/components/layout/login-page'
-
-type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated'
+import React, { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { LoadingScreen } from "@/components/layout/loading";
+import LoginPage from "@/components/layout/login-page";
+import { useAuth } from "@/context/auth-context";
 
 const Page = () => {
-  const router = useRouter()
-  const [status, setStatus] = useState<AuthStatus>('checking')
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
-    authService.checkUserSession((isActive) => {
-      setStatus(isActive ? 'authenticated' : 'unauthenticated')
-    })
-  }, [])
-
-  useEffect(() => {
-    if (status === 'authenticated') {
-      router.push("/home")
+    if (!isLoading && isAuthenticated) {
+      router.replace("/dashboard");
     }
-  }, [status, router])
+  }, [isAuthenticated, isLoading, router]);
 
-  if (status === 'checking' || status === 'authenticated') {
-    return <LoadingScreen />
+  if (isLoading || isAuthenticated) {
+    return <LoadingScreen />;
   }
 
-  return <LoginPage />
-}
+  return <LoginPage />;
+};
 
-export default Page
+export default Page;

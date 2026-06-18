@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { withAuth } from "@/utils/auth/with-auth";
 import {
     Boxes,
     Search,
@@ -98,7 +99,7 @@ const INITIAL_INVENTORY: InventoryItem[] = [
 type SortKey = "name" | "quantity" | "status" | "category";
 type SortOrder = "asc" | "desc";
 
-export default function InventoriesPage() {
+export default withAuth(function InventoriesPage() {
     const [inventory, setInventory] = useState<InventoryItem[]>(INITIAL_INVENTORY);
     const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
 
@@ -652,4 +653,4 @@ export default function InventoriesPage() {
             )}
         </div>
     );
-}
+})

@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { withAuth } from "@/utils/auth/with-auth";
+
 import {
     Users,
     Search,
@@ -102,7 +104,7 @@ const INITIAL_WORKERS: Worker[] = [
 type SortKey = "name" | "department" | "status" | "joinDate";
 type SortOrder = "asc" | "desc";
 
-export default function WorkersPage() {
+export default withAuth(function WorkersPage() {
     const [workers, setWorkers] = useState<Worker[]>(INITIAL_WORKERS);
     const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
 
@@ -490,4 +492,4 @@ export default function WorkersPage() {
             </div>
         </div>
     );
-}
+})

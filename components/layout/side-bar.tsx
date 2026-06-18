@@ -14,8 +14,11 @@ import {
     ChevronDown,
     ChevronUp,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    LogOutIcon,
+    LogOut
 } from "lucide-react";
+import { useAuth } from "@/context/auth-context";
 
 interface SubNavItem {
     name: string;
@@ -33,7 +36,7 @@ export default function Sidebar() {
     const pathname = usePathname();
     const [openDropdown, setOpenDropdown] = useState<string | null>(null);
     const [isMinimized, setIsMinimized] = useState(false);
-
+    const { logout } = useAuth()
     const navigationData: NavItem[] = [
         {
             name: "Dashboard",
@@ -45,6 +48,7 @@ export default function Sidebar() {
             icon: Megaphone,
             subItems: [
                 { name: "Events", href: "/events" },
+                { name: "Venues", href: "/venue" },
                 { name: "Announcements", href: "/announcements" }
             ]
         },
@@ -151,8 +155,8 @@ export default function Sidebar() {
                                                         key={subItem.name}
                                                         href={subItem.href}
                                                         className={`block px-4 py-2.5 text-xs tracking-wider uppercase font-medium transition-colors rounded-md ${isSubActive
-                                                                ? "text-[#FFFFFF] bg-[#8A817C]/20"
-                                                                : "text-[#8A817C] hover:text-[#FFFFFF]"
+                                                            ? "text-[#FFFFFF] bg-[#8A817C]/20"
+                                                            : "text-[#8A817C] hover:text-[#FFFFFF]"
                                                             }`}
                                                     >
                                                         {subItem.name}
@@ -186,7 +190,13 @@ export default function Sidebar() {
                 </nav>
             </div>
 
-            <div className={`p-6 border-t border-white/10 ${isMinimized ? "text-center px-2" : ""}`}>
+            <div className={`p-6 space-y-2 border-t border-white/10 ${isMinimized ? "text-center px-2" : ""}`}>
+                <div className={`w-full flex items-center space-x-3 text-xs font-bold p-3 text-[#8A817C] rounded-sm ${isMinimized ? "bg-transparent" : "bg-white/10"}`} onClick={logout}>
+                    <div className={`p-2 rounded-xl transition-colors bg-transparent`}>
+                        <LogOut className="w-4 h-4 shrink-0" />
+                    </div>
+                    {!isMinimized && "Logout"}
+                </div>
                 {!isMinimized ? (
                     <>
                         <div className="text-[10px] tracking-widest font-semibold uppercase text-[#8A817C] truncate">

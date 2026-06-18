@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/auth-context";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -8,32 +10,23 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const { login } = useAuth();
+    const router = useRouter();
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
 
-        const payload = {
-            email: email,
-            password: password,
-        };
-
         try {
-            // const response = await fetch("/api/auth/login", {
-            //     method: "POST",
-            //     headers: {
-            //         "Content-Type": "application/json",
-            //     },
-            //     body: JSON.stringify(payload),
-            // });
-
-            // if (!response.ok) {
-            //     throw new Error("Invalid administrative credentials.");
-            // }
-
-            window.location.href = "/dashboard";
+            const { requiresPasswordChange } = await login(email, password);
+            router.push(requiresPasswordChange ? "/dashboard" : "/dashboard");
         } catch (err: any) {
-            setError(err.message || "An authentication error occurred.");
+            setError(
+                err?.response?.data?.message ||
+                err?.message ||
+                "Invalid administrative credentials."
+            );
         } finally {
             setIsLoading(false);
         }
@@ -43,11 +36,6 @@ export default function LoginPage() {
         <div className="w-screen h-screen bg-[#F4F1EA] flex items-center justify-center p-6 select-none">
             <div className="w-full max-w-md bg-[#FFFFFF] border border-[#121212]/10 p-10 flex flex-col">
                 <div className="flex flex-col items-center mb-10 text-center">
-                    {/* <img
-                        src="https://i.ibb.co/cX1MnZ5z/DC-LOGO.png"
-                        alt="RCCG Discovery Centre Logo"
-                        className="w-16 h-8 object-contain mb-4"
-                    /> */}
                     <h1 className="text-xl font-light tracking-tight text-[#121212] uppercase">
                         Administrative Login
                     </h1>
