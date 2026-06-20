@@ -15,8 +15,8 @@ import {
     ChevronUp,
     ChevronLeft,
     ChevronRight,
-    LogOutIcon,
-    LogOut
+    LogOut,
+    MicVocalIcon
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 
@@ -58,6 +58,17 @@ export default function Sidebar() {
             subItems: [
                 { name: "Manage Workers", href: "/workers" },
                 { name: "Manage Members", href: "/members" }
+            ]
+        },
+        {
+            name: "Ministries",
+            icon: MicVocalIcon,
+            subItems: [
+                { name: "Children's Ministry", href: "/childrens-ministry" },
+                { name: "Classes", href: "/classes" },
+                { name: "Connect Center", href: "/connect-center" },
+                { name: "Follow up", href: "/follow-up" },
+                { name: "Sunday School", href: "/sunday-school" }
             ]
         },
         {
@@ -126,14 +137,14 @@ export default function Sidebar() {
                             const hasActiveChild = item.subItems.some(sub => pathname === sub.href);
 
                             return (
-                                <div key={item.name} className="space-y-1">
+                                <div key={item.name} className="">
                                     <button
                                         onClick={() => toggleDropdown(item.name)}
                                         title={isMinimized ? item.name : undefined}
-                                        className={`w-full text-left py-3 text-xs tracking-wider font-semibold uppercase transition-colors flex items-center justify-between rounded-lg ${isMinimized ? "px-0 justify-center" : "px-4"
+                                        className={`w-full text-left py-1 text-xs tracking-wider font-semibold uppercase transition-colors flex items-center justify-between rounded-lg ${isMinimized ? "px-0 justify-center" : "px-4"
                                             } ${hasActiveChild ? "text-[#FFFFFF]" : "text-[#8A817C] hover:text-[#FFFFFF]"}`}
                                     >
-                                        <div className="flex items-center space-x-3 min-w-0">
+                                        <div className="flex items-center min-w-0 space-x-2">
                                             <div className={`p-2 rounded-xl transition-colors ${hasActiveChild ? "bg-[#8A817C]/30 text-[#FFFFFF]" : "bg-transparent"}`}>
                                                 <Icon className="w-4 h-4 shrink-0" />
                                             </div>
@@ -154,7 +165,7 @@ export default function Sidebar() {
                                                     <Link
                                                         key={subItem.name}
                                                         href={subItem.href}
-                                                        className={`block px-4 py-2.5 text-xs tracking-wider uppercase font-medium transition-colors rounded-md ${isSubActive
+                                                        className={`block px-4 py-1 text-xs tracking-wider uppercase font-medium transition-colors rounded-md ${isSubActive
                                                             ? "text-[#FFFFFF] bg-[#8A817C]/20"
                                                             : "text-[#8A817C] hover:text-[#FFFFFF]"
                                                             }`}
@@ -175,11 +186,11 @@ export default function Sidebar() {
                                 key={item.name}
                                 href={item.href || "#"}
                                 title={isMinimized ? item.name : undefined}
-                                className={`flex items-center text-xs tracking-wider font-semibold uppercase transition-colors rounded-lg ${isMinimized ? "px-2 justify-center py-3" : "px-4 py-3"
+                                className={`flex items-center text-xs tracking-wider font-semibold uppercase transition-colors rounded-lg ${isMinimized ? "px-2 justify-center py-1" : "px-4 py-1"
                                     } ${isActive && !isMinimized ? "text-[#FFFFFF] bg-[#8A817C]/20" : "text-[#8A817C] hover:text-[#FFFFFF]"}`}
                             >
-                                <div className="flex items-center space-x-3 min-w-0 w-full">
-                                    <div className={`p-2 rounded-xl transition-colors ${isActive ? "bg-[#8A817C]/30 text-[#FFFFFF]" : "bg-transparent"}`}>
+                                <div className="flex items-center space-x-2  min-w-0 w-full">
+                                    <div className={`p-2 rounded-xl transition-colors ${isActive && isMinimized ? "bg-[#8A817C]/30 text-[#FFFFFF]" : "bg-transparent"}`}>
                                         <Icon className="w-4 h-4 shrink-0" />
                                     </div>
                                     {!isMinimized && <span className="truncate">{item.name}</span>}
@@ -190,8 +201,8 @@ export default function Sidebar() {
                 </nav>
             </div>
 
-            <div className={`p-6 space-y-2 border-t border-white/10 ${isMinimized ? "text-center px-2" : ""}`}>
-                <div className={`w-full flex items-center space-x-3 text-xs font-bold p-3 text-[#8A817C] rounded-sm ${isMinimized ? "bg-transparent" : "bg-white/10"}`} onClick={logout}>
+            <div className={`p-6 space-y-2 border-t border-white/10 transition-all duration-300 ${isMinimized ? "text-center px-2" : ""}`}>
+                <div className={`w-full flex items-center space-x-3 text-xs font-bold p-3 text-[#8A817C] hover:text-white rounded-sm ${isMinimized ? "bg-transparent" : "bg-white/10"}`} onClick={logout}>
                     <div className={`p-2 rounded-xl transition-colors bg-transparent`}>
                         <LogOut className="w-4 h-4 shrink-0" />
                     </div>

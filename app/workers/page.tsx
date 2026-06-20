@@ -2,323 +2,568 @@
 
 import React, { useState, useMemo } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
-
 import {
-    Users,
-    Search,
-    SlidersHorizontal,
-    ChevronLeft,
-    ChevronRight,
-    ArrowUpDown,
-    Eye,
-    GraduationCap,
-    X,
-    CheckCircle2,
-    AlertCircle
+    Users, Search, SlidersHorizontal, ChevronLeft, ChevronRight,
+    ArrowUpDown, Eye, X, RefreshCw, ShieldAlert, CheckCircle2,
+    Briefcase, GraduationCap, UserMinus, Pencil, Phone, Mail,
+    Calendar, Check,
 } from "lucide-react";
+import { useWorkers, Worker, UpdateWorkerProfilePayload } from "@/hooks/use-workers";
+import { useDepartments } from "@/hooks/use-departments";
 
-interface Enrollment {
-    className: "Believers Class" | "Baptismal Class" | "Workers in Training Class";
-    status: "Enrolled" | "Completed" | "Dropped";
-    grade: string | null;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const fullName = (w: Worker) =>
+    [w.firstname, w.lastname].filter(Boolean).join(" ") || w.email;
+
+const formatDate = (iso: string | null) => {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+};
+
+const formatYear = (iso: string | null) => {
+    if (!iso) return "—";
+    return new Date(iso).getFullYear().toString();
+};
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function SkeletonRow() {
+    return (
+        <tr className="border-b border-[#121212]/5 animate-pulse">
+            <td className="p-4">
+                <div className="h-3.5 bg-[#F4F1EA] rounded w-32 mb-2" />
+                <div className="h-2.5 bg-[#F4F1EA] rounded w-44" />
+            </td>
+            <td className="p-4"><div className="h-3 bg-[#F4F1EA] rounded w-24" /></td>
+            <td className="p-4"><div className="h-5 bg-[#F4F1EA] rounded w-16" /></td>
+            <td className="p-4 flex justify-end"><div className="h-8 w-8 bg-[#F4F1EA] rounded-lg" /></td>
+        </tr>
+    );
 }
 
-interface Worker {
-    id: string;
-    name: string;
-    email: string;
-    department: string;
-    status: "Active" | "On Leave" | "Suspended";
-    joinDate: string;
-    enrollments: Enrollment[];
+// ─── Status badge ─────────────────────────────────────────────────────────────
+
+function WorkerStatusBadge({ status }: { status: string }) {
+    const map: Record<string, string> = {
+        ACTIVE: "bg-green-50 border-green-100 text-green-700",
+        INACTIVE: "bg-red-50 border-red-100 text-red-600",
+        SUSPENDED: "bg-orange-50 border-orange-100 text-orange-700",
+        ON_LEAVE: "bg-yellow-50 border-yellow-100 text-yellow-700",
+    };
+    return (
+        <span className={`inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border ${map[status] ?? "bg-[#F4F1EA] border-[#121212]/5 text-[#8A817C]"}`}>
+            {status.replace("_", " ")}
+        </span>
+    );
 }
 
-const INITIAL_WORKERS: Worker[] = [
-    {
-        id: "W-74920",
-        name: "Oluwaseun Adebayo",
-        email: "o.adebayo@discoverycentre.org",
-        department: "Media & Tech",
-        status: "Active",
-        joinDate: "2024-01-15",
-        enrollments: [
-            { className: "Believers Class", status: "Completed", grade: "A" },
-            { className: "Baptismal Class", status: "Completed", grade: "Pass" },
-            { className: "Workers in Training Class", status: "Completed", grade: "B+" }
-        ]
-    },
-    {
-        id: "W-11402",
-        name: "Chidi Obi",
-        email: "c.obi@discoverycentre.org",
-        department: "Ushering",
-        status: "Active",
-        joinDate: "2024-06-20",
-        enrollments: [
-            { className: "Believers Class", status: "Completed", grade: "A-" },
-            { className: "Baptismal Class", status: "Completed", grade: "Pass" },
-            { className: "Workers in Training Class", status: "Enrolled", grade: null }
-        ]
-    },
-    {
-        id: "W-33948",
-        name: "Amara Nwosu",
-        email: "a.nwosu@discoverycentre.org",
-        department: "Children's Church",
-        status: "On Leave",
-        joinDate: "2023-11-02",
-        enrollments: [
-            { className: "Believers Class", status: "Completed", grade: "B" },
-            { className: "Baptismal Class", status: "Completed", grade: "Pass" },
-            { className: "Workers in Training Class", status: "Completed", grade: "A" }
-        ]
-    },
-    {
-        id: "W-98211",
-        name: "Tunde Bakare",
-        email: "t.bakare@discoverycentre.org",
-        department: "Praise Team",
-        status: "Active",
-        joinDate: "2025-02-10",
-        enrollments: [
-            { className: "Believers Class", status: "Enrolled", grade: null },
-            { className: "Baptismal Class", status: "Dropped", grade: null },
-            { className: "Workers in Training Class", status: "Enrolled", grade: null }
-        ]
-    },
-    {
-        id: "W-55401",
-        name: "Funmi Oladele",
-        email: "f.oladele@discoverycentre.org",
-        department: "Prayer Band",
-        status: "Suspended",
-        joinDate: "2023-04-12",
-        enrollments: [
-            { className: "Believers Class", status: "Completed", grade: "A" },
-            { className: "Baptismal Class", status: "Completed", grade: "Pass" },
-            { className: "Workers in Training Class", status: "Completed", grade: "C" }
-        ]
-    }
-];
+// ─── Bool badge ───────────────────────────────────────────────────────────────
 
-type SortKey = "name" | "department" | "status" | "joinDate";
+function BoolBadge({ value, label }: { value: boolean; label: string }) {
+    return (
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border ${value
+                ? "bg-green-50 border-green-100 text-green-700"
+                : "bg-[#F4F1EA] border-[#121212]/5 text-[#8A817C]"
+            }`}>
+            {value ? <CheckCircle2 className="w-2.5 h-2.5" /> : null}
+            {label}
+        </span>
+    );
+}
+
+// ─── Detail row ───────────────────────────────────────────────────────────────
+
+function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
+    return (
+        <div>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] block mb-0.5">
+                {label}
+            </span>
+            <span className="text-xs font-mono text-[#121212]">{value ?? "—"}</span>
+        </div>
+    );
+}
+
+// ─── Confirm banner ───────────────────────────────────────────────────────────
+
+function ConfirmBanner({
+    message,
+    onConfirm,
+    onCancel,
+    isLoading,
+    confirmLabel = "Confirm",
+    danger = false,
+}: {
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+    isLoading: boolean;
+    confirmLabel?: string;
+    danger?: boolean;
+}) {
+    return (
+        <div className="p-4 bg-[#fdfaf2] border border-dashed border-[#121212]/15 rounded-lg text-xs space-y-3">
+            <p className="text-[#121212] font-light leading-relaxed">{message}</p>
+            <div className="flex gap-2">
+                <button
+                    onClick={onConfirm}
+                    disabled={isLoading}
+                    className={`px-4 py-1.5 text-white text-[10px] font-bold uppercase tracking-wider rounded disabled:opacity-50 flex items-center gap-1.5 ${danger ? "bg-red-600 hover:bg-red-700" : "bg-[#121212] hover:bg-[#121212]/90"
+                        }`}
+                >
+                    {isLoading && <RefreshCw className="w-3 h-3 animate-spin" />}
+                    {confirmLabel}
+                </button>
+                <button
+                    onClick={onCancel}
+                    disabled={isLoading}
+                    className="px-4 py-1.5 border border-[#121212]/10 text-[#8A817C] text-[10px] font-semibold uppercase tracking-wider rounded hover:text-[#121212] disabled:opacity-50"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ─── Profile edit form ────────────────────────────────────────────────────────
+
+const WORKER_STATUSES = ["ACTIVE", "INACTIVE", "SUSPENDED", "ON_LEAVE"] as const;
+
+function ProfileEditForm({
+    worker,
+    departments,
+    onSave,
+    onCancel,
+    isSubmitting,
+}: {
+    worker: Worker;
+    departments: { id: string; name: string }[];
+    onSave: (payload: UpdateWorkerProfilePayload) => void;
+    onCancel: () => void;
+    isSubmitting: boolean;
+}) {
+    const [form, setForm] = useState<UpdateWorkerProfilePayload>({
+        departmentId: (worker.workerProfile?.department as any)?.id ?? "",
+        status: worker.workerProfile?.status ?? "ACTIVE",
+        profession: worker.workerProfile?.profession ?? "",
+        yearJoinedWorkforce: worker.workerProfile?.yearJoinedWorkforce
+            ? new Date(worker.workerProfile.yearJoinedWorkforce).getFullYear().toString()
+            : "",
+        completedSOD: worker.workerProfile?.completedSOD ?? false,
+        completedBibleCollege: worker.workerProfile?.completedBibleCollege ?? false,
+        secondaryDepartmentId: (worker.workerProfile?.secondaryDepartment as any)?.id ?? "",
+    });
+
+    return (
+        <div className="space-y-4 p-4 bg-[#F4F1EA]/20 border border-[#121212]/5 rounded-xl">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C]">
+                Edit Worker Profile
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+                {/* Status */}
+                <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">
+                        Status
+                    </label>
+                    <select
+                        value={form.status}
+                        onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as any }))}
+                        className="w-full h-9 px-2 bg-white border border-[#121212]/10 text-xs text-[#121212] focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
+                    >
+                        {WORKER_STATUSES.map((s) => (
+                            <option key={s} value={s}>{s.replace("_", " ")}</option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Profession */}
+                <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">
+                        Profession
+                    </label>
+                    <input
+                        type="text"
+                        value={form.profession}
+                        onChange={(e) => setForm((p) => ({ ...p, profession: e.target.value }))}
+                        placeholder="e.g. Accountant"
+                        className="w-full h-9 px-2 bg-white border border-[#121212]/10 text-xs text-[#121212] focus:outline-none focus:border-[#121212] rounded-lg"
+                    />
+                </div>
+
+                {/* Year joined */}
+                <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">
+                        Year Joined Workforce
+                    </label>
+                    <input
+                        type="number"
+                        min={1950}
+                        max={new Date().getFullYear()}
+                        value={form.yearJoinedWorkforce}
+                        onChange={(e) => setForm((p) => ({ ...p, yearJoinedWorkforce: e.target.value }))}
+                        placeholder="e.g. 2021"
+                        className="w-full h-9 px-2 bg-white border border-[#121212]/10 text-xs text-[#121212] focus:outline-none focus:border-[#121212] rounded-lg"
+                    />
+                </div>
+
+                {/* Primary dept */}
+                <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">
+                        Primary Department
+                    </label>
+                    <select
+                        value={form.departmentId}
+                        onChange={(e) => setForm((p) => ({ ...p, departmentId: e.target.value }))}
+                        className="w-full h-9 px-2 bg-white border border-[#121212]/10 text-xs text-[#121212] focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
+                    >
+                        <option value="">-- Select department --</option>
+                        {departments.map((d) => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Secondary dept */}
+                <div className="col-span-2">
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">
+                        Secondary Department
+                        <span className="normal-case font-normal text-[#8A817C]/60 ml-1">(optional)</span>
+                    </label>
+                    <select
+                        value={form.secondaryDepartmentId ?? ""}
+                        onChange={(e) =>
+                            setForm((p) => ({
+                                ...p,
+                                secondaryDepartmentId: e.target.value === "" ? null : e.target.value,
+                            }))
+                        }
+                        className="w-full h-9 px-2 bg-white border border-[#121212]/10 text-xs text-[#121212] focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
+                    >
+                        <option value="">-- None (clear assignment) --</option>
+                        {departments.map((d) => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* Checkboxes */}
+            <div className="flex gap-6 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                        type="checkbox"
+                        checked={form.completedSOD ?? false}
+                        onChange={(e) => setForm((p) => ({ ...p, completedSOD: e.target.checked }))}
+                        className="w-4 h-4 rounded border-[#121212]/10 focus:ring-0"
+                    />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[#121212]">
+                        Completed SOD
+                    </span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                        type="checkbox"
+                        checked={form.completedBibleCollege ?? false}
+                        onChange={(e) => setForm((p) => ({ ...p, completedBibleCollege: e.target.checked }))}
+                        className="w-4 h-4 rounded border-[#121212]/10 focus:ring-0"
+                    />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[#121212]">
+                        Completed Bible College
+                    </span>
+                </label>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-1">
+                <button
+                    onClick={() => onSave(form)}
+                    disabled={isSubmitting}
+                    className="px-4 py-1.5 bg-[#121212] text-white text-[10px] font-bold uppercase tracking-wider rounded disabled:opacity-50 flex items-center gap-1.5"
+                >
+                    {isSubmitting ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                    Save Changes
+                </button>
+                <button
+                    onClick={onCancel}
+                    disabled={isSubmitting}
+                    className="px-4 py-1.5 border border-[#121212]/10 text-[#8A817C] text-[10px] font-semibold uppercase tracking-wider rounded hover:text-[#121212] disabled:opacity-50"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type SortKey = "firstname" | "status" | "createdAt";
 type SortOrder = "asc" | "desc";
 
+const STATUS_OPTIONS = ["ALL", "ACTIVE", "INACTIVE", "SUSPENDED", "ON_LEAVE"] as const;
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
 export default withAuth(function WorkersPage() {
-    const [workers, setWorkers] = useState<Worker[]>(INITIAL_WORKERS);
+    const {
+        workers,
+        pagination,
+        page,
+        statusFilter,
+        isLoading,
+        isSubmitting,
+        error,
+        goToPage,
+        applyStatusFilter,
+        refetch,
+        updateWorkerProfile,
+        revokeWorker,
+    } = useWorkers(10);
+
+    const { departments } = useDepartments();
+
+    // Panel state
     const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [confirmRevoke, setConfirmRevoke] = useState(false);
+    const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+    const [actionError, setActionError] = useState<string | null>(null);
 
+    // Client-side search + sort (within server page)
     const [searchQuery, setSearchQuery] = useState("");
-    const [statusFilter, setStatusFilter] = useState<string>("All");
-    const [deptFilter, setDeptFilter] = useState<string>("All");
-
-    const [sortKey, setSortKey] = useState<SortKey>("name");
+    const [sortKey, setSortKey] = useState<SortKey>("firstname");
     const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 4;
-
-    const [gradingIndex, setGradingIndex] = useState<number | null>(null);
-    const [tempGrade, setTempGrade] = useState("");
-    const [tempStatus, setTempStatus] = useState<"Enrolled" | "Completed" | "Dropped">("Enrolled");
-
-    const departments = useMemo(() => {
-        const depts = new Set(workers.map(w => w.department));
-        return ["All", ...Array.from(depts)];
-    }, [workers]);
-
     const handleSort = (key: SortKey) => {
-        if (sortKey === key) {
-            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-        } else {
-            setSortKey(key);
-            setSortOrder("asc");
-        }
+        if (sortKey === key) setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
+        else { setSortKey(key); setSortOrder("asc"); }
     };
 
-    const filteredAndSortedWorkers = useMemo(() => {
-        let result = [...workers];
+    const selectWorker = (w: Worker) => {
+        setSelectedWorker(w);
+        setIsEditing(false);
+        setConfirmRevoke(false);
+        setActionSuccess(null);
+        setActionError(null);
+    };
 
-        if (searchQuery.trim() !== "") {
-            const query = searchQuery.toLowerCase();
+    const processed = useMemo(() => {
+        let result = [...workers];
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
             result = result.filter(
                 (w) =>
-                    w.name.toLowerCase().includes(query) ||
-                    w.email.toLowerCase().includes(query) ||
-                    w.id.toLowerCase().includes(query)
+                    fullName(w).toLowerCase().includes(q) ||
+                    w.email.toLowerCase().includes(q) ||
+                    w.id.toLowerCase().includes(q)
             );
         }
-
-        if (statusFilter !== "All") {
-            result = result.filter((w) => w.status === statusFilter);
-        }
-
-        if (deptFilter !== "All") {
-            result = result.filter((w) => w.department === deptFilter);
-        }
-
         result.sort((a, b) => {
-            let valA = a[sortKey].toLowerCase();
-            let valB = b[sortKey].toLowerCase();
+            const valA = String(a[sortKey] ?? "").toLowerCase();
+            const valB = String(b[sortKey] ?? "").toLowerCase();
             if (valA < valB) return sortOrder === "asc" ? -1 : 1;
             if (valA > valB) return sortOrder === "asc" ? 1 : -1;
             return 0;
         });
-
         return result;
-    }, [workers, searchQuery, statusFilter, deptFilter, sortKey, sortOrder]);
+    }, [workers, searchQuery, sortKey, sortOrder]);
 
-    const paginatedWorkers = useMemo(() => {
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        return filteredAndSortedWorkers.slice(startIndex, startIndex + itemsPerPage);
-    }, [filteredAndSortedWorkers, currentPage]);
+    // ── Handlers ──────────────────────────────────────────────────────────────
 
-    const totalPages = Math.ceil(filteredAndSortedWorkers.length / itemsPerPage);
-
-    const startGrading = (index: number, enrollment: Enrollment) => {
-        setGradingIndex(index);
-        setTempGrade(enrollment.grade || "");
-        setTempStatus(enrollment.status);
+    const handleUpdateProfile = async (payload: UpdateWorkerProfilePayload) => {
+        if (!selectedWorker) return;
+        setActionError(null);
+        setActionSuccess(null);
+        try {
+            const updated = await updateWorkerProfile(selectedWorker.id, payload);
+            setSelectedWorker((prev) => prev ? { ...prev, ...updated } : prev);
+            setIsEditing(false);
+            setActionSuccess("Worker profile updated successfully.");
+            setTimeout(() => setActionSuccess(null), 3000);
+        } catch (err: any) {
+            setActionError(err?.message ?? "Failed to update profile.");
+        }
     };
 
-    const saveGrade = () => {
-        if (!selectedWorker || gradingIndex === null) return;
+    const handleRevoke = async () => {
+        if (!selectedWorker) return;
+        setActionError(null);
+        setActionSuccess(null);
+        try {
+            await revokeWorker(selectedWorker.id);
+            setSelectedWorker(null);
+            setConfirmRevoke(false);
+        } catch (err: any) {
+            setActionError(err?.message ?? "Failed to revoke worker role.");
+            setConfirmRevoke(false);
+        }
+    };
 
-        const updatedEnrollments = [...selectedWorker.enrollments];
-        updatedEnrollments[gradingIndex] = {
-            ...updatedEnrollments[gradingIndex],
-            status: tempStatus,
-            grade: tempStatus === "Completed" ? tempGrade || "Pass" : null
-        };
-
-        const updatedWorker = { ...selectedWorker, enrollments: updatedEnrollments };
-
-        setWorkers(prev => prev.map(w => w.id === selectedWorker.id ? updatedWorker : w));
-        setSelectedWorker(updatedWorker);
-        setGradingIndex(null);
+    const deptName = (w: Worker) => {
+        const dept = w.workerProfile?.department as any;
+        return dept?.name ?? "—";
     };
 
     return (
         <div className="space-y-10 font-sans">
-            <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#121212]">
-                    Personnel & Workers Ledger
-                </h1>
-                <p className="text-xs uppercase tracking-widest font-semibold text-[#8A817C] mt-1">
-                    Monitor structural deployments, access indices, and worker qualification training tracks
-                </p>
+
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-light tracking-tight text-[#121212]">
+                        Personnel & Workers Ledger
+                    </h1>
+                    <p className="text-xs uppercase tracking-widest font-semibold text-[#8A817C] mt-1">
+                        Monitor structural deployments, access indices, and worker qualification tracks
+                    </p>
+                </div>
+                <div className="flex items-center gap-3">
+                    {pagination && (
+                        <span className="text-[10px] font-mono text-[#8A817C] border border-[#121212]/10 px-3 py-1.5 rounded-lg">
+                            {pagination.totalCount} workers
+                        </span>
+                    )}
+                    <button
+                        onClick={refetch}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
+                </div>
             </div>
 
+            {/* Global error */}
+            {error && (
+                <div className="bg-red-50 border border-red-200 p-4 rounded-lg text-xs text-red-700">
+                    <strong className="block font-semibold uppercase tracking-wider text-[11px] mb-1">Error</strong>
+                    {error}
+                </div>
+            )}
+
+            {/* Filters */}
             <div className="flex flex-col xl:flex-row gap-6 items-center justify-between bg-[#FFFFFF] border border-[#121212]/10 p-6 rounded-xl">
                 <div className="w-full xl:max-w-md relative">
                     <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-[#8A817C]" />
                     <input
                         type="text"
-                        placeholder="Search workers by name, email, or system token identifier..."
+                        placeholder="Search by name, email, or ID..."
                         value={searchQuery}
-                        onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full h-11 pl-11 pr-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
                     />
                 </div>
 
-                <div className="w-full xl:w-auto flex flex-col sm:flex-row gap-4 items-center">
-                    <div className="flex items-center space-x-2 w-full sm:w-auto">
-                        <SlidersHorizontal className="w-3.5 h-3.5 text-[#8A817C]" />
-                        <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Dept:</span>
-                        <select
-                            value={deptFilter}
-                            onChange={(e) => { setDeptFilter(e.target.value); setCurrentPage(1); }}
-                            className="h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none min-w-[140px]"
-                        >
-                            {departments.map(d => <option key={d} value={d}>{d}</option>)}
-                        </select>
-                    </div>
-
-                    <div className="flex items-center space-x-2 w-full sm:w-auto">
-                        <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Status:</span>
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                            className="h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none min-w-[140px]"
-                        >
-                            <option value="All">All Statuses</option>
-                            <option value="Active">Active</option>
-                            <option value="On Leave">On Leave</option>
-                            <option value="Suspended">Suspended</option>
-                        </select>
+                <div className="flex items-center gap-2 w-full xl:w-auto">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-[#8A817C] shrink-0" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] shrink-0">
+                        Status:
+                    </span>
+                    <div className="flex bg-[#F4F1EA] p-1 border border-[#121212]/5 rounded-xl flex-wrap gap-1">
+                        {STATUS_OPTIONS.map((s) => (
+                            <button
+                                key={s}
+                                onClick={() => applyStatusFilter(s)}
+                                disabled={isLoading}
+                                className={`px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg transition-colors disabled:opacity-40 ${statusFilter === s
+                                        ? "bg-[#121212] text-white"
+                                        : "text-[#8A817C] hover:text-[#121212]"
+                                    }`}
+                            >
+                                {s.replace("_", " ")}
+                            </button>
+                        ))}
                     </div>
                 </div>
             </div>
 
+            {/* Table + detail */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+                {/* Table */}
                 <div className="lg:col-span-7 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
                                     <th
-                                        onClick={() => handleSort("name")}
-                                        className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] cursor-pointer hover:text-[#121212]"
+                                        onClick={() => handleSort("firstname")}
+                                        className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] cursor-pointer hover:text-[#121212] select-none"
                                     >
                                         <div className="flex items-center space-x-1.5">
-                                            <span>Worker Identity</span>
+                                            <span>Worker</span>
                                             <ArrowUpDown className="w-3 h-3" />
                                         </div>
                                     </th>
-                                    <th
-                                        onClick={() => handleSort("department")}
-                                        className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] cursor-pointer hover:text-[#121212]"
-                                    >
-                                        <div className="flex items-center space-x-1.5">
-                                            <span>Department</span>
-                                            <ArrowUpDown className="w-3 h-3" />
-                                        </div>
+                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">
+                                        Department
                                     </th>
                                     <th
                                         onClick={() => handleSort("status")}
-                                        className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] cursor-pointer hover:text-[#121212]"
+                                        className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] cursor-pointer hover:text-[#121212] select-none"
                                     >
                                         <div className="flex items-center space-x-1.5">
                                             <span>Status</span>
                                             <ArrowUpDown className="w-3 h-3" />
                                         </div>
                                     </th>
-                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] text-right">Action</th>
+                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] text-right">
+                                        Action
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#121212]/5 text-[#121212]">
-                                {paginatedWorkers.length === 0 ? (
+                                {isLoading ? (
+                                    Array.from({ length: 10 }).map((_, i) => (
+                                        <SkeletonRow key={i} />
+                                    ))
+                                ) : processed.length === 0 ? (
                                     <tr>
                                         <td colSpan={4} className="p-12 text-center text-xs text-[#8A817C] font-light">
-                                            No matching personnel logs registered in system matrices.
+                                            No matching workers found.
                                         </td>
                                     </tr>
                                 ) : (
-                                    paginatedWorkers.map((worker) => (
+                                    processed.map((worker) => (
                                         <tr
                                             key={worker.id}
-                                            className={`transition-colors cursor-pointer ${selectedWorker?.id === worker.id ? "bg-[#F4F1EA]/50" : "hover:bg-[#F4F1EA]/10"}`}
-                                            onClick={() => { setSelectedWorker(worker); setGradingIndex(null); }}
+                                            onClick={() => selectWorker(worker)}
+                                            className={`transition-colors cursor-pointer ${selectedWorker?.id === worker.id
+                                                    ? "bg-[#F4F1EA]/50"
+                                                    : "hover:bg-[#F4F1EA]/10"
+                                                }`}
                                         >
                                             <td className="p-4">
-                                                <div className="text-sm font-medium text-[#121212]">{worker.name}</div>
-                                                <div className="text-xs text-[#8A817C] font-mono mt-0.5">{worker.email}</div>
+                                                <div className="text-sm font-medium text-[#121212]">
+                                                    {fullName(worker)}
+                                                </div>
+                                                <div className="text-xs text-[#8A817C] font-mono mt-0.5 truncate max-w-[200px]">
+                                                    {worker.email}
+                                                </div>
                                             </td>
                                             <td className="p-4 text-xs font-light text-[#121212]">
-                                                {worker.department}
+                                                {deptName(worker)}
                                             </td>
                                             <td className="p-4">
-                                                <span className={`inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded ${worker.status === "Active" ? "bg-green-100 text-green-800" :
-                                                        worker.status === "On Leave" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"
-                                                    }`}>
-                                                    {worker.status}
-                                                </span>
+                                                <WorkerStatusBadge
+                                                    status={worker.workerProfile?.status ?? worker.status}
+                                                />
                                             </td>
-                                            <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                            <td
+                                                className="p-4 text-right"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
                                                 <button
-                                                    onClick={() => { setSelectedWorker(worker); setGradingIndex(null); }}
+                                                    onClick={() => selectWorker(worker)}
                                                     className="p-2 text-[#8A817C] hover:text-[#121212] border border-[#121212]/10 hover:border-[#121212] rounded-lg transition-colors"
-                                                    title="Review profile layout"
                                                 >
                                                     <Eye className="w-3.5 h-3.5" />
                                                 </button>
@@ -330,23 +575,54 @@ export default withAuth(function WorkersPage() {
                         </table>
                     </div>
 
-                    {totalPages > 1 && (
+                    {/* Pagination */}
+                    {pagination && pagination.totalPages > 1 && (
                         <div className="p-4 border-t border-[#121212]/10 bg-[#F4F1EA]/10 flex items-center justify-between">
                             <span className="text-xs font-mono text-[#8A817C]">
-                                Page {currentPage} of {totalPages}
+                                Page {pagination.page} of {pagination.totalPages}
+                                <span className="ml-2 text-[#121212]/30">({pagination.totalCount} total)</span>
                             </span>
                             <div className="flex space-x-1">
                                 <button
-                                    disabled={currentPage === 1}
-                                    onClick={() => setCurrentPage(prev => prev - 1)}
-                                    className="p-2 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212]"
+                                    disabled={pagination.page <= 1 || isLoading}
+                                    onClick={() => goToPage(pagination.page - 1)}
+                                    className="p-2 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212] hover:bg-[#F4F1EA]"
                                 >
                                     <ChevronLeft className="w-3.5 h-3.5" />
                                 </button>
+                                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+                                    .filter((p) => {
+                                        const cur = pagination.page;
+                                        return p === 1 || p === pagination.totalPages || Math.abs(p - cur) <= 1;
+                                    })
+                                    .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                                        if (idx > 0 && typeof arr[idx - 1] === "number" && (p as number) - (arr[idx - 1] as number) > 1) {
+                                            acc.push("...");
+                                        }
+                                        acc.push(p);
+                                        return acc;
+                                    }, [])
+                                    .map((item, idx) =>
+                                        item === "..." ? (
+                                            <span key={`e-${idx}`} className="w-8 h-8 flex items-center justify-center text-xs text-[#8A817C]">…</span>
+                                        ) : (
+                                            <button
+                                                key={item}
+                                                disabled={isLoading}
+                                                onClick={() => goToPage(item as number)}
+                                                className={`w-8 h-8 text-xs font-semibold rounded-md border transition-colors disabled:opacity-40 ${pagination.page === item
+                                                        ? "bg-[#121212] text-white border-[#121212]"
+                                                        : "border-[#121212]/10 text-[#121212] hover:bg-[#F4F1EA]"
+                                                    }`}
+                                            >
+                                                {item}
+                                            </button>
+                                        )
+                                    )}
                                 <button
-                                    disabled={currentPage === totalPages}
-                                    onClick={() => setCurrentPage(prev => prev + 1)}
-                                    className="p-2 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212]"
+                                    disabled={pagination.page >= pagination.totalPages || isLoading}
+                                    onClick={() => goToPage(pagination.page + 1)}
+                                    className="p-2 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212] hover:bg-[#F4F1EA]"
                                 >
                                     <ChevronRight className="w-3.5 h-3.5" />
                                 </button>
@@ -355,9 +631,10 @@ export default withAuth(function WorkersPage() {
                     )}
                 </div>
 
-                <div className="lg:col-span-5 h-[400px] overflow-auto">
+                {/* Detail panel */}
+                <div className="lg:col-span-5">
                     {selectedWorker ? (
-                        <div className="bg-[#FFFFFF] border border-[#121212]/10 p-6 rounded-xl space-y-8 relative">
+                        <div className="bg-[#FFFFFF] border border-[#121212]/10 p-6 rounded-xl space-y-6 relative">
                             <button
                                 onClick={() => setSelectedWorker(null)}
                                 className="absolute top-6 right-6 p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/10 rounded-md"
@@ -365,126 +642,170 @@ export default withAuth(function WorkersPage() {
                                 <X className="w-4 h-4" />
                             </button>
 
+                            {/* Name */}
                             <div>
                                 <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1">
-                                    Personnel Record Details
+                                    Worker Profile
                                 </div>
-                                <h2 className="text-xl font-light tracking-tight text-[#121212]">
-                                    {selectedWorker.name}
+                                <h2 className="text-xl font-light tracking-tight text-[#121212] pr-8">
+                                    {fullName(selectedWorker)}
                                 </h2>
-                                <p className="text-xs font-mono text-[#8A817C] mt-1">{selectedWorker.email}</p>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4 border-y border-[#121212]/5 py-4 font-mono text-xs">
-                                <div>
-                                    <span className="text-[#8A817C] block text-[10px] font-semibold uppercase tracking-widest mb-1">Deployment</span>
-                                    <span className="text-[#121212]">{selectedWorker.department}</span>
-                                </div>
-                                <div>
-                                    <span className="text-[#8A817C] block text-[10px] font-semibold uppercase tracking-widest mb-1">Enrollment Date</span>
-                                    <span className="text-[#121212]">{selectedWorker.joinDate}</span>
-                                </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-[#121212] flex items-center space-x-2">
-                                    <GraduationCap className="w-4 h-4 text-[#8A817C]" />
-                                    <span>Enrollments</span>
-                                </h3>
-
-                                <div className="space-y-3">
-                                    {selectedWorker.enrollments.map((enr, idx) => (
-                                        <div
-                                            key={enr.className}
-                                            className="p-4 border border-[#121212]/10 rounded-lg bg-[#F4F1EA]/20 space-y-3"
-                                        >
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div>
-                                                    <div className="text-xs font-medium text-[#121212]">{enr.className}</div>
-                                                    <div className="flex items-center space-x-2 mt-1.5">
-                                                        <span className={`inline-flex items-center space-x-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${enr.status === "Completed" ? "bg-green-50 text-green-700 border border-green-200" :
-                                                                enr.status === "Enrolled" ? "bg-blue-50 text-blue-700 border border-blue-200" : "bg-gray-100 text-gray-600"
-                                                            }`}>
-                                                            {enr.status === "Completed" ? <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" /> : <AlertCircle className="w-2.5 h-2.5 mr-0.5" />}
-                                                            {enr.status}
-                                                        </span>
-                                                        {enr.grade && (
-                                                            <span className="text-[10px] font-mono text-[#8A817C]">
-                                                                Evaluation Grade: <strong className="text-[#121212] font-semibold">{enr.grade}</strong>
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                {gradingIndex !== idx && (
-                                                    <button
-                                                        onClick={() => startGrading(idx, enr)}
-                                                        className="text-[10px] uppercase font-bold tracking-wider px-2 py-1 bg-[#121212] text-white rounded-md hover:bg-[#121212]/90 transition-colors"
-                                                    >
-                                                        Grade / Update
-                                                    </button>
-                                                )}
-                                            </div>
-
-                                            {gradingIndex === idx && (
-                                                <div className="pt-3 border-t border-[#121212]/5 space-y-3 animate-fadeIn">
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <div>
-                                                            <label className="block text-[9px] font-bold uppercase tracking-wider text-[#8A817C] mb-1">Status</label>
-                                                            <select
-                                                                value={tempStatus}
-                                                                onChange={(e) => setTempStatus(e.target.value as any)}
-                                                                className="w-full h-8 px-2 bg-white border border-[#121212]/10 text-xs focus:outline-none rounded"
-                                                            >
-                                                                <option value="Enrolled">Enrolled</option>
-                                                                <option value="Completed">Completed</option>
-                                                                <option value="Dropped">Dropped</option>
-                                                            </select>
-                                                        </div>
-
-                                                        {tempStatus === "Completed" && (
-                                                            <div>
-                                                                <label className="block text-[9px] font-bold uppercase tracking-wider text-[#8A817C] mb-1">Grade / Score</label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={tempGrade}
-                                                                    placeholder="e.g. A, B+, Pass"
-                                                                    onChange={(e) => setTempGrade(e.target.value)}
-                                                                    className="w-full h-8 px-2 bg-white border border-[#121212]/10 text-xs focus:outline-none rounded"
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="flex justify-end space-x-1">
-                                                        <button
-                                                            onClick={() => setGradingIndex(null)}
-                                                            className="text-[10px] font-semibold uppercase px-2 py-1 text-[#8A817C] hover:text-[#121212]"
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                        <button
-                                                            onClick={saveGrade}
-                                                            className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 bg-[#121212] text-white rounded"
-                                                        >
-                                                            Commit Change
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    <WorkerStatusBadge
+                                        status={selectedWorker.workerProfile?.status ?? selectedWorker.status}
+                                    />
+                                    {selectedWorker.workerProfile?.completedSOD && (
+                                        <BoolBadge value={true} label="SOD" />
+                                    )}
+                                    {selectedWorker.workerProfile?.completedBibleCollege && (
+                                        <BoolBadge value={true} label="Bible College" />
+                                    )}
                                 </div>
                             </div>
+
+                            {/* Contact */}
+                            <div className="space-y-2 border-y border-[#121212]/5 py-4">
+                                <div className="flex items-center gap-2 text-xs text-[#121212]">
+                                    <Mail className="w-3.5 h-3.5 text-[#8A817C] shrink-0" />
+                                    <span className="font-mono truncate">{selectedWorker.email}</span>
+                                </div>
+                                {selectedWorker.phoneNumber && (
+                                    <div className="flex items-center gap-2 text-xs text-[#121212]">
+                                        <Phone className="w-3.5 h-3.5 text-[#8A817C] shrink-0" />
+                                        <span className="font-mono">{selectedWorker.phoneNumber}</span>
+                                    </div>
+                                )}
+                                {selectedWorker.dateJoinedChurch && (
+                                    <div className="flex items-center gap-2 text-xs text-[#121212]">
+                                        <Calendar className="w-3.5 h-3.5 text-[#8A817C] shrink-0" />
+                                        <span className="font-mono">Joined: {formatDate(selectedWorker.dateJoinedChurch)}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Worker profile details */}
+                            {!isEditing && (
+                                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                                    <DetailRow
+                                        label="Profession"
+                                        value={selectedWorker.workerProfile?.profession}
+                                    />
+                                    <DetailRow
+                                        label="Year Joined Workforce"
+                                        value={formatYear(selectedWorker.workerProfile?.yearJoinedWorkforce ?? null)}
+                                    />
+                                    <DetailRow
+                                        label="Primary Department"
+                                        value={deptName(selectedWorker)}
+                                    />
+                                    <DetailRow
+                                        label="Secondary Department"
+                                        value={
+                                            (selectedWorker.workerProfile?.secondaryDepartment as any)?.name ?? "—"
+                                        }
+                                    />
+                                    <DetailRow
+                                        label="Completed SOD"
+                                        value={
+                                            <BoolBadge
+                                                value={selectedWorker.workerProfile?.completedSOD ?? false}
+                                                label={selectedWorker.workerProfile?.completedSOD ? "Yes" : "No"}
+                                            />
+                                        }
+                                    />
+                                    <DetailRow
+                                        label="Bible College"
+                                        value={
+                                            <BoolBadge
+                                                value={selectedWorker.workerProfile?.completedBibleCollege ?? false}
+                                                label={selectedWorker.workerProfile?.completedBibleCollege ? "Yes" : "No"}
+                                            />
+                                        }
+                                    />
+                                    <DetailRow
+                                        label="Account Created"
+                                        value={formatDate(selectedWorker.createdAt)}
+                                    />
+                                    <DetailRow
+                                        label="Last Updated"
+                                        value={formatDate(selectedWorker.updatedAt)}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Edit form */}
+                            {isEditing && (
+                                <ProfileEditForm
+                                    worker={selectedWorker}
+                                    departments={departments}
+                                    onSave={handleUpdateProfile}
+                                    onCancel={() => setIsEditing(false)}
+                                    isSubmitting={isSubmitting}
+                                />
+                            )}
+
+                            {/* Feedback */}
+                            {actionSuccess && (
+                                <div className="flex items-start gap-2.5 p-4 bg-green-50 border border-green-100 rounded-lg text-xs text-green-700">
+                                    <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                                    <span>{actionSuccess}</span>
+                                </div>
+                            )}
+                            {actionError && (
+                                <div className="flex items-start gap-2.5 p-4 bg-[#fdfaf2] border border-dashed border-[#121212]/15 rounded-lg text-xs text-[#121212]">
+                                    <ShieldAlert className="w-4 h-4 text-red-700 shrink-0 mt-0.5" />
+                                    <div>
+                                        <strong className="block font-semibold uppercase tracking-wider text-[11px] mb-0.5">
+                                            Action Failed
+                                        </strong>
+                                        {actionError}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Revoke confirm */}
+                            {confirmRevoke && (
+                                <ConfirmBanner
+                                    message={`Revoke the worker role from ${fullName(selectedWorker)}? They will revert to a standard member. This cannot be undone.`}
+                                    onConfirm={handleRevoke}
+                                    onCancel={() => setConfirmRevoke(false)}
+                                    isLoading={isSubmitting}
+                                    confirmLabel="Revoke Role"
+                                    danger
+                                />
+                            )}
+
+                            {/* Action buttons */}
+                            {!isEditing && !confirmRevoke && (
+                                <div className="space-y-3 pt-2">
+                                    <button
+                                        onClick={() => setIsEditing(true)}
+                                        disabled={isSubmitting}
+                                        className="w-full h-11 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors flex items-center justify-center space-x-2 rounded-xl disabled:opacity-50"
+                                    >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                        <span>Edit Worker Profile</span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => setConfirmRevoke(true)}
+                                        disabled={isSubmitting}
+                                        className="w-full h-11 border border-red-200 text-red-600 text-xs font-semibold uppercase tracking-widest hover:bg-red-50 transition-colors flex items-center justify-center space-x-2 rounded-xl disabled:opacity-50"
+                                    >
+                                        <UserMinus className="w-3.5 h-3.5" />
+                                        <span>Revoke Worker Role</span>
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="border-2 border-dashed border-[#121212]/10 flex flex-col items-center justify-center text-center p-12 bg-[#FFFFFF] rounded-xl h-64">
                             <Users className="w-8 h-8 text-[#8A817C]/40 mb-3" />
                             <div className="text-xs uppercase tracking-wider font-semibold text-[#121212]">
-                                No Profile Evaluated
+                                No Profile Selected
                             </div>
                             <p className="text-xs text-[#8A817C] font-light max-w-xs mt-1">
-                                Select an entry row element from the tracking index grid to display personnel metrics and academic grades.
+                                Select a worker from the table to view their profile and manage their deployment.
                             </p>
                         </div>
                     )}
@@ -492,4 +813,4 @@ export default withAuth(function WorkersPage() {
             </div>
         </div>
     );
-})
+});
