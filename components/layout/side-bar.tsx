@@ -165,7 +165,7 @@ export default function Sidebar() {
                                                     <Link
                                                         key={subItem.name}
                                                         href={subItem.href}
-                                                        className={`block px-4 py-1 text-xs tracking-wider uppercase font-medium transition-colors rounded-md ${isSubActive
+                                                        className={`block px-4 py-2 text-xs tracking-wider uppercase font-medium transition-colors rounded-md ${isSubActive
                                                             ? "text-[#FFFFFF] bg-[#8A817C]/20"
                                                             : "text-[#8A817C] hover:text-[#FFFFFF]"
                                                             }`}

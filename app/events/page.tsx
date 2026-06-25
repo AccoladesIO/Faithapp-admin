@@ -1,25 +1,22 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
     Calendar, MapPin, RefreshCw, Clock, AlignLeft,
     Search, Plus, Sliders, Layers, Trash2, Pencil,
-    X, Check, Globe, ToggleLeft, ToggleRight,
+    X, Globe, ToggleLeft, ToggleRight,
 } from "lucide-react";
 import { withAuth } from "@/utils/auth/with-auth";
 import { useEvents, ServiceSlot, Recurrence, CreateEventPayload } from "@/hooks/use-events";
 import { useEventConfigs, CreateEventConfigPayload } from "@/hooks/use-event-configs";
 import { useVenues } from "@/hooks/use-venues";
 import Error from "@/components/layout/error";
+import { toInputDateTime, toPayloadDateTime } from "@/utils/parse-local-time";
 
-
-
-// ─── Reusable offset input ───────────────────────────────────────────────────
+// ─── Reusable offset input ────────────────────────────────────────────────────
 
 function OffsetInput({
-    label,
-    value,
-    onChange,
+    label, value, onChange,
 }: {
     label: string;
     value: number;
@@ -40,7 +37,7 @@ function OffsetInput({
     );
 }
 
-// ─── Empty state ─────────────────────────────────────────────────────────────
+// ─── Empty state ──────────────────────────────────────────────────────────────
 
 function EmptyState({ icon: Icon, title, description }: {
     icon: React.ElementType;
@@ -59,12 +56,7 @@ function EmptyState({ icon: Icon, title, description }: {
 // ─── Service slot row ─────────────────────────────────────────────────────────
 
 function SlotRow({
-    slot,
-    index,
-    configs,
-    venues,
-    onChange,
-    onRemove,
+    slot, index, configs, venues, onChange, onRemove,
 }: {
     slot: ServiceSlot;
     index: number;
@@ -79,11 +71,7 @@ function SlotRow({
                 <span className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C]">
                     Slot {index + 1}
                 </span>
-                <button
-                    type="button"
-                    onClick={() => onRemove(index)}
-                    className="p-1 text-[#8A817C] hover:text-red-500 transition-colors"
-                >
+                <button type="button" onClick={() => onRemove(index)} className="p-1 text-[#8A817C] hover:text-red-500 transition-colors">
                     <X className="w-3.5 h-3.5" />
                 </button>
             </div>
@@ -99,26 +87,22 @@ function SlotRow({
 
             <div className="grid grid-cols-2 gap-3">
                 <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">
-                        Start Time
-                    </label>
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Start Time</label>
                     <input
                         type="datetime-local"
                         required
-                        value={slot.startTime ? slot.startTime.slice(0, 16) : ""}
-                        onChange={(e) => onChange(index, "startTime", e.target.value + ":00.000Z")}
+                        value={toInputDateTime(slot.startTime)}
+                        onChange={(e) => onChange(index, "startTime", toPayloadDateTime(e.target.value))}
                         className="w-full h-9 px-3 bg-[#FFFFFF] border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
                     />
                 </div>
                 <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">
-                        End Time
-                    </label>
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">End Time</label>
                     <input
                         type="datetime-local"
                         required
-                        value={slot.endTime ? slot.endTime.slice(0, 16) : ""}
-                        onChange={(e) => onChange(index, "endTime", e.target.value + ":00.000Z")}
+                        value={toInputDateTime(slot.endTime)}
+                        onChange={(e) => onChange(index, "endTime", toPayloadDateTime(e.target.value))}
                         className="w-full h-9 px-3 bg-[#FFFFFF] border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
                     />
                 </div>
@@ -126,9 +110,7 @@ function SlotRow({
 
             <div className="grid grid-cols-2 gap-3">
                 <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">
-                        Config
-                    </label>
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Config</label>
                     <select
                         required
                         value={slot.configId}
@@ -136,24 +118,18 @@ function SlotRow({
                         className="w-full h-9 px-3 bg-[#FFFFFF] border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
                     >
                         <option value="">-- Select config --</option>
-                        {configs.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
+                        {configs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                 </div>
                 <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">
-                        Venue Override
-                    </label>
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Venue Override</label>
                     <select
                         value={slot.venueOverrideId ?? ""}
                         onChange={(e) => onChange(index, "venueOverrideId", e.target.value)}
                         className="w-full h-9 px-3 bg-[#FFFFFF] border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
                     >
                         <option value="">-- Use config default --</option>
-                        {venues.map((v) => (
-                            <option key={v.id} value={v.id}>{v.name}</option>
-                        ))}
+                        {venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
                     </select>
                 </div>
             </div>
@@ -191,57 +167,41 @@ const defaultConfigForm: CreateEventConfigPayload = {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default withAuth(function EventsPage() {
+export default withAuth(function AdminEventsPage() {
     const [activeTab, setActiveTab] = useState<"events" | "configs">("events");
 
     const { events, isLoading: eventsLoading, isSubmitting: eventSubmitting, error: eventError, createEvent, updateEvent, deleteEvent } = useEvents();
     const { eventConfigs, isLoading: configsLoading, isSubmitting: configSubmitting, error: configError, createEventConfig, updateEventConfig, deleteEventConfig } = useEventConfigs();
     const { venues } = useVenues();
 
-    // ── Event form state ────────────────────────────────────────────────────
     const [eventForm, setEventForm] = useState(defaultEventForm);
     const [editingEventId, setEditingEventId] = useState<string | null>(null);
-
-    // ── Config form state ───────────────────────────────────────────────────
     const [configForm, setConfigForm] = useState<CreateEventConfigPayload>(defaultConfigForm);
     const [editingConfigId, setEditingConfigId] = useState<string | null>(null);
 
-    // ── Slot helpers ────────────────────────────────────────────────────────
-    const addSlot = () => {
+    // ── Slot helpers ──────────────────────────────────────────────────────────
+    const addSlot = () => setEventForm((prev) => ({
+        ...prev,
+        serviceSlots: [
+            ...prev.serviceSlots,
+            { name: "", startTime: "", endTime: "", configId: "", venueOverrideId: "" },
+        ],
+    }));
+
+    const removeSlot = (index: number) => setEventForm((prev) => ({
+        ...prev,
+        serviceSlots: prev.serviceSlots.filter((_, i) => i !== index),
+    }));
+
+    const updateSlot = (index: number, field: keyof ServiceSlot, value: string) =>
         setEventForm((prev) => ({
             ...prev,
-            serviceSlots: [
-                ...prev.serviceSlots,
-                { name: "", startTime: "", endTime: "", configId: "", venueOverrideId: "" },
-            ],
+            serviceSlots: prev.serviceSlots.map((s, i) => i === index ? { ...s, [field]: value } : s),
         }));
-    };
 
-    const removeSlot = (index: number) => {
-        setEventForm((prev) => ({
-            ...prev,
-            serviceSlots: prev.serviceSlots.filter((_, i) => i !== index),
-        }));
-    };
-
-    const updateSlot = (index: number, field: keyof ServiceSlot, value: string) => {
-        setEventForm((prev) => ({
-            ...prev,
-            serviceSlots: prev.serviceSlots.map((s, i) =>
-                i === index ? { ...s, [field]: value } : s
-            ),
-        }));
-    };
-
-    // ── Event submit ────────────────────────────────────────────────────────
+    // ── Event submit ──────────────────────────────────────────────────────────
     const handleEventSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        const cleanedSlots = eventForm.serviceSlots.map((s) => ({
-            ...s,
-            ...(s.venueOverrideId === "" ? {} : { venueOverrideId: s.venueOverrideId }),
-        }));
-
         const payload: CreateEventPayload = {
             name: eventForm.name,
             description: eventForm.description,
@@ -249,10 +209,12 @@ export default withAuth(function EventsPage() {
             endDate: eventForm.endDate,
             onlineAttendanceEnabled: eventForm.onlineAttendanceEnabled,
             isRecurring: eventForm.isRecurring,
-            serviceSlots: cleanedSlots,
+            serviceSlots: eventForm.serviceSlots.map((s) => ({
+                ...s,
+                ...(s.venueOverrideId === "" ? {} : { venueOverrideId: s.venueOverrideId }),
+            })),
             ...(eventForm.isRecurring && { recurrence: eventForm.recurrence }),
         };
-
         try {
             if (editingEventId) {
                 await updateEvent(editingEventId, payload);
@@ -261,9 +223,7 @@ export default withAuth(function EventsPage() {
                 await createEvent(payload);
             }
             setEventForm(defaultEventForm);
-        } catch {
-            // error surfaced via hook
-        }
+        } catch { /* error surfaced via hook */ }
     };
 
     const startEditEvent = (event: typeof events[0]) => {
@@ -274,17 +234,25 @@ export default withAuth(function EventsPage() {
             eventDate: event?.eventDate ?? "",
             endDate: event?.endDate ?? "",
             onlineAttendanceEnabled: !!event?.onlineAttendanceEnabled,
-            isRecurring: !!event?.isRecurring,                        // coerce to boolean
+            isRecurring: !!event?.isRecurring,
             recurrence: event?.recurrence ?? {
                 recurrencePattern: "weekly" as "daily" | "weekly" | "monthly",
                 recurrenceInterval: 1,
                 recurrenceEndDate: "",
             },
-            serviceSlots: event?.serviceSlots ?? [],
+            // API returns full nested slot objects — map to flat ID strings
+            serviceSlots: (event?.serviceSlots ?? []).map((s: any) => ({
+                name: s.name ?? "",
+                startTime: s.startTime ?? "",
+                endTime: s.endTime ?? "",
+                configId: s.config?.id ?? s.configId ?? "",
+                venueOverrideId: s.venueOverride?.id ?? s.venueOverrideId ?? "",
+            })),
         });
         setActiveTab("events");
     };
-    // ── Config submit ───────────────────────────────────────────────────────
+
+    // ── Config submit ─────────────────────────────────────────────────────────
     const handleConfigSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
@@ -295,9 +263,7 @@ export default withAuth(function EventsPage() {
                 await createEventConfig(configForm);
             }
             setConfigForm(defaultConfigForm);
-        } catch {
-            // error surfaced via hook
-        }
+        } catch { /* error surfaced via hook */ }
     };
 
     const startEditConfig = (config: typeof eventConfigs[0]) => {
@@ -323,23 +289,17 @@ export default withAuth(function EventsPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-light tracking-tight text-[#121212]">
-                        Events & Management Hub
-                    </h1>
+                    <h1 className="text-2xl font-light tracking-tight text-[#121212]">Events & Management Hub</h1>
                     <p className="text-xs uppercase tracking-widest font-semibold text-[#8A817C] mt-1">
                         Build global presets and deploy structured church operational calendars
                     </p>
                 </div>
-
                 <div className="flex bg-[#F4F1EA] p-1 border border-[#121212]/5 rounded-xl self-start md:self-auto">
                     {(["events", "configs"] as const).map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`flex items-center space-x-2 px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors ${activeTab === tab
-                                ? "bg-[#121212] text-[#FFFFFF]"
-                                : "text-[#8A817C] hover:text-[#121212]"
-                                }`}
+                            className={`flex items-center space-x-2 px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors ${activeTab === tab ? "bg-[#121212] text-[#FFFFFF]" : "text-[#8A817C] hover:text-[#121212]"}`}
                         >
                             {tab === "events" ? <Layers className="w-3.5 h-3.5" /> : <Sliders className="w-3.5 h-3.5" />}
                             <span>{tab === "events" ? "Operational Events" : "Config Presets"}</span>
@@ -348,15 +308,13 @@ export default withAuth(function EventsPage() {
                 </div>
             </div>
 
-            {/* Error banners */}
             {(eventError || configError) && (
-                <Error  error={eventError || configError || "An unexpected error occurred."} />
+                <Error error={eventError || configError || "An unexpected error occurred."} />
             )}
 
-            {/* ── EVENTS TAB ─────────────────────────────────────────────────────── */}
+            {/* ── EVENTS TAB ───────────────────────────────────────────────── */}
             {activeTab === "events" && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                    {/* Form */}
                     <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#121212]/10 p-8 rounded-xl">
                         <h2 className="text-sm font-semibold uppercase tracking-wider text-[#121212] mb-6 flex items-center space-x-2">
                             <Plus className="w-4 h-4 text-[#8A817C]" />
@@ -364,11 +322,8 @@ export default withAuth(function EventsPage() {
                         </h2>
 
                         <form onSubmit={handleEventSubmit} className="space-y-5">
-                            {/* Name */}
                             <div>
-                                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                    Event Name
-                                </label>
+                                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">Event Name</label>
                                 <div className="relative">
                                     <AlignLeft className="absolute left-3 top-3.5 w-4 h-4 text-[#8A817C]" />
                                     <input
@@ -382,11 +337,8 @@ export default withAuth(function EventsPage() {
                                 </div>
                             </div>
 
-                            {/* Description */}
                             <div>
-                                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                    Description
-                                </label>
+                                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">Description</label>
                                 <textarea
                                     value={eventForm.description}
                                     onChange={(e) => setEventForm((p) => ({ ...p, description: e.target.value }))}
@@ -396,16 +348,11 @@ export default withAuth(function EventsPage() {
                                 />
                             </div>
 
-                            {/* Dates */}
                             <div className="p-4 bg-[#F4F1EA]/20 border border-[#121212]/5 rounded-xl space-y-4">
-                                <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C]">
-                                    Timeline Manifest
-                                </div>
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C]">Timeline Manifest</div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
-                                            Event Date
-                                        </label>
+                                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">Event Date</label>
                                         <div className="relative">
                                             <Calendar className="absolute left-3 top-3 w-3.5 h-3.5 text-[#8A817C]" />
                                             <input
@@ -418,9 +365,7 @@ export default withAuth(function EventsPage() {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
-                                            End Date
-                                        </label>
+                                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">End Date</label>
                                         <div className="relative">
                                             <Calendar className="absolute left-3 top-3 w-3.5 h-3.5 text-[#8A817C]" />
                                             <input
@@ -435,7 +380,6 @@ export default withAuth(function EventsPage() {
                                 </div>
                             </div>
 
-                            {/* Online attendance */}
                             <label className="flex items-center space-x-3 cursor-pointer select-none">
                                 <button
                                     type="button"
@@ -446,12 +390,9 @@ export default withAuth(function EventsPage() {
                                         ? <ToggleRight className="w-6 h-6" />
                                         : <ToggleLeft className="w-6 h-6 text-[#8A817C]" />}
                                 </button>
-                                <span className="text-xs uppercase tracking-wider font-semibold text-[#121212]">
-                                    Online Attendance Enabled
-                                </span>
+                                <span className="text-xs uppercase tracking-wider font-semibold text-[#121212]">Online Attendance Enabled</span>
                             </label>
 
-                            {/* Recurrence */}
                             <div className="pt-2 border-t border-[#121212]/5 space-y-4">
                                 <label className="flex items-center space-x-3 cursor-pointer select-none">
                                     <input
@@ -460,67 +401,46 @@ export default withAuth(function EventsPage() {
                                         onChange={(e) => setEventForm((p) => ({ ...p, isRecurring: e.target.checked }))}
                                         className="w-4 h-4 rounded border-[#121212]/10 text-[#121212] focus:ring-0"
                                     />
-                                    <span className="text-xs uppercase tracking-wider font-semibold text-[#121212]">
-                                        Configure Recurrence
-                                    </span>
+                                    <span className="text-xs uppercase tracking-wider font-semibold text-[#121212]">Configure Recurrence</span>
                                 </label>
 
                                 {eventForm.isRecurring && (
                                     <div className="bg-[#F4F1EA]/50 p-4 border border-[#121212]/5 rounded-xl space-y-4">
                                         <div>
-                                            <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-2">
-                                                Pattern
-                                            </label>
+                                            <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-2">Pattern</label>
                                             <div className="grid grid-cols-3 gap-2">
                                                 {(["daily", "weekly", "monthly"] as const).map((pattern) => (
                                                     <button
                                                         key={pattern}
                                                         type="button"
-                                                        onClick={() => setEventForm((p) => ({
-                                                            ...p,
-                                                            recurrence: { ...p.recurrence, recurrencePattern: pattern },
-                                                        }))}
-                                                        className={`h-9 text-xs font-semibold uppercase tracking-wider transition-colors border rounded-md ${eventForm.recurrence.recurrencePattern === pattern
-                                                            ? "bg-[#121212] text-[#FFFFFF] border-[#121212]"
-                                                            : "bg-[#FFFFFF] text-[#8A817C] border-[#121212]/10 hover:text-[#121212]"
-                                                            }`}
+                                                        onClick={() => setEventForm((p) => ({ ...p, recurrence: { ...p.recurrence, recurrencePattern: pattern } }))}
+                                                        className={`h-9 text-xs font-semibold uppercase tracking-wider transition-colors border rounded-md ${eventForm.recurrence.recurrencePattern === pattern ? "bg-[#121212] text-[#FFFFFF] border-[#121212]" : "bg-[#FFFFFF] text-[#8A817C] border-[#121212]/10 hover:text-[#121212]"}`}
                                                     >
                                                         {pattern}
                                                     </button>
                                                 ))}
                                             </div>
                                         </div>
-
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
-                                                    Interval
-                                                </label>
+                                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">Interval</label>
                                                 <input
                                                     type="number"
                                                     min={1}
                                                     value={eventForm.recurrence.recurrenceInterval}
-                                                    onChange={(e) => setEventForm((p) => ({
-                                                        ...p,
-                                                        recurrence: { ...p.recurrence, recurrenceInterval: Number(e.target.value) },
-                                                    }))}
+                                                    onChange={(e) => setEventForm((p) => ({ ...p, recurrence: { ...p.recurrence, recurrenceInterval: Number(e.target.value) } }))}
                                                     className="w-full h-9 px-3 bg-[#FFFFFF] border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
-                                                    End Date
-                                                </label>
+                                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">End Date</label>
                                                 <div className="relative">
                                                     <Clock className="absolute left-3 top-2.5 w-3.5 h-3.5 text-[#8A817C]" />
                                                     <input
                                                         type="date"
                                                         required
                                                         value={eventForm.recurrence.recurrenceEndDate}
-                                                        onChange={(e) => setEventForm((p) => ({
-                                                            ...p,
-                                                            recurrence: { ...p.recurrence, recurrenceEndDate: e.target.value },
-                                                        }))}
+                                                        onChange={(e) => setEventForm((p) => ({ ...p, recurrence: { ...p.recurrence, recurrenceEndDate: e.target.value } }))}
                                                         className="w-full h-9 pl-9 pr-3 bg-[#FFFFFF] border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
                                                     />
                                                 </div>
@@ -530,26 +450,20 @@ export default withAuth(function EventsPage() {
                                 )}
                             </div>
 
-                            {/* Service slots */}
                             <div className="pt-2 border-t border-[#121212]/5 space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[11px] font-bold uppercase tracking-widest text-[#8A817C]">
-                                        Service Slots
-                                    </span>
+                                    <span className="text-[11px] font-bold uppercase tracking-widest text-[#8A817C]">Service Slots</span>
                                     <button
                                         type="button"
                                         onClick={addSlot}
                                         className="flex items-center space-x-1 px-3 py-1.5 border border-[#121212]/10 rounded-lg text-[10px] font-semibold uppercase tracking-wider text-[#121212] hover:bg-[#F4F1EA] transition-colors"
                                     >
-                                        <Plus className="w-3 h-3" />
-                                        <span>Add Slot</span>
+                                        <Plus className="w-3 h-3" /><span>Add Slot</span>
                                     </button>
                                 </div>
 
                                 {eventForm.serviceSlots.length === 0 && (
-                                    <p className="text-[10px] text-[#8A817C] font-mono">
-                                        No slots added. At least one service slot is required.
-                                    </p>
+                                    <p className="text-[10px] text-[#8A817C] font-mono">No slots added. At least one service slot is required.</p>
                                 )}
 
                                 {eventForm.serviceSlots.map((slot, i) => (
@@ -569,10 +483,7 @@ export default withAuth(function EventsPage() {
                                 {editingEventId && (
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            setEditingEventId(null);
-                                            setEventForm(defaultEventForm);
-                                        }}
+                                        onClick={() => { setEditingEventId(null); setEventForm(defaultEventForm); }}
                                         className="h-12 px-6 border border-[#121212]/10 text-xs font-semibold uppercase tracking-widest text-[#8A817C] hover:text-[#121212] transition-colors rounded-xl"
                                     >
                                         Cancel
@@ -584,19 +495,12 @@ export default withAuth(function EventsPage() {
                                     className="flex-1 h-12 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 rounded-xl"
                                 >
                                     <RefreshCw className={`w-3.5 h-3.5 ${isEventBusy ? "animate-spin" : ""}`} />
-                                    <span>
-                                        {isEventBusy
-                                            ? "Processing..."
-                                            : editingEventId
-                                                ? "Update Event"
-                                                : "Save Operational Event"}
-                                    </span>
+                                    <span>{isEventBusy ? "Processing..." : editingEventId ? "Update Event" : "Save Operational Event"}</span>
                                 </button>
                             </div>
                         </form>
                     </div>
 
-                    {/* Events table */}
                     <div className="lg:col-span-7 bg-[#FFFFFF] border border-[#121212]/10 p-8 rounded-xl flex flex-col">
                         <h2 className="text-sm font-semibold uppercase tracking-wider text-[#121212] mb-6 flex items-center space-x-2">
                             <Search className="w-4 h-4 text-[#8A817C]" />
@@ -606,11 +510,7 @@ export default withAuth(function EventsPage() {
                         {eventsLoading ? (
                             <div className="p-12 text-center text-xs text-[#8A817C]">Loading events...</div>
                         ) : events.length === 0 ? (
-                            <EmptyState
-                                icon={Calendar}
-                                title="No Operational Events Active"
-                                description="Schedule a new event using the form on the left."
-                            />
+                            <EmptyState icon={Calendar} title="No Operational Events Active" description="Schedule a new event using the form on the left." />
                         ) : (
                             <div className="border border-[#121212]/10 rounded-xl overflow-hidden">
                                 <div className="overflow-x-auto">
@@ -624,16 +524,14 @@ export default withAuth(function EventsPage() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-[#121212]/5 text-[#121212]">
-                                            {Array.isArray(events) && events?.map((event) => (
+                                            {events.map((event) => (
                                                 <tr key={event?.id} className="hover:bg-[#F4F1EA]/10 transition-colors">
                                                     <td className="p-4 align-top">
                                                         <div className="text-sm font-medium text-[#121212]">{event?.name}</div>
                                                         <div className="text-xs text-[#8A817C] font-light mt-0.5">{event?.description}</div>
                                                         <div className="flex flex-wrap gap-1 mt-2">
                                                             {event?.onlineAttendanceEnabled && (
-                                                                <span className="px-1.5 py-0.5 bg-blue-50 border border-blue-100 text-blue-600 text-[9px] font-bold uppercase tracking-wider rounded">
-                                                                    Online
-                                                                </span>
+                                                                <span className="px-1.5 py-0.5 bg-blue-50 border border-blue-100 text-blue-600 text-[9px] font-bold uppercase tracking-wider rounded">Online</span>
                                                             )}
                                                             {event?.isRecurring && (
                                                                 <span className="px-1.5 py-0.5 bg-[#EADCC9] text-[#121212] text-[9px] font-bold uppercase tracking-wider rounded">
@@ -658,19 +556,10 @@ export default withAuth(function EventsPage() {
                                                     </td>
                                                     <td className="p-4 align-top text-right">
                                                         <div className="flex items-center justify-end space-x-1">
-                                                            <button
-                                                                onClick={() => startEditEvent(event)}
-                                                                className="p-2 text-[#8A817C] hover:text-[#121212] rounded-lg hover:bg-[#F4F1EA] border border-transparent transition-colors"
-                                                                title="Edit"
-                                                            >
+                                                            <button onClick={() => startEditEvent(event)} className="p-2 text-[#8A817C] hover:text-[#121212] rounded-lg hover:bg-[#F4F1EA] border border-transparent transition-colors" title="Edit">
                                                                 <Pencil className="w-3.5 h-3.5" />
                                                             </button>
-                                                            <button
-                                                                onClick={() => deleteEvent(event?.id)}
-                                                                disabled={isEventBusy}
-                                                                className="p-2 text-[#8A817C] hover:text-red-600 rounded-lg hover:bg-red-50 border border-transparent hover:border-red-100 transition-colors disabled:opacity-50"
-                                                                title="Delete"
-                                                            >
+                                                            <button onClick={() => deleteEvent(event?.id)} disabled={isEventBusy} className="p-2 text-[#8A817C] hover:text-red-600 rounded-lg hover:bg-red-50 border border-transparent hover:border-red-100 transition-colors disabled:opacity-50" title="Delete">
                                                                 <Trash2 className="w-3.5 h-3.5" />
                                                             </button>
                                                         </div>
@@ -686,10 +575,9 @@ export default withAuth(function EventsPage() {
                 </div>
             )}
 
-            {/* ── CONFIGS TAB ────────────────────────────────────────────────────── */}
+            {/* ── CONFIGS TAB ──────────────────────────────────────────────── */}
             {activeTab === "configs" && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                    {/* Config form */}
                     <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#121212]/10 p-8 rounded-xl">
                         <h2 className="text-sm font-semibold uppercase tracking-wider text-[#121212] mb-6 flex items-center space-x-2">
                             <Plus className="w-4 h-4 text-[#8A817C]" />
@@ -698,9 +586,7 @@ export default withAuth(function EventsPage() {
 
                         <form onSubmit={handleConfigSubmit} className="space-y-5">
                             <div>
-                                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                    Config Name
-                                </label>
+                                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">Config Name</label>
                                 <input
                                     type="text"
                                     required
@@ -712,9 +598,7 @@ export default withAuth(function EventsPage() {
                             </div>
 
                             <div>
-                                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                    Description
-                                </label>
+                                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">Description</label>
                                 <textarea
                                     value={configForm.description}
                                     onChange={(e) => setConfigForm((p) => ({ ...p, description: e.target.value }))}
@@ -725,9 +609,7 @@ export default withAuth(function EventsPage() {
                             </div>
 
                             <div>
-                                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                    Default Venue
-                                </label>
+                                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">Default Venue</label>
                                 <div className="relative">
                                     <MapPin className="absolute left-3 top-3.5 w-4 h-4 text-[#8A817C]" />
                                     <select
@@ -737,55 +619,27 @@ export default withAuth(function EventsPage() {
                                         className="w-full h-11 pl-10 pr-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
                                     >
                                         <option value="">-- Select a venue --</option>
-                                        {venues.map((v) => (
-                                            <option key={v.id} value={v.id}>{v.name}</option>
-                                        ))}
+                                        {venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
                                     </select>
                                 </div>
                             </div>
 
-                            {/* Offset fields */}
                             <div className="p-4 bg-[#F4F1EA]/20 border border-[#121212]/5 rounded-xl space-y-4">
-                                <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C]">
-                                    Check-in Offset Parameters (seconds)
-                                </div>
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C]">Check-in Offset Parameters (seconds)</div>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <OffsetInput
-                                        label="Worker Start Offset"
-                                        value={configForm.workerCheckinStartOffsetSeconds}
-                                        onChange={(v) => setConfigForm((p) => ({ ...p, workerCheckinStartOffsetSeconds: v }))}
-                                    />
-                                    <OffsetInput
-                                        label="Worker Late Offset"
-                                        value={configForm.workerLateOffsetSeconds}
-                                        onChange={(v) => setConfigForm((p) => ({ ...p, workerLateOffsetSeconds: v }))}
-                                    />
-                                    <OffsetInput
-                                        label="Member Start Offset"
-                                        value={configForm.memberCheckinStartOffsetSeconds}
-                                        onChange={(v) => setConfigForm((p) => ({ ...p, memberCheckinStartOffsetSeconds: v }))}
-                                    />
-                                    <OffsetInput
-                                        label="Checkin Stop Offset"
-                                        value={configForm.checkinStopOffsetSeconds}
-                                        onChange={(v) => setConfigForm((p) => ({ ...p, checkinStopOffsetSeconds: v }))}
-                                    />
+                                    <OffsetInput label="Worker Start Offset" value={configForm.workerCheckinStartOffsetSeconds} onChange={(v) => setConfigForm((p) => ({ ...p, workerCheckinStartOffsetSeconds: v }))} />
+                                    <OffsetInput label="Worker Late Offset" value={configForm.workerLateOffsetSeconds} onChange={(v) => setConfigForm((p) => ({ ...p, workerLateOffsetSeconds: v }))} />
+                                    <OffsetInput label="Member Start Offset" value={configForm.memberCheckinStartOffsetSeconds} onChange={(v) => setConfigForm((p) => ({ ...p, memberCheckinStartOffsetSeconds: v }))} />
+                                    <OffsetInput label="Checkin Stop Offset" value={configForm.checkinStopOffsetSeconds} onChange={(v) => setConfigForm((p) => ({ ...p, checkinStopOffsetSeconds: v }))} />
                                 </div>
-                                <OffsetInput
-                                    label="Allowed Distance (meters)"
-                                    value={configForm.allowedDistanceInMeters}
-                                    onChange={(v) => setConfigForm((p) => ({ ...p, allowedDistanceInMeters: v }))}
-                                />
+                                <OffsetInput label="Allowed Distance (meters)" value={configForm.allowedDistanceInMeters} onChange={(v) => setConfigForm((p) => ({ ...p, allowedDistanceInMeters: v }))} />
                             </div>
 
                             <div className="flex gap-3 mt-6">
                                 {editingConfigId && (
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            setEditingConfigId(null);
-                                            setConfigForm(defaultConfigForm);
-                                        }}
+                                        onClick={() => { setEditingConfigId(null); setConfigForm(defaultConfigForm); }}
                                         className="h-12 px-6 border border-[#121212]/10 text-xs font-semibold uppercase tracking-widest text-[#8A817C] hover:text-[#121212] transition-colors rounded-xl"
                                     >
                                         Cancel
@@ -803,7 +657,6 @@ export default withAuth(function EventsPage() {
                         </form>
                     </div>
 
-                    {/* Configs table */}
                     <div className="lg:col-span-7 bg-[#FFFFFF] border border-[#121212]/10 p-8 rounded-xl flex flex-col">
                         <h2 className="text-sm font-semibold uppercase tracking-wider text-[#121212] mb-6 flex items-center space-x-2">
                             <Search className="w-4 h-4 text-[#8A817C]" />
@@ -813,11 +666,7 @@ export default withAuth(function EventsPage() {
                         {configsLoading ? (
                             <div className="p-12 text-center text-xs text-[#8A817C]">Loading configs...</div>
                         ) : eventConfigs.length === 0 ? (
-                            <EmptyState
-                                icon={Sliders}
-                                title="No Presets Configured"
-                                description="Create high-level config components to accelerate event creation sequences."
-                            />
+                            <EmptyState icon={Sliders} title="No Presets Configured" description="Create high-level config components to accelerate event creation sequences." />
                         ) : (
                             <div className="border border-[#121212]/10 rounded-xl overflow-hidden">
                                 <div className="overflow-x-auto">
@@ -830,13 +679,13 @@ export default withAuth(function EventsPage() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-[#121212]/5 text-[#121212]">
-                                            {Array.isArray(eventConfigs) && eventConfigs.map((config) => {
-                                                const venue = venues.find((v) => v.id === config.defaultVenueId);
+                                            {eventConfigs.map((config) => {
+                                                const venue = venues.find((v) => v.id === config?.defaultVenueId);
                                                 return (
                                                     <tr key={config.id} className="hover:bg-[#F4F1EA]/10 transition-colors">
                                                         <td className="p-4 align-top">
-                                                            <div className="text-sm font-medium text-[#121212]">{config.name}</div>
-                                                            <div className="text-xs text-[#8A817C] font-light mt-0.5">{config.description}</div>
+                                                            <div className="text-sm font-medium text-[#121212]">{config?.name}</div>
+                                                            <div className="text-xs text-[#8A817C] font-light mt-0.5">{config?.description}</div>
                                                             {venue && (
                                                                 <div className="text-xs text-[#8A817C] font-light mt-1 flex items-center space-x-1">
                                                                     <MapPin className="w-3 h-3 shrink-0" />
@@ -856,19 +705,10 @@ export default withAuth(function EventsPage() {
                                                         </td>
                                                         <td className="p-4 align-top text-right">
                                                             <div className="flex items-center justify-end space-x-1">
-                                                                <button
-                                                                    onClick={() => startEditConfig(config)}
-                                                                    className="p-2 text-[#8A817C] hover:text-[#121212] rounded-lg hover:bg-[#F4F1EA] border border-transparent transition-colors"
-                                                                    title="Edit"
-                                                                >
+                                                                <button onClick={() => startEditConfig(config)} className="p-2 text-[#8A817C] hover:text-[#121212] rounded-lg hover:bg-[#F4F1EA] border border-transparent transition-colors" title="Edit">
                                                                     <Pencil className="w-3.5 h-3.5" />
                                                                 </button>
-                                                                <button
-                                                                    onClick={() => deleteEventConfig(config.id)}
-                                                                    disabled={isConfigBusy}
-                                                                    className="p-2 text-[#8A817C] hover:text-red-600 rounded-lg hover:bg-red-50 border border-transparent hover:border-red-100 transition-colors disabled:opacity-50"
-                                                                    title="Delete"
-                                                                >
+                                                                <button onClick={() => deleteEventConfig(config.id)} disabled={isConfigBusy} className="p-2 text-[#8A817C] hover:text-red-600 rounded-lg hover:bg-red-50 border border-transparent hover:border-red-100 transition-colors disabled:opacity-50" title="Delete">
                                                                     <Trash2 className="w-3.5 h-3.5" />
                                                                 </button>
                                                             </div>
