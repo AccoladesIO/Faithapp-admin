@@ -2,6 +2,7 @@ import { Plus_Jakarta_Sans, Outfit, Sacramento, Tangerine } from "next/font/goog
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/context/auth-context";
+import { ToastProvider } from "@/context/toast-context";
 
 export const metadata: Metadata = {
   title: "Faith App by RCCGDC",
@@ -59,7 +60,9 @@ export default function RootLayout({
       className={`${headingFont.variable} ${bodyFont.variable} ${scriptFont.variable} ${logoFont.variable} h-full antialiased`}
     >
       <body className="min-h-full font-body bg-slate-50 text-slate-900 w-full mx-auto">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );

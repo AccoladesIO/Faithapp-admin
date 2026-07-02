@@ -45,6 +45,18 @@ export class VerifyUser {
         return { requiresPasswordChange: !!payload.requires_password_change };
     }
 
+    async forgotPassword(email: string): Promise<void> {
+        await api.post("/auth/forgot-password", { email }, { _skipAuth: true } as any);
+    }
+
+    async resetPassword(email: string, otp: string, newPassword: string): Promise<void> {
+        await api.post("/auth/reset-password", { email, otp, newPassword }, { _skipAuth: true } as any);
+    }
+
+    async changePassword(oldPassword: string, newPassword: string, confirmPassword: string): Promise<void> {
+        await api.post("/auth/change-password", { oldPassword, newPassword, confirmPassword });
+    }
+
     async logout(): Promise<void> {
         const current = tokenStore.get();
         if (!current?.accessToken) {

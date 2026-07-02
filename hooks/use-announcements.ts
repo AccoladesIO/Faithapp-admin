@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
-export type AnnouncementAudience = "ALL" | "DEPARTMENT" | "INDIVIDUAL";
+export type AnnouncementAudience = "ALL" | "WORKERS_ONLY" | "MEMBERS_ONLY" | "DEPARTMENT" | "INDIVIDUAL";
 
 export interface AnnouncementAuthor {
     id: string;
@@ -56,46 +56,67 @@ export interface CreateAnnouncementPayload {
 
 export type UpdateAnnouncementPayload = Partial<Omit<CreateAnnouncementPayload, "audience" | "departmentId" | "targetMemberId">>;
 
+export interface AnnouncementFilters {
+    search?: string;
+    audience?: AnnouncementAudience;
+}
+
 export function useAnnouncements(defaultLimit = 10) {
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [pagination, setPagination] = useState<AnnouncementPagination | null>(null);
     const [page, setPage] = useState(1);
+    const [filters, setFilters] = useState<AnnouncementFilters>({});
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchAnnouncements = useCallback(async (targetPage = 1) => {
-        setIsLoading(true);
-        setAnnouncements([]);
-        setError(null);
-        try {
-            const res = await api.get(
-                `/announcements/all?page=${targetPage}&limit=${defaultLimit}`
-            );
-            const outer = res.data?.data;
-            const list: Announcement[] = Array.isArray(outer?.data) ? outer.data : [];
-            setAnnouncements(list);
-            setPage(targetPage);
-            setPagination({
-                page: outer?.page ?? targetPage,
-                limit: outer?.limit ?? defaultLimit,
-                totalCount: outer?.totalCount ?? list.length,
-                totalPages: outer?.totalPages ?? 1,
-            });
-        } catch (err: any) {
-            setError(
-                err?.response?.data?.message ||
-                err?.message ||
-                "Failed to fetch announcements."
-            );
-        } finally {
-            setIsLoading(false);
-        }
-    }, [defaultLimit]);
+    const fetchAnnouncements = useCallback(
+        async (targetPage = 1, activeFilters: AnnouncementFilters = {}) => {
+            setIsLoading(true);
+            setAnnouncements([]);
+            setError(null);
+            try {
+                const params = new URLSearchParams({ page: String(targetPage), limit: String(defaultLimit) });
+                if (activeFilters.search?.trim()) params.set("search", activeFilters.search.trim());
+                if (activeFilters.audience) params.set("audience", activeFilters.audience);
+                const res = await api.get(`/announcements/all?${params}`);
+                const outer = res.data?.data;
+                const list: Announcement[] = Array.isArray(outer?.data) ? outer.data : [];
+                setAnnouncements(list);
+                setPage(targetPage);
+                setPagination({
+                    page: outer?.page ?? targetPage,
+                    limit: outer?.limit ?? defaultLimit,
+                    totalCount: outer?.totalCount ?? list.length,
+                    totalPages: outer?.totalPages ?? 1,
+                });
+            } catch (err: any) {
+                setError(
+                    err?.response?.data?.message ||
+                    err?.message ||
+                    "Failed to fetch announcements."
+                );
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        [defaultLimit]
+    );
 
-    const goToPage = useCallback((targetPage: number) => {
-        fetchAnnouncements(targetPage);
-    }, [fetchAnnouncements]);
+    const applyFilters = useCallback(
+        (newFilters: AnnouncementFilters) => {
+            setFilters(newFilters);
+            fetchAnnouncements(1, newFilters);
+        },
+        [fetchAnnouncements]
+    );
+
+    const goToPage = useCallback(
+        (targetPage: number) => {
+            fetchAnnouncements(targetPage, filters);
+        },
+        [fetchAnnouncements, filters]
+    );
 
     const createAnnouncement = useCallback(async (
         payload: CreateAnnouncementPayload
@@ -172,11 +193,13 @@ export function useAnnouncements(defaultLimit = 10) {
         announcements,
         pagination,
         page,
+        filters,
         isLoading,
         isSubmitting,
         error,
+        applyFilters,
         goToPage,
-        refetch: () => fetchAnnouncements(page),
+        refetch: () => fetchAnnouncements(page, filters),
         createAnnouncement,
         updateAnnouncement,
         deleteAnnouncement,

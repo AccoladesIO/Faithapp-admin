@@ -16,6 +16,7 @@ import {
 } from "@/hooks/use-departments";
 import { useMembers } from "@/hooks/use-member";
 import Error from "@/components/layout/error";
+import { TableEmptyState } from "@/components/ui/table-empty-state";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -42,6 +43,13 @@ function SkeletonRow({ cols }: { cols: number }) {
 // ─── Default forms ────────────────────────────────────────────────────────────
 
 const defaultCreateForm = { name: "", description: "", key: "" };
+
+function isWorkerInDept(m: { role: string; workerProfile: any }, deptId: string): boolean {
+    if (m.role !== "WORKER") return false;
+    const primary = m.workerProfile?.department?.id;
+    const secondary = m.workerProfile?.secondaryDepartment?.id;
+    return primary === deptId || secondary === deptId;
+}
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
@@ -76,6 +84,7 @@ export default withAuth(function DepartmentsPage() {
     const itemsPerPage = 8;
 
     // ── Create form ───────────────────────────────────────────────────────────
+    const [showCreateForm, setShowCreateForm] = useState(false);
     const [createForm, setCreateForm] = useState(defaultCreateForm);
 
     // ── Edit state ────────────────────────────────────────────────────────────
@@ -159,6 +168,7 @@ export default withAuth(function DepartmentsPage() {
     // ── Select department ─────────────────────────────────────────────────────
     const selectDept = useCallback((dept: Department) => {
         setSelectedDept(dept);
+        setShowCreateForm(false);
         setPanelTab("details");
         setLeadSuccess(null);
         setLeadError(null);
@@ -174,9 +184,12 @@ export default withAuth(function DepartmentsPage() {
         setCreateError(null);
         setCreateSuccess(null);
         try {
-            await createDepartment(createForm);
+            const created = await createDepartment(createForm);
             setCreateForm(defaultCreateForm);
+            setSelectedDept(created);
+            setShowCreateForm(false);
             setCreateSuccess("Department created successfully.");
+            selectDept(created);
             setTimeout(() => setCreateSuccess(null), 3000);
         } catch (err: any) {
             setCreateError(err?.message ?? "Failed to create department.");
@@ -246,11 +259,29 @@ export default withAuth(function DepartmentsPage() {
         }
     };
 
-    // ── Workers from members (role === WORKER) ────────────────────────────────
-    const workerMembers = useMemo(
-        () => members.filter((m) => m.role === "WORKER"),
-        [members]
-    );
+    // ── Workers eligible for lead assignment in the selected department ───────
+    const workerMembers = useMemo(() => {
+        const deptId = selectedDept?.id;
+        return deptId ? members.filter((m) => isWorkerInDept(m, deptId)) : [];
+    }, [members, selectedDept]);
+
+    const openCreateForm = () => {
+        setShowCreateForm(true);
+        setSelectedDept(null);
+        setCreateError(null);
+        setCreateSuccess(null);
+        setEditingId(null);
+        setDeletingId(null);
+    };
+
+    const closePanel = () => {
+        setShowCreateForm(false);
+        setSelectedDept(null);
+        setEditingId(null);
+        setDeletingId(null);
+    };
+
+    const panelOpen = showCreateForm || selectedDept !== null;
 
     return (
         <div className="space-y-10 font-sans">
@@ -259,20 +290,31 @@ export default withAuth(function DepartmentsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-light tracking-tight text-[#121212]">
-                        Structural Department Directories
+                        Ministry Departments
                     </h1>
                     <p className="text-xs uppercase tracking-widest font-semibold text-[#8A817C] mt-1">
-                        Configure operations teams, assign leads, and manage workforce deployments
+                        Create and manage ministry departments, assign leadership, and view team members
                     </p>
                 </div>
-                <button
-                    onClick={fetchDepartments}
-                    disabled={isLoading}
-                    className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40 self-start sm:self-auto"
-                    title="Refresh"
-                >
-                    <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-                </button>
+                <div className="flex items-center gap-3">
+                    <span className="text-xs font-mono text-[#8A817C]">{departments.length} department{departments.length !== 1 ? "s" : ""}</span>
+                    <button
+                        type="button"
+                        onClick={openCreateForm}
+                        className="flex items-center gap-1.5 h-9 px-4 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        New Department
+                    </button>
+                    <button
+                        onClick={fetchDepartments}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
+                </div>
             </div>
 
             {/* Global error */}
@@ -294,87 +336,10 @@ export default withAuth(function DepartmentsPage() {
                 </div>
             </div>
 
-            {/* Create + Table */}
+            {/* List + contextual panel */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-
-                {/* Create form */}
-                <div className="lg:col-span-4 bg-[#FFFFFF] border border-[#121212]/10 p-6 rounded-xl">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-[#121212] mb-6 flex items-center space-x-2">
-                        <Plus className="w-4 h-4 text-[#8A817C]" />
-                        <span>Create Department</span>
-                    </h2>
-
-                    {createSuccess && (
-                        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-100 rounded-lg text-xs text-green-700 mb-4">
-                            <CheckCircle2 className="w-4 h-4 shrink-0" />
-                            {createSuccess}
-                        </div>
-                    )}
-                    {createError && (
-                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700 mb-4">
-                            <ShieldAlert className="w-4 h-4 shrink-0" />
-                            {createError}
-                        </div>
-                    )}
-
-                    <form onSubmit={handleCreate} className="space-y-5">
-                        <div>
-                            <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                Department Name
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                value={createForm.name}
-                                onChange={(e) => setCreateForm((p) => ({ ...p, name: e.target.value }))}
-                                placeholder="e.g., Technical Media"
-                                className="w-full h-11 px-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                Description
-                            </label>
-                            <textarea
-                                rows={3}
-                                value={createForm.description}
-                                onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
-                                placeholder="Detail core operational responsibilities..."
-                                className="w-full p-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg resize-none"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                Department Key
-                            </label>
-                            <select
-                                required
-                                value={createForm.key}
-                                onChange={(e) => setCreateForm((p) => ({ ...p, key: e.target.value }))}
-                                className="w-full h-11 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
-                            >
-                                <option value="">-- Select a key --</option>
-                                {departmentKeys.map((k) => (
-                                    <option key={k} value={k}>{formatKey(k)}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="w-full h-12 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 rounded-xl"
-                        >
-                            <RefreshCw className={`w-3.5 h-3.5 ${isSubmitting ? "animate-spin" : "hidden"}`} />
-                            <span>{isSubmitting ? "Creating..." : "Initialize Department"}</span>
-                        </button>
-                    </form>
-                </div>
-
                 {/* Table */}
-                <div className="lg:col-span-8 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col">
+                <div className={`${panelOpen ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col transition-all`}>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -412,8 +377,19 @@ export default withAuth(function DepartmentsPage() {
                                     ))
                                 ) : paginated.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="p-12 text-center text-xs text-[#8A817C] font-light">
-                                            No departments found.
+                                        <td colSpan={4} className="p-12 text-center">
+                                            <TableEmptyState
+                                                title={
+                                                    searchQuery.trim()
+                                                        ? "No departments match the current search."
+                                                        : "No departments yet."
+                                                }
+                                                action={
+                                                    !searchQuery.trim()
+                                                        ? { label: "Add Department", onClick: () => setShowCreateForm(true) }
+                                                        : undefined
+                                                }
+                                            />
                                         </td>
                                     </tr>
                                 ) : (
@@ -564,14 +540,99 @@ export default withAuth(function DepartmentsPage() {
                         </div>
                     )}
                 </div>
-            </div>
 
-            {/* Detail panel */}
-            {selectedDept && (
-                <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl relative">
+                {/* Create panel */}
+                {showCreateForm && (
+                    <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl relative overflow-hidden">
+                        <button
+                            type="button"
+                            onClick={closePanel}
+                            className="absolute top-4 right-4 p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/20 rounded-md z-10 transition-colors"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+
+                        <div className="p-6">
+                            <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1">New Department</div>
+                            <h2 className="text-lg font-light tracking-tight text-[#121212] mb-6 pr-8">Create Department</h2>
+
+                            {createSuccess && (
+                                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-100 rounded-lg text-xs text-green-700 mb-4">
+                                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                                    {createSuccess}
+                                </div>
+                            )}
+                            {createError && (
+                                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700 mb-4">
+                                    <ShieldAlert className="w-4 h-4 shrink-0" />
+                                    {createError}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleCreate} className="space-y-5">
+                                <div>
+                                    <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
+                                        Department Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={createForm.name}
+                                        onChange={(e) => setCreateForm((p) => ({ ...p, name: e.target.value }))}
+                                        placeholder="e.g., Technical Media"
+                                        className="w-full h-11 px-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
+                                        Description
+                                    </label>
+                                    <textarea
+                                        rows={3}
+                                        value={createForm.description}
+                                        onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
+                                        placeholder="Detail core operational responsibilities..."
+                                        className="w-full p-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg resize-none"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
+                                        Department Key
+                                    </label>
+                                    <select
+                                        required
+                                        value={createForm.key}
+                                        onChange={(e) => setCreateForm((p) => ({ ...p, key: e.target.value }))}
+                                        className="w-full h-11 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
+                                    >
+                                        <option value="">-- Select a key --</option>
+                                        {departmentKeys.map((k) => (
+                                            <option key={k} value={k}>{formatKey(k)}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="w-full h-12 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 rounded-xl"
+                                >
+                                    <RefreshCw className={`w-3.5 h-3.5 ${isSubmitting ? "animate-spin" : "hidden"}`} />
+                                    <span>{isSubmitting ? "Creating..." : "Create Department"}</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Detail panel */}
+                {selectedDept && (
+                <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl relative overflow-hidden">
                     <button
-                        onClick={() => setSelectedDept(null)}
-                        className="absolute top-6 right-6 p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/10 rounded-md z-10"
+                        onClick={closePanel}
+                        className="absolute top-4 right-4 p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/20 rounded-md z-10 transition-colors"
                     >
                         <X className="w-4 h-4" />
                     </button>
@@ -612,10 +673,10 @@ export default withAuth(function DepartmentsPage() {
 
                     {/* Details tab */}
                     {panelTab === "details" && (
-                        <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        <div className="p-6 space-y-6">
 
                             {/* Left — info + leads */}
-                            <div className="lg:col-span-7 space-y-6">
+                            <div className="space-y-6">
                                 {selectedDept.description && (
                                     <p className="text-xs text-[#121212]/80 font-light leading-relaxed bg-[#F4F1EA]/30 p-4 border border-[#121212]/5 rounded-lg">
                                         {selectedDept.description}
@@ -677,7 +738,7 @@ export default withAuth(function DepartmentsPage() {
                             </div>
 
                             {/* Right — assign lead */}
-                            <div className="lg:col-span-5 bg-[#F4F1EA]/20 border border-[#121212]/10 p-6 rounded-xl space-y-5">
+                            <div className="bg-[#F4F1EA]/20 border border-[#121212]/10 p-6 rounded-xl space-y-5">
                                 <h3 className="text-xs font-bold uppercase tracking-wider text-[#121212] flex items-center space-x-2">
                                     <UserPlus className="w-4 h-4 text-[#8A817C]" />
                                     <span>Assign Lead</span>
@@ -729,14 +790,16 @@ export default withAuth(function DepartmentsPage() {
                                             className="w-full h-10 px-3 bg-white border border-[#121212]/10 text-xs text-[#121212] focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
                                         >
                                             <option value="">-- Select worker --</option>
-                                            {workerMembers.map((m) => (
-                                                <option key={m.id} value={m.workerProfile?.id ?? m.id}>
+                                            {workerMembers.length === 0 ? (
+                                                <option value="" disabled>No workers in this department</option>
+                                            ) : workerMembers.map((m) => (
+                                                <option key={m.id} value={m.id}>
                                                     {[m.firstname, m.lastname].filter(Boolean).join(" ")} — {m.email}
                                                 </option>
                                             ))}
                                         </select>
                                         <p className="text-[10px] text-[#8A817C] mt-1 font-mono">
-                                            Only promoted workers appear here.
+                                            Only workers in this department appear here.
                                         </p>
                                     </div>
 
@@ -839,5 +902,6 @@ export default withAuth(function DepartmentsPage() {
                 </div>
             )}
         </div>
+        </div>
     );
-});
+}, { requiredPermission: 'departments:read' });

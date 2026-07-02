@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/utils/auth/axios-client";
 
 export interface WorkerProfile {
@@ -15,7 +15,7 @@ export interface Member {
     email: string;
     phoneNumber: string | null;
     changedPassword: boolean;
-    role: "MEMBER" | "WORKER" | "ADMIN";
+    role: "MEMBER" | "WORKER";
     status: "ACTIVE" | "INACTIVE";
     gender: string | null;
     birthDay: number | null;
@@ -43,21 +43,43 @@ export interface PromoteToWorkerPayload {
     profession: string;
     yearJoinedWorkforce: string;
 }
-export function useMembers(defaultLimit = 10) {
+
+export interface BulkPromotePayload {
+    memberIds: string[];
+    departmentId: string;
+    profession?: string;
+    yearJoinedWorkforce?: string;
+}
+
+export interface BulkPromoteFailure {
+    memberId: string;
+    reason: string;
+}
+
+export interface BulkPromoteResult {
+    promoted: number;
+    skipped: number;
+    failures: BulkPromoteFailure[];
+}
+export function useMembers(defaultLimit = 10, roleFilter?: "MEMBER" | "WORKER") {
     const [members, setMembers] = useState<Member[]>([]);
     const [pagination, setPagination] = useState<MemberPagination | null>(null);
     const [page, setPage] = useState(1);
+    const [search, setSearch] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const fetchMembers = useCallback(async (targetPage = 1) => {
+    const fetchMembers = useCallback(async (targetPage = 1, searchTerm = "") => {
         setIsLoading(true);
-        setMembers([]); // clear so skeleton shows
+        setMembers([]);
         setError(null);
         try {
+            const roleParam = roleFilter ? `&role=${roleFilter}` : "";
+            const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : "";
             const res = await api.get(
-                `/members?page=${targetPage}&limit=${defaultLimit}`
+                `/members?page=${targetPage}&limit=${defaultLimit}${roleParam}${searchParam}`
             );
             const outer = res.data?.data;
             const list: Member[] = Array.isArray(outer?.data) ? outer.data : [];
@@ -78,10 +100,18 @@ export function useMembers(defaultLimit = 10) {
         } finally {
             setIsLoading(false);
         }
-    }, [defaultLimit]);
+    }, [defaultLimit, roleFilter]);
 
     const goToPage = useCallback((targetPage: number) => {
-        fetchMembers(targetPage);
+        fetchMembers(targetPage, search);
+    }, [fetchMembers, search]);
+
+    const onSearchChange = useCallback((value: string) => {
+        setSearch(value);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+            fetchMembers(1, value);
+        }, 400);
     }, [fetchMembers]);
 
     const promoteToWorker = useCallback(async (
@@ -134,6 +164,26 @@ export function useMembers(defaultLimit = 10) {
         }
     }, []);
 
+    const bulkPromote = useCallback(async (
+        payload: BulkPromotePayload
+    ): Promise<BulkPromoteResult> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            const res = await api.post("/members/bulk-promote", payload);
+            return res.data?.data as BulkPromoteResult;
+        } catch (err: any) {
+            const message =
+                err?.response?.data?.message ||
+                err?.message ||
+                "Failed to bulk promote members.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
     const resetPassword = useCallback(async (memberId: string): Promise<void> => {
         setIsSubmitting(true);
         setError(null);
@@ -159,12 +209,15 @@ export function useMembers(defaultLimit = 10) {
         members,
         pagination,
         page,
+        search,
+        onSearchChange,
         isLoading,
         isSubmitting,
         error,
         goToPage,
-        refetch: () => fetchMembers(page),
+        refetch: () => fetchMembers(page, search),
         promoteToWorker,
+        bulkPromote,
         changeStatus,
         resetPassword,
     };

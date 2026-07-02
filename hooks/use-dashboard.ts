@@ -63,6 +63,41 @@ export interface WeeklyRegistrationTrend {
     newWorkers: number;
 }
 
+export interface WeeklyAttendanceTrend {
+    week: string;
+    present: number;
+    absent: number;
+}
+
+export interface DepartmentAttendanceSummary {
+    departmentId: string;
+    departmentName: string;
+    totalWorkers: number;
+    attendedWorkers: number;
+    attendancePercentage: number;
+}
+
+export interface TopAbsentWorker {
+    id: string;
+    name: string;
+    department: string | null;
+    absentCount: number;
+}
+
+export interface ClassEnrollmentBreakdown {
+    classId: string;
+    className: string;
+    inProgress: number;
+    completed: number;
+    cancelled: number;
+    completionRate: number;
+}
+
+export interface ClassCompletionsTrend {
+    week: string;
+    completions: number;
+}
+
 export interface DashboardData {
     totalMembers: number;
     totalWorkers: number;
@@ -70,16 +105,16 @@ export interface DashboardData {
     totalCheckInsToday: number;
     workerAttendancePercentage: number;
     congregationAttendancePercentage: number;
-    weeklyAttendanceTrend: any[];
+    weeklyAttendanceTrend: WeeklyAttendanceTrend[];
     newMemberRegistrationsTrend: WeeklyRegistrationTrend[];
-    departmentAttendanceSummary: any[];
-    topAbsentWorkers: any[];
+    departmentAttendanceSummary: DepartmentAttendanceSummary[];
+    topAbsentWorkers: TopAbsentWorker[];
     membersNotSeenRecently: MemberNotSeen[];
     upcomingEvents: UpcomingEvent[];
     totalPendingLeaveRequests: number;
     totalActiveEnrollments: number;
-    classEnrollmentBreakdown: any[];
-    classCompletionsTrend: any[];
+    classEnrollmentBreakdown: ClassEnrollmentBreakdown[];
+    classCompletionsTrend: ClassCompletionsTrend[];
 }
 
 export function useDashboard(daysAgo: number = 30) {

@@ -2,14 +2,18 @@
 
 import React, { useState, useMemo } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
+import { useRouter } from "next/navigation";
 import {
-    Users, Search, SlidersHorizontal, ChevronLeft, ChevronRight,
+    Search, SlidersHorizontal,
     ArrowUpDown, Eye, X, RefreshCw, ShieldAlert, CheckCircle2,
     Briefcase, GraduationCap, UserMinus, Pencil, Phone, Mail,
-    Calendar, Check,
+    Calendar, Check, Building2,
 } from "lucide-react";
 import { useWorkers, Worker, UpdateWorkerProfilePayload } from "@/hooks/use-workers";
 import { useDepartments } from "@/hooks/use-departments";
+import { PaginationBar } from "@/components/ui/pagination-bar";
+import { TableEmptyState } from "@/components/ui/table-empty-state";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -157,7 +161,7 @@ function ProfileEditForm({
             : "",
         completedSOD: worker.workerProfile?.completedSOD ?? false,
         completedBibleCollege: worker.workerProfile?.completedBibleCollege ?? false,
-        secondaryDepartmentId: (worker.workerProfile?.secondaryDepartment as any)?.id ?? "",
+        secondaryDepartmentId: (worker.workerProfile?.secondaryDepartment as any)?.id ?? null,
     });
 
     return (
@@ -312,6 +316,7 @@ const STATUS_OPTIONS = ["ALL", "ACTIVE", "INACTIVE", "SUSPENDED", "ON_LEAVE"] as
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default withAuth(function WorkersPage() {
+    const router = useRouter();
     const {
         workers,
         pagination,
@@ -418,10 +423,10 @@ export default withAuth(function WorkersPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-light tracking-tight text-[#121212]">
-                        Personnel & Workers Ledger
+                        Ministry Workers
                     </h1>
                     <p className="text-xs uppercase tracking-widest font-semibold text-[#8A817C] mt-1">
-                        Monitor structural deployments, access indices, and worker qualification tracks
+                        View worker roles, department assignments, and training progress
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -430,6 +435,13 @@ export default withAuth(function WorkersPage() {
                             {pagination.totalCount} workers
                         </span>
                     )}
+                    <button
+                        onClick={() => router.push("/workers/bulk-department")}
+                        className="flex items-center gap-1.5 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors"
+                    >
+                        <Building2 className="w-3.5 h-3.5" />
+                        Bulk Assign
+                    </button>
                     <button
                         onClick={refetch}
                         disabled={isLoading}
@@ -441,13 +453,7 @@ export default withAuth(function WorkersPage() {
                 </div>
             </div>
 
-            {/* Global error */}
-            {error && (
-                <div className="bg-red-50 border border-red-200 p-4 rounded-lg text-xs text-red-700">
-                    <strong className="block font-semibold uppercase tracking-wider text-[11px] mb-1">Error</strong>
-                    {error}
-                </div>
-            )}
+            <DismissibleError message={error} />
 
             {/* Filters */}
             <div className="flex flex-col xl:flex-row gap-6 items-center justify-between bg-[#FFFFFF] border border-[#121212]/10 p-6 rounded-xl">
@@ -489,7 +495,7 @@ export default withAuth(function WorkersPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
                 {/* Table */}
-                <div className="lg:col-span-7 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col">
+                <div className={`${selectedWorker ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col transition-all`}>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -527,8 +533,14 @@ export default withAuth(function WorkersPage() {
                                     ))
                                 ) : processed.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="p-12 text-center text-xs text-[#8A817C] font-light">
-                                            No matching workers found.
+                                        <td colSpan={4} className="p-12 text-center">
+                                            <TableEmptyState
+                                                title={
+                                                    workers.length === 0
+                                                        ? "No workers assigned yet."
+                                                        : "No workers match the current search or filters."
+                                                }
+                                            />
                                         </td>
                                     </tr>
                                 ) : (
@@ -575,65 +587,17 @@ export default withAuth(function WorkersPage() {
                         </table>
                     </div>
 
-                    {/* Pagination */}
-                    {pagination && pagination.totalPages > 1 && (
-                        <div className="p-4 border-t border-[#121212]/10 bg-[#F4F1EA]/10 flex items-center justify-between">
-                            <span className="text-xs font-mono text-[#8A817C]">
-                                Page {pagination.page} of {pagination.totalPages}
-                                <span className="ml-2 text-[#121212]/30">({pagination.totalCount} total)</span>
-                            </span>
-                            <div className="flex space-x-1">
-                                <button
-                                    disabled={pagination.page <= 1 || isLoading}
-                                    onClick={() => goToPage(pagination.page - 1)}
-                                    className="p-2 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212] hover:bg-[#F4F1EA]"
-                                >
-                                    <ChevronLeft className="w-3.5 h-3.5" />
-                                </button>
-                                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-                                    .filter((p) => {
-                                        const cur = pagination.page;
-                                        return p === 1 || p === pagination.totalPages || Math.abs(p - cur) <= 1;
-                                    })
-                                    .reduce<(number | "...")[]>((acc, p, idx, arr) => {
-                                        if (idx > 0 && typeof arr[idx - 1] === "number" && (p as number) - (arr[idx - 1] as number) > 1) {
-                                            acc.push("...");
-                                        }
-                                        acc.push(p);
-                                        return acc;
-                                    }, [])
-                                    .map((item, idx) =>
-                                        item === "..." ? (
-                                            <span key={`e-${idx}`} className="w-8 h-8 flex items-center justify-center text-xs text-[#8A817C]">…</span>
-                                        ) : (
-                                            <button
-                                                key={item}
-                                                disabled={isLoading}
-                                                onClick={() => goToPage(item as number)}
-                                                className={`w-8 h-8 text-xs font-semibold rounded-md border transition-colors disabled:opacity-40 ${pagination.page === item
-                                                        ? "bg-[#121212] text-white border-[#121212]"
-                                                        : "border-[#121212]/10 text-[#121212] hover:bg-[#F4F1EA]"
-                                                    }`}
-                                            >
-                                                {item}
-                                            </button>
-                                        )
-                                    )}
-                                <button
-                                    disabled={pagination.page >= pagination.totalPages || isLoading}
-                                    onClick={() => goToPage(pagination.page + 1)}
-                                    className="p-2 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212] hover:bg-[#F4F1EA]"
-                                >
-                                    <ChevronRight className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    <PaginationBar
+                        pagination={pagination}
+                        onPage={goToPage}
+                        isLoading={isLoading}
+                        label="workers"
+                    />
                 </div>
 
                 {/* Detail panel */}
-                <div className="lg:col-span-5">
-                    {selectedWorker ? (
+                {selectedWorker && (
+                    <div className="lg:col-span-5">
                         <div className="bg-[#FFFFFF] border border-[#121212]/10 p-6 rounded-xl space-y-6 relative">
                             <button
                                 onClick={() => setSelectedWorker(null)}
@@ -751,17 +715,7 @@ export default withAuth(function WorkersPage() {
                                     <span>{actionSuccess}</span>
                                 </div>
                             )}
-                            {actionError && (
-                                <div className="flex items-start gap-2.5 p-4 bg-[#fdfaf2] border border-dashed border-[#121212]/15 rounded-lg text-xs text-[#121212]">
-                                    <ShieldAlert className="w-4 h-4 text-red-700 shrink-0 mt-0.5" />
-                                    <div>
-                                        <strong className="block font-semibold uppercase tracking-wider text-[11px] mb-0.5">
-                                            Action Failed
-                                        </strong>
-                                        {actionError}
-                                    </div>
-                                </div>
-                            )}
+                            <DismissibleError message={actionError} />
 
                             {/* Revoke confirm */}
                             {confirmRevoke && (
@@ -798,19 +752,9 @@ export default withAuth(function WorkersPage() {
                                 </div>
                             )}
                         </div>
-                    ) : (
-                        <div className="border-2 border-dashed border-[#121212]/10 flex flex-col items-center justify-center text-center p-12 bg-[#FFFFFF] rounded-xl h-64">
-                            <Users className="w-8 h-8 text-[#8A817C]/40 mb-3" />
-                            <div className="text-xs uppercase tracking-wider font-semibold text-[#121212]">
-                                No Profile Selected
-                            </div>
-                            <p className="text-xs text-[#8A817C] font-light max-w-xs mt-1">
-                                Select a worker from the table to view their profile and manage their deployment.
-                            </p>
-                        </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
         </div>
     );
-});
+}, { requiredPermission: 'departments:read' });
