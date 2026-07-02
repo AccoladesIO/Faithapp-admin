@@ -226,8 +226,13 @@ function ProgramsTab({
     const [formActive, setFormActive] = useState(true);
     const [formCopyFrom, setFormCopyFrom] = useState("");
     const [formIncludeFixed, setFormIncludeFixed] = useState(false);
+    const [search, setSearch] = useState("");
 
     useEffect(() => { fetchPrograms(); }, [fetchPrograms]);
+
+    const filtered = programs.filter((p) =>
+        !search.trim() || p.name.toLowerCase().includes(search.toLowerCase()),
+    );
 
     const openCreate = () => {
         setEditingId(null); setCloningId(null);
@@ -288,13 +293,30 @@ function ProgramsTab({
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C]">
-                    {programs.length} program{programs.length !== 1 ? "s" : ""}
+            <div className="flex items-center justify-between gap-3">
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] shrink-0">
+                    {search.trim() ? `${filtered.length} of ${programs.length}` : programs.length} program{programs.length !== 1 ? "s" : ""}
                 </span>
-                <button onClick={openCreate} className={`flex items-center gap-2 ${primaryCls}`}>
-                    <Plus className="w-3.5 h-3.5" /> New Program
-                </button>
+                <div className="flex items-center gap-3 flex-1 justify-end">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8A817C] pointer-events-none" />
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Search programs…"
+                            className="h-9 pl-9 pr-8 w-52 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                        />
+                        {search && (
+                            <button type="button" onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8A817C] hover:text-[#121212]">
+                                <X className="w-3 h-3" />
+                            </button>
+                        )}
+                    </div>
+                    <button onClick={openCreate} className={`flex items-center gap-2 shrink-0 ${primaryCls}`}>
+                        <Plus className="w-3.5 h-3.5" /> New Program
+                    </button>
+                </div>
             </div>
 
             {error && <Error error={error} onDismiss={clearError} />}
@@ -313,9 +335,9 @@ function ProgramsTab({
                             <tbody>
                                 {isLoading
                                     ? Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} cols={5} />)
-                                    : programs.length === 0
-                                    ? <tr><td colSpan={5} className="p-12 text-center text-xs text-[#8A817C] font-light">No programs yet. Create one above.</td></tr>
-                                    : programs.map((p) => (
+                                    : filtered.length === 0
+                                    ? <tr><td colSpan={5} className="p-12 text-center text-xs text-[#8A817C] font-light">{search.trim() ? "No programs match your search." : "No programs yet. Create one above."}</td></tr>
+                                    : filtered.map((p) => (
                                         <tr key={p.id}
                                             onClick={() => onSelect(p.id)}
                                             className={`border-b border-[#121212]/5 cursor-pointer transition-colors ${selectedProgramId === p.id ? "bg-[#F4F1EA]/60" : "hover:bg-[#F4F1EA]/30"}`}>
