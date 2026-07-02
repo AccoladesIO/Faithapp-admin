@@ -63,7 +63,7 @@ const ChildrensChurchPage = () => {
     const hook = useChildrenChurch(20);
     const {
         ageGroups, classGroups, activeCheckIns, checkInHistory, checkInHistoryPagination,
-        isLoading, isSubmitting, error,
+        isLoading, isSubmitting, error, clearError,
         fetchAgeGroups, createAgeGroup, updateAgeGroup, deleteAgeGroup,
         fetchClassGroups, createClassGroup, updateClassGroup, deleteClassGroup,
         fetchActiveCheckInsAdmin, fetchCheckInHistory, flagCheckIn,
@@ -236,7 +236,7 @@ const ChildrensChurchPage = () => {
                 </button>
             </div>
 
-            {error && <Error error={error} />}
+            {error && <Error error={error} onDismiss={clearError} />}
 
             <div className="flex bg-[#F4F1EA] p-1 border border-[#121212]/5 rounded-xl w-fit flex-wrap gap-0.5">
                 {TABS.map((t) => (

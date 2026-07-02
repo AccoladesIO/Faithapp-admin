@@ -64,7 +64,8 @@ export default withAuth(function DepartmentsPage() {
         isLoading,
         isSubmitting,
         error,
-        fetchDepartments,
+        clearError,
+fetchDepartments,
         createDepartment,
         updateDepartment,
         deleteDepartment,
@@ -319,7 +320,7 @@ export default withAuth(function DepartmentsPage() {
 
             {/* Global error */}
             {error && (
-                <Error error={error} />
+                <Error error={error} onDismiss={clearError} />
             )}
 
             {/* Search */}

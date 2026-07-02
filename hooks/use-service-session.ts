@@ -197,11 +197,14 @@ export function useServiceSession() {
         }
     }, []);
 
+    const clearError = useCallback(() => setError(null), []);
     return {
         anchor,
         session,
         isSubmitting,
         error,
+
+        clearError,
         startSession,
         fetchLatestSession,
         fetchState,

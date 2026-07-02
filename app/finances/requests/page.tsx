@@ -356,6 +356,7 @@ function FinanceRequestsPage() {
     const {
         requests, pagination, categories,
         isLoading, isSubmitting, error,
+        clearError,
         fetchRequests, approveRequest, rejectRequest,
         fetchCategories, createCategory, goToPage,
     } = useFinanceRequests(15);
@@ -405,7 +406,7 @@ function FinanceRequestsPage() {
                 <button className={tabCls("categories")} onClick={() => setActiveTab("categories")}>Categories</button>
             </div>
 
-            {error && <Error error={error} />}
+            {error && <Error error={error} onDismiss={clearError} />}
 
             {/* ── Requests tab ── */}
             {activeTab === "requests" && (

@@ -217,12 +217,12 @@ type PageTab = "admins" | "roles";
 export default withAuth(function AdminManagementPage() {
     const {
         roles, isLoading: rolesLoading, isSubmitting: roleSubmitting,
-        error: roleError, fetchRoles, createRole, updateRole, deleteRole,
+        error: roleError, clearError: clearRoleError, fetchRoles, createRole, updateRole, deleteRole,
     } = useAdminRoles();
 
     const {
         admins, isLoading: adminsLoading, isSubmitting: adminSubmitting,
-        error: adminError, fetchAdmins, grantAdmin, updateAdmin, revokeAdmin,
+        error: adminError, clearError: clearAdminError, fetchAdmins, grantAdmin, updateAdmin, revokeAdmin,
     } = useAdminUsers();
 
     const isSubmitting = roleSubmitting || adminSubmitting;
@@ -458,7 +458,12 @@ export default withAuth(function AdminManagementPage() {
             </div>
 
             {/* Global error */}
-            {(adminError || roleError) && <Error error={adminError ?? roleError ?? ""} />}
+            {(adminError || roleError) && (
+                <Error
+                    error={adminError ?? roleError ?? ""}
+                    onDismiss={() => { clearAdminError(); clearRoleError(); }}
+                />
+            )}
 
             {/* Tabs */}
             <div className="flex bg-[#F4F1EA] p-1 border border-[#121212]/5 rounded-xl w-fit">
@@ -640,7 +645,8 @@ export default withAuth(function AdminManagementPage() {
                                     {grantError && (
                                         <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700 mb-4">
                                             <ShieldAlert className="w-4 h-4 shrink-0" />
-                                            {grantError}
+                                            <span className="flex-1">{grantError}</span>
+                                            <button onClick={() => setGrantError(null)} className="shrink-0 p-0.5 text-red-400 hover:text-red-700 transition-colors" aria-label="Dismiss"><X className="w-3.5 h-3.5" /></button>
                                         </div>
                                     )}
 
@@ -708,7 +714,8 @@ export default withAuth(function AdminManagementPage() {
                                         {adminPanelError && (
                                             <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700">
                                                 <ShieldAlert className="w-4 h-4 shrink-0" />
-                                                {adminPanelError}
+                                                <span className="flex-1">{adminPanelError}</span>
+                                                <button onClick={() => setAdminPanelError(null)} className="shrink-0 p-0.5 text-red-400 hover:text-red-700 transition-colors" aria-label="Dismiss"><X className="w-3.5 h-3.5" /></button>
                                             </div>
                                         )}
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import {
     LayoutDashboard,
@@ -122,6 +123,7 @@ function NavDropdown({ item, pathname, isMinimized, isOpen, onToggle, visibleSub
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const router = useRouter();
     const [openDropdown, setOpenDropdown] = useState<string | null>(null);
     const [isMinimized, setIsMinimized] = useState(false);
     const { logout, hasPermission, adminName, adminRoleName } = useAuth();
@@ -304,13 +306,17 @@ export default function Sidebar() {
 
             <div className={`p-6 space-y-2 border-t border-white/10 transition-all duration-300 ${isMinimized ? "text-center px-2" : ""}`}>
                 {!isMinimized && (adminName || adminRoleName) && (
-                    <div className="flex items-center gap-2 mb-3 px-1">
+                    <button
+                        type="button"
+                        onClick={() => router.push("/profile")}
+                        className="flex items-center gap-2 mb-3 px-1 w-full text-left hover:opacity-80 transition-opacity"
+                    >
                         <UserCircle className="w-4 h-4 text-[#8A817C] shrink-0" />
                         <div className="min-w-0">
                             {adminName && <p className="text-[10px] text-[#FFFFFF]/70 font-medium truncate">{adminName}</p>}
                             {adminRoleName && <p className="text-[9px] text-[#8A817C] truncate">{adminRoleName}</p>}
                         </div>
-                    </div>
+                    </button>
                 )}
                 <button
                     type="button"

@@ -272,12 +272,15 @@ export function useEvents(defaultLimit = 20) {
         fetchEvents();
     }, [fetchEvents]);
 
+    const clearError = useCallback(() => setError(null), []);
     return {
         events,
         pagination,
         isLoading,
         isSubmitting,
         error,
+
+        clearError,
         fetchEvents,
         createEvent,
         updateEvent,

@@ -167,9 +167,9 @@ export default withAuth(function AdminEventsPage() {
     const [activeTab, setActiveTab] = useState<"events" | "configs">("events");
     const today = new Date().toISOString().slice(0, 10);
 
-    const { events, pagination: eventPagination, isLoading: eventsLoading, isSubmitting: eventSubmitting, error: eventError, fetchEvents, createEvent, updateEvent, deleteEvent } = useEvents();
+    const { events, pagination: eventPagination, isLoading: eventsLoading, isSubmitting: eventSubmitting, error: eventError, clearError: clearEventError, fetchEvents, createEvent, updateEvent, deleteEvent } = useEvents();
     const [upcomingOnly, setUpcomingOnly] = useState(false);
-    const { eventConfigs, isLoading: configsLoading, isSubmitting: configSubmitting, error: configError, createEventConfig, updateEventConfig, deleteEventConfig } = useEventConfigs();
+    const { eventConfigs, isLoading: configsLoading, isSubmitting: configSubmitting, error: configError, clearError: clearConfigError, createEventConfig, updateEventConfig, deleteEventConfig } = useEventConfigs();
     const { venues } = useVenues();
 
     const [eventForm, setEventForm] = useState(defaultEventForm);
@@ -417,7 +417,7 @@ export default withAuth(function AdminEventsPage() {
             </div>
 
             {(eventError || configError) && (
-                <Error error={eventError || configError || "An unexpected error occurred."} />
+                <Error error={eventError || configError || "An unexpected error occurred."} onDismiss={() => { clearEventError(); clearConfigError(); }} />
             )}
 
             {/* ── EVENTS TAB ───────────────────────────────────────────────── */}

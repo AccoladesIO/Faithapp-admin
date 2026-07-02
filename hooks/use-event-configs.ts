@@ -114,11 +114,14 @@ export function useEventConfigs() {
         fetchEventConfigs();
     }, [fetchEventConfigs]);
 
+    const clearError = useCallback(() => setError(null), []);
     return {
         eventConfigs,
         isLoading,
         isSubmitting,
         error,
+
+        clearError,
         fetchEventConfigs,
         createEventConfig,
         updateEventConfig,

@@ -486,6 +486,7 @@ export function usePrayer() {
         }
     }, []);
 
+    const clearError = useCallback(() => setError(null), []);
     return {
         programs,
         dayConfigs,
@@ -495,6 +496,8 @@ export function usePrayer() {
         isLoading,
         isSubmitting,
         error,
+
+        clearError,
         setError,
         fetchPrograms,
         createProgram,
