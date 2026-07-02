@@ -1,16 +1,17 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
 import {
-    CalendarCheck, Search, SlidersHorizontal, ChevronLeft, ChevronRight,
-    Cpu, RefreshCw, MapPin, Clock, X, Trophy, History,
+    Search, SlidersHorizontal,
+    RefreshCw, MapPin, Clock, X, Trophy, History,
 } from "lucide-react";
 import {
     useAttendanceHistory,
     useAttendanceLeaderboard,
     AttendanceRecord,
 } from "@/hooks/use-attendance";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -194,6 +195,7 @@ export default withAuth(function AttendancePage() {
             status: statusFilter as any,
             dateFrom,
             dateTo,
+            search: searchQuery.trim() || undefined,
         });
     };
 
@@ -202,18 +204,8 @@ export default withAuth(function AttendancePage() {
         setStatusFilter("");
         setDateFrom("");
         setDateTo("");
-        applyFilters({ status: "", dateFrom: "", dateTo: "" });
+        applyFilters({ status: "", dateFrom: "", dateTo: "", search: undefined });
     };
-
-    const processed = useMemo(() => {
-        if (!searchQuery.trim()) return records;
-        const q = searchQuery.toLowerCase();
-        return records.filter(
-            (r) =>
-                fullName(r.member).toLowerCase().includes(q) ||
-                r.member.email.toLowerCase().includes(q)
-        );
-    }, [records, searchQuery]);
 
     const medals = ["🥇", "🥈", "🥉"];
     const borders = ["border-yellow-500", "border-slate-400", "border-amber-700"];
@@ -225,19 +217,13 @@ export default withAuth(function AttendancePage() {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-light tracking-tight text-[#121212]">
-                        Attendance Metrics & Leaderboard
+                        Attendance & Check-ins
                     </h1>
                     <p className="text-xs uppercase tracking-widest font-semibold text-[#8A817C] mt-1">
-                        Real-time check-in monitoring and staff performance rankings
+                        Track service attendance and view engagement across your team
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center space-x-2 bg-[#FFFFFF] border border-[#121212]/10 px-4 py-2 rounded-xl text-[11px] font-mono font-semibold uppercase tracking-wider text-[#8A817C]">
-                        <Cpu className="w-3.5 h-3.5 text-green-600 animate-pulse" />
-                        <span>System Active</span>
-                    </div>
-                </div>
             </div>
 
             {/* Tabs */}
@@ -383,7 +369,7 @@ export default withAuth(function AttendancePage() {
                             <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-[#8A817C]" />
                             <input
                                 type="text"
-                                placeholder="Search by name or email (current page)..."
+                                placeholder="Search by name or email..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full h-11 pl-11 pr-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
@@ -477,14 +463,14 @@ export default withAuth(function AttendancePage() {
                                         <tbody className="divide-y divide-[#121212]/5 text-[#121212]">
                                             {isLoading ? (
                                                 Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
-                                            ) : processed.length === 0 ? (
+                                            ) : records.length === 0 ? (
                                                 <tr>
                                                     <td colSpan={4} className="p-12 text-center text-xs text-[#8A817C] font-light">
                                                         No matching attendance records found.
                                                     </td>
                                                 </tr>
                                             ) : (
-                                                processed.map((record) => (
+                                                records.map((record) => (
                                                     <tr
                                                         key={record.id}
                                                         onClick={() => setSelectedRecord(record)}
@@ -526,30 +512,12 @@ export default withAuth(function AttendancePage() {
                                     </table>
                                 </div>
 
-                                {pagination && pagination.totalPages > 1 && (
-                                    <div className="p-4 border-t border-[#121212]/10 bg-[#F4F1EA]/10 flex items-center justify-between">
-                                        <span className="text-xs font-mono text-[#8A817C]">
-                                            Page {pagination.page} of {pagination.totalPages}
-                                            <span className="ml-2 text-[#121212]/30">({pagination.totalCount} total)</span>
-                                        </span>
-                                        <div className="flex space-x-1">
-                                            <button
-                                                disabled={pagination.page <= 1 || isLoading}
-                                                onClick={() => goToPage(pagination.page - 1)}
-                                                className="p-2 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212] hover:bg-[#F4F1EA]"
-                                            >
-                                                <ChevronLeft className="w-3.5 h-3.5" />
-                                            </button>
-                                            <button
-                                                disabled={pagination.page >= pagination.totalPages || isLoading}
-                                                onClick={() => goToPage(pagination.page + 1)}
-                                                className="p-2 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212] hover:bg-[#F4F1EA]"
-                                            >
-                                                <ChevronRight className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
+                                <PaginationBar
+                                    pagination={pagination}
+                                    onPage={goToPage}
+                                    isLoading={isLoading}
+                                    label="records"
+                                />
                             </div>
                         </div>
 
@@ -566,4 +534,4 @@ export default withAuth(function AttendancePage() {
             )}
         </div>
     );
-});
+}, { requiredPermission: 'attendance:read' });

@@ -57,7 +57,7 @@ export interface AttendanceServiceSlot {
 export interface AttendanceRecord {
     id: string;
     checkinTime: string | null;
-    status: "PRESENT" | "ABSENT" | "LATE" | "ONLINE";
+    status: "PRESENT" | "ABSENT" | "LATE" | "ATTENDED_ONLINE";
     roleAtCheckin: "MEMBER" | "WORKER" | "ADMIN";
     location: AttendanceLocation | null;
     member: AttendanceMember;
@@ -78,10 +78,35 @@ export interface AttendanceHistoryFilters {
     limit?: number;
     memberId?: string;
     slotId?: string;
-    status?: "PRESENT" | "ABSENT" | "LATE" | "ONLINE" | "";
+    status?: "PRESENT" | "ABSENT" | "LATE" | "ATTENDED_ONLINE" | "";
     dateFrom?: string;
     dateTo?: string;
+    search?: string;
 }
+
+// ─── At-Risk / Admin types ─────────────────────────────────────────────────────
+
+export type AttendanceStatusEnum = "PRESENT" | "ABSENT" | "LATE" | "ON_LEAVE" | "ATTENDED_ONLINE";
+
+export interface AtRiskMember {
+    id: string;
+    firstname: string;
+    lastname: string;
+    email: string;
+    phoneNumber: string | null;
+    absenceCount: number;
+    lastSeenAt: string | null;
+    hasOpenFollowUpTask: boolean;
+}
+
+export interface AtRiskMemberPagination {
+    page: number;
+    limit: number;
+    totalCount: number;
+    totalPages: number;
+}
+
+export type SlotSummary = Record<AttendanceStatusEnum, number>;
 
 // ─── Leaderboard types ─────────────────────────────────────────────────────────
 
@@ -127,6 +152,7 @@ export function useAttendanceHistory(initialLimit = 10) {
             if (merged.status) params.set("status", merged.status);
             if (merged.dateFrom) params.set("dateFrom", merged.dateFrom);
             if (merged.dateTo) params.set("dateTo", merged.dateTo);
+            if (merged.search) params.set("search", merged.search);
 
             const res = await api.get(`/attendances/history?${params.toString()}`);
             const outer = res.data?.data;
@@ -229,5 +255,88 @@ export function useAttendanceLeaderboard(initialDaysAgo = 30, initialLimit = 10)
         error,
         changeDaysAgo,
         refetch: () => fetchLeaderboard(daysAgo, limit),
+    };
+}
+
+// ─── Admin hook ────────────────────────────────────────────────────────────────
+
+export function useAttendanceAdmin() {
+    const [atRiskMembers, setAtRiskMembers] = useState<AtRiskMember[]>([]);
+    const [atRiskPagination, setAtRiskPagination] = useState<AtRiskMemberPagination | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const getAtRiskMembers = useCallback(async (params?: {
+        minAbsences?: number;
+        from?: string;
+        to?: string;
+        page?: number;
+        limit?: number;
+    }) => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const qs = new URLSearchParams();
+            if (params?.minAbsences !== undefined) qs.set("minAbsences", String(params.minAbsences));
+            if (params?.from) qs.set("from", params.from);
+            if (params?.to) qs.set("to", params.to);
+            qs.set("page", String(params?.page ?? 1));
+            qs.set("limit", String(params?.limit ?? 20));
+            const res = await api.get(`/attendances/at-risk?${qs.toString()}`);
+            const outer = res.data?.data;
+            const list: AtRiskMember[] = Array.isArray(outer?.data) ? outer.data : [];
+            setAtRiskMembers(list);
+            setAtRiskPagination({
+                page: outer?.page ?? 1,
+                limit: outer?.limit ?? 20,
+                totalCount: outer?.totalCount ?? list.length,
+                totalPages: outer?.totalPages ?? 1,
+            });
+        } catch (err: any) {
+            setError(err?.response?.data?.message || err?.message || "Failed to fetch at-risk members.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    const getSlotSummary = useCallback(async (slotId: string): Promise<SlotSummary> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const res = await api.get(`/attendances/summary/slot/${slotId}`);
+            return res.data?.data as SlotSummary;
+        } catch (err: any) {
+            const message = err?.response?.data?.message || err?.message || "Failed to fetch slot summary.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    const correctAttendance = useCallback(async (id: string, status: AttendanceStatusEnum): Promise<void> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            await api.patch(`/attendances/${id}/correct`, { status });
+        } catch (err: any) {
+            const message = err?.response?.data?.message || err?.message || "Failed to correct attendance.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
+    return {
+        atRiskMembers,
+        atRiskPagination,
+        isLoading,
+        isSubmitting,
+        error,
+        getAtRiskMembers,
+        getSlotSummary,
+        correctAttendance,
     };
 }

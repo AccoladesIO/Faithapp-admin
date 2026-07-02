@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
-export type ClassType = "BELIEVERS" | "BAPTISMAL" | "WORKERS_IN_TRAINING";
+export type ClassType = "BELIEVERS" | "BAPTISMAL" | "WORKERS_IN_TRAINING" | "BIBLE_COLLEGE" | "SCHOOL_OF_DISCIPLESHIP";
+export type ClassStatus = "ACTIVE" | "CLOSED";
 export type EnrollmentStatus = "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 
 export interface ClassFacilitator {
@@ -16,10 +17,11 @@ export interface ChurchClass {
     id: string;
     name: string;
     type: ClassType;
+    status: ClassStatus;
     description: string;
     startDate: string;
     endDate: string;
-    facilitator: ClassFacilitator;
+    facilitator: ClassFacilitator | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -40,7 +42,7 @@ export interface CreateClassPayload {
     endDate: string;
 }
 
-export type UpdateClassPayload = Partial<Omit<CreateClassPayload, "type" | "facilitatorId">>;
+export type UpdateClassPayload = Partial<Omit<CreateClassPayload, "type">>;
 
 export interface Enrollment {
     id: string;
@@ -203,14 +205,14 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
             );
             const outer = res.data?.data;
             const list: Enrollment[] = Array.isArray(outer?.data) ? outer.data : [];
-            const p = outer?.page !== undefined
-                ? {
+            const p = outer?.page === undefined
+                ? null
+                : {
                     page: outer.page,
                     limit: outer.limit,
                     totalCount: outer.totalCount,
                     totalPages: outer.totalPages,
-                }
-                : null;
+                };
             return { enrollments: list, pagination: p };
         } catch {
             return { enrollments: [], pagination: null };
@@ -241,6 +243,50 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
         }
     }, []);
 
+    const bulkEnroll = useCallback(async (
+        classId: string,
+        memberIds: string[]
+    ): Promise<{ enrolled: number; skipped: number }> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            const res = await api.post('/classes/bulk-enroll', { classId, memberIds });
+            return res.data?.data;
+        } catch (err: any) {
+            const message =
+                err?.response?.data?.message ||
+                err?.message ||
+                'Failed to bulk enrol members.';
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
+    const closeClass = useCallback(async (
+        classId: string
+    ): Promise<{ closedEnrollments: number }> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            const res = await api.patch(`/classes/${classId}/close`);
+            setClasses((prev) =>
+                prev.map((c) => c.id === classId ? { ...c, status: "CLOSED" as const } : c)
+            );
+            return res.data?.data;
+        } catch (err: any) {
+            const message =
+                err?.response?.data?.message ||
+                err?.message ||
+                "Failed to close class.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
     useEffect(() => {
         fetchClasses(1, initialType);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -261,7 +307,9 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
         updateClass,
         deleteClass,
         enrollMember,
+        bulkEnroll,
         fetchEnrollments,
         updateEnrollmentStatus,
+        closeClass,
     };
 }

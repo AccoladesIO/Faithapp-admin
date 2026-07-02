@@ -5,7 +5,7 @@ export interface EventConfig {
     id: string;
     name: string;
     description: string;
-    defaultVenueId: string;
+    defaultVenue: { id: string; name: string; address: string } | null;
     workerCheckinStartOffsetSeconds: number;
     workerLateOffsetSeconds: number;
     memberCheckinStartOffsetSeconds: number;

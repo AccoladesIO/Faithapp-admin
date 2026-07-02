@@ -2,8 +2,9 @@
 
 import React, { useState, useMemo } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
+import { useRouter } from "next/navigation";
 import {
-    User, Search, SlidersHorizontal, ChevronLeft, ChevronRight,
+    User, Search, SlidersHorizontal,
     ArrowUpDown, Eye, X, UserPlus, ShieldAlert, CheckCircle2,
     RefreshCw, KeyRound, ToggleLeft, ToggleRight, BadgeCheck,
     Phone, Mail, Calendar, Users,
@@ -11,6 +12,8 @@ import {
 import { useMembers, Member } from "@/hooks/use-member";
 import { useDepartments } from "@/hooks/use-departments";
 import { PromoteToWorkerPayload } from "@/hooks/use-member";
+import { PaginationBar } from "@/components/ui/pagination-bar";
+import { TableEmptyState } from "@/components/ui/table-empty-state";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fullName = (m: Member) =>
@@ -51,7 +54,6 @@ function SkeletonRow() {
 
 function RoleBadge({ role }: { role: Member["role"] }) {
     const styles: Record<Member["role"], string> = {
-        ADMIN: "bg-purple-50 border-purple-100 text-purple-700",
         WORKER: "bg-[#EADCC9] border-[#EADCC9] text-[#121212]",
         MEMBER: "bg-[#F4F1EA] border-[#121212]/5 text-[#8A817C]",
     };
@@ -132,6 +134,7 @@ type ConfirmAction = "promote" | "deactivate" | "activate" | "reset-password" | 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default withAuth(function MembersPage() {
+    const router = useRouter();
     const {
         members,
         pagination,
@@ -144,6 +147,8 @@ export default withAuth(function MembersPage() {
         promoteToWorker,
         changeStatus,
         resetPassword,
+        search: searchQuery,
+        onSearchChange,
     } = useMembers(10);
     const { departments } = useDepartments();
 
@@ -159,7 +164,6 @@ export default withAuth(function MembersPage() {
     const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
     // Filters
-    const [searchQuery, setSearchQuery] = useState("");
     const [roleFilter, setRoleFilter] = useState<string>("All");
     const [statusFilter, setStatusFilter] = useState<string>("All");
 
@@ -183,19 +187,9 @@ export default withAuth(function MembersPage() {
         setActionSuccess(null);
     };
 
-    // Client-side filter + sort on current server page
+    // Client-side filter + sort on current server page (search is server-side)
     const processed = useMemo(() => {
         let result = [...members];
-
-        if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase();
-            result = result.filter(
-                (m) =>
-                    fullName(m).toLowerCase().includes(q) ||
-                    m.email.toLowerCase().includes(q) ||
-                    m.id.toLowerCase().includes(q)
-            );
-        }
 
         if (roleFilter !== "All") result = result.filter((m) => m.role === roleFilter);
         if (statusFilter !== "All") result = result.filter((m) => m.status === statusFilter);
@@ -209,7 +203,7 @@ export default withAuth(function MembersPage() {
         });
 
         return result;
-    }, [members, searchQuery, roleFilter, statusFilter, sortKey, sortOrder]);
+    }, [members, roleFilter, statusFilter, sortKey, sortOrder]);
 
     // ── Actions ───────────────────────────────────────────────────────────────
 
@@ -257,10 +251,10 @@ export default withAuth(function MembersPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-light tracking-tight text-[#121212]">
-                        Congregation & Membership Register
+                        Member Directory
                     </h1>
                     <p className="text-xs uppercase tracking-widest font-semibold text-[#8A817C] mt-1">
-                        Review member demographics, manage roles, and authorize promotions
+                        View member profiles, manage statuses, and authorize role changes
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -269,6 +263,13 @@ export default withAuth(function MembersPage() {
                             {pagination.totalCount} members
                         </span>
                     )}
+                    <button
+                        onClick={() => router.push("/members/bulk-promote")}
+                        className="flex items-center gap-1.5 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors"
+                    >
+                        <Users className="w-3.5 h-3.5" />
+                        Bulk Promote
+                    </button>
                     <button
                         onClick={refetch}
                         disabled={isLoading}
@@ -298,7 +299,7 @@ export default withAuth(function MembersPage() {
                         type="text"
                         placeholder="Search by name, email, or ID..."
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => onSearchChange(e.target.value)}
                         className="w-full h-11 pl-11 pr-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
                     />
                 </div>
@@ -317,7 +318,6 @@ export default withAuth(function MembersPage() {
                             <option value="All">All Roles</option>
                             <option value="MEMBER">Member</option>
                             <option value="WORKER">Worker</option>
-                            <option value="ADMIN">Admin</option>
                         </select>
                     </div>
 
@@ -342,7 +342,7 @@ export default withAuth(function MembersPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
                 {/* Table */}
-                <div className="lg:col-span-7 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col">
+                <div className={`${selectedMember ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col transition-all`}>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -386,11 +386,14 @@ export default withAuth(function MembersPage() {
                                     ))
                                 ) : processed.length === 0 ? (
                                     <tr>
-                                        <td
-                                            colSpan={4}
-                                            className="p-12 text-center text-xs text-[#8A817C] font-light"
-                                        >
-                                            No matching members found.
+                                        <td colSpan={4} className="p-12 text-center">
+                                            <TableEmptyState
+                                                title={
+                                                    members.length === 0
+                                                        ? "No members registered yet."
+                                                        : "No members match the current search or filters."
+                                                }
+                                            />
                                         </td>
                                     </tr>
                                 ) : (
@@ -435,77 +438,17 @@ export default withAuth(function MembersPage() {
                         </table>
                     </div>
 
-                    {/* Server-side pagination footer */}
-                    {pagination && pagination.totalPages > 1 && (
-                        <div className="p-4 border-t border-[#121212]/10 bg-[#F4F1EA]/10 flex items-center justify-between">
-                            <span className="text-xs font-mono text-[#8A817C]">
-                                Page {pagination.page} of {pagination.totalPages}
-                                <span className="ml-2 text-[#121212]/30">
-                                    ({pagination.totalCount} total)
-                                </span>
-                            </span>
-                            <div className="flex space-x-1">
-                                <button
-                                    disabled={pagination.page <= 1 || isLoading}
-                                    onClick={() => goToPage(pagination.page - 1)}
-                                    className="p-2 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212] hover:bg-[#F4F1EA] transition-colors"
-                                >
-                                    <ChevronLeft className="w-3.5 h-3.5" />
-                                </button>
-
-                                {/* Page number pills */}
-                                <div className="flex space-x-1">
-                                    {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-                                        .filter((p) => {
-                                            const cur = pagination.page;
-                                            return p === 1 || p === pagination.totalPages || Math.abs(p - cur) <= 1;
-                                        })
-                                        .reduce<(number | "...")[]>((acc, p, idx, arr) => {
-                                            if (idx > 0 && typeof arr[idx - 1] === "number" && (p as number) - (arr[idx - 1] as number) > 1) {
-                                                acc.push("...");
-                                            }
-                                            acc.push(p);
-                                            return acc;
-                                        }, [])
-                                        .map((item, idx) =>
-                                            item === "..." ? (
-                                                <span
-                                                    key={`ellipsis-${idx}`}
-                                                    className="w-8 h-8 flex items-center justify-center text-xs text-[#8A817C]"
-                                                >
-                                                    …
-                                                </span>
-                                            ) : (
-                                                <button
-                                                    key={item}
-                                                    disabled={isLoading}
-                                                    onClick={() => goToPage(item as number)}
-                                                    className={`w-8 h-8 text-xs font-semibold rounded-md border transition-colors disabled:opacity-40 ${pagination.page === item
-                                                            ? "bg-[#121212] text-white border-[#121212]"
-                                                            : "border-[#121212]/10 text-[#121212] hover:bg-[#F4F1EA]"
-                                                        }`}
-                                                >
-                                                    {item}
-                                                </button>
-                                            )
-                                        )}
-                                </div>
-
-                                <button
-                                    disabled={pagination.page >= pagination.totalPages || isLoading}
-                                    onClick={() => goToPage(pagination.page + 1)}
-                                    className="p-2 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212] hover:bg-[#F4F1EA] transition-colors"
-                                >
-                                    <ChevronRight className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    <PaginationBar
+                        pagination={pagination}
+                        onPage={goToPage}
+                        isLoading={isLoading}
+                        label="members"
+                    />
                 </div>
 
                 {/* Detail panel */}
-                <div className="lg:col-span-5">
-                    {selectedMember ? (
+                {selectedMember && (
+                    <div className="lg:col-span-5">
                         <div className="bg-[#FFFFFF] border border-[#121212]/10 p-6 rounded-xl space-y-6 relative">
                             <button
                                 onClick={() => setSelectedMember(null)}
@@ -717,11 +660,7 @@ export default withAuth(function MembersPage() {
                                     ) : (
                                         <div className="w-full h-11 bg-[#F4F1EA] text-[#8A817C] text-xs font-semibold uppercase tracking-widest flex items-center justify-center space-x-2 rounded-xl border border-[#121212]/5">
                                             <BadgeCheck className="w-4 h-4 text-green-600" />
-                                            <span>
-                                                {selectedMember.role === "ADMIN"
-                                                    ? "Administrator Account"
-                                                    : "Authorized Worker"}
-                                            </span>
+                                            <span>Authorized Worker</span>
                                         </div>
                                     )}
 
@@ -760,19 +699,9 @@ export default withAuth(function MembersPage() {
                                 </div>
                             )}
                         </div>
-                    ) : (
-                        <div className="border-2 border-dashed border-[#121212]/10 flex flex-col items-center justify-center text-center p-12 bg-[#FFFFFF] rounded-xl h-64">
-                            <Users className="w-8 h-8 text-[#8A817C]/40 mb-3" />
-                            <div className="text-xs uppercase tracking-wider font-semibold text-[#121212]">
-                                No Profile Selected
-                            </div>
-                            <p className="text-xs text-[#8A817C] font-light max-w-xs mt-1">
-                                Select a member from the table to view their profile and manage their account.
-                            </p>
-                        </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
         </div>
     );
-});
+}, { requiredPermission: 'members:read' });

@@ -1,97 +1,240 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
     LayoutDashboard,
     Megaphone,
     Users,
-    Network,
     Wallet,
-    Boxes,
     CalendarCheck,
     ChevronDown,
     ChevronUp,
     ChevronLeft,
     ChevronRight,
     LogOut,
-    MicVocalIcon
+    MicVocalIcon,
+    Building2,
+    UserCircle,
+    Settings2,
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 
 interface SubNavItem {
     name: string;
     href: string;
+    permission?: string;
+    comingSoon?: boolean;
 }
 
 interface NavItem {
     name: string;
     href?: string;
     icon: React.ComponentType<{ className?: string }>;
+    permission?: string;
     subItems?: SubNavItem[];
+}
+
+function NavLink({ item, pathname, isMinimized }: Readonly<{ item: NavItem; pathname: string; isMinimized: boolean }>) {
+    const Icon = item.icon;
+    const isActive = pathname === item.href;
+    const iconCls = isActive && isMinimized ? "bg-[#8A817C]/30 text-[#FFFFFF]" : "bg-transparent";
+    const linkCls = isActive && !isMinimized ? "text-[#FFFFFF] bg-[#8A817C]/20" : "text-[#8A817C] hover:text-[#FFFFFF]";
+    return (
+        <Link
+            href={item.href || "#"}
+            title={isMinimized ? item.name : undefined}
+            className={`flex items-center text-xs tracking-wider font-semibold uppercase transition-colors rounded-lg ${isMinimized ? "px-2 justify-center py-1" : "px-4 py-1"} ${linkCls}`}
+        >
+            <div className="flex items-center space-x-2 min-w-0 w-full">
+                <div className={`p-2 rounded-xl transition-colors ${iconCls}`}>
+                    <Icon className="w-4 h-4 shrink-0" />
+                </div>
+                {!isMinimized && <span className="truncate">{item.name}</span>}
+            </div>
+        </Link>
+    );
+}
+
+function NavDropdown({ item, pathname, isMinimized, isOpen, onToggle, visibleSubItems }: Readonly<{
+    item: NavItem;
+    pathname: string;
+    isMinimized: boolean;
+    isOpen: boolean;
+    onToggle: () => void;
+    visibleSubItems: SubNavItem[];
+}>) {
+    const Icon = item.icon;
+    const hasActiveChild = visibleSubItems.some(sub => !sub.comingSoon && pathname.startsWith(sub.href));
+    const iconCls = hasActiveChild ? "bg-[#8A817C]/30 text-[#FFFFFF]" : "bg-transparent";
+    const textCls = hasActiveChild ? "text-[#FFFFFF]" : "text-[#8A817C] hover:text-[#FFFFFF]";
+    const paddingCls = isMinimized ? "px-0 justify-center" : "px-4";
+    return (
+        <div>
+            <button
+                onClick={onToggle}
+                title={isMinimized ? item.name : undefined}
+                className={`w-full text-left py-1 text-xs tracking-wider font-semibold uppercase transition-colors flex items-center justify-between rounded-lg ${paddingCls} ${textCls}`}
+            >
+                <div className="flex items-center min-w-0 space-x-2">
+                    <div className={`p-2 rounded-xl transition-colors ${iconCls}`}>
+                        <Icon className="w-4 h-4 shrink-0" />
+                    </div>
+                    {!isMinimized && <span className="truncate">{item.name}</span>}
+                </div>
+                {!isMinimized && (
+                    <span className="text-[10px] shrink-0 ml-2">
+                        {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </span>
+                )}
+            </button>
+            {isOpen && (
+                <div className="bg-[#1C1C1C] border-l border-[#8A817C]/30 pl-2 ml-6 rounded-r-lg">
+                    {visibleSubItems.map((subItem) => {
+                        if (subItem.comingSoon) {
+                            return (
+                                <div
+                                    key={subItem.name}
+                                    className="flex items-center justify-between px-4 py-2 text-xs tracking-wider uppercase font-medium text-[#8A817C]/40 cursor-not-allowed rounded-md select-none"
+                                >
+                                    <span>{subItem.name}</span>
+                                    <span className="text-[8px] bg-[#8A817C]/15 text-[#8A817C]/50 px-1.5 py-0.5 rounded font-mono tracking-wide">Soon</span>
+                                </div>
+                            );
+                        }
+                        const isSubActive = pathname.startsWith(subItem.href);
+                        return (
+                            <Link
+                                key={subItem.name}
+                                href={subItem.href}
+                                className={`block px-4 py-2 text-xs tracking-wider uppercase font-medium transition-colors rounded-md ${isSubActive ? "text-[#FFFFFF] bg-[#8A817C]/20" : "text-[#8A817C] hover:text-[#FFFFFF]"}`}
+                            >
+                                {subItem.name}
+                            </Link>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
 }
 
 export default function Sidebar() {
     const pathname = usePathname();
     const [openDropdown, setOpenDropdown] = useState<string | null>(null);
     const [isMinimized, setIsMinimized] = useState(false);
-    const { logout } = useAuth()
+    const { logout, hasPermission, adminName, adminRoleName } = useAuth();
+
     const navigationData: NavItem[] = [
         {
             name: "Dashboard",
             href: "/dashboard",
-            icon: LayoutDashboard
+            icon: LayoutDashboard,
+            permission: "dashboard:read",
         },
         {
-            name: "Events & Announcements",
-            icon: Megaphone,
+            name: "Events",
+            icon: CalendarCheck,
             subItems: [
-                { name: "Events", href: "/events" },
-                { name: "Venues", href: "/venue" },
-                { name: "Announcements", href: "/announcements" }
-            ]
+                { name: "Services",        href: "/events",             permission: "events:read" },
+                { name: "Venues",          href: "/venue",              permission: "venues:read" },
+                { name: "Headcount",       href: "/service-headcount",  permission: "headcount:read" },
+                { name: "Programme",       href: "/service-programme",  permission: "service_programme:read" },
+                { name: "Live Session",    href: "/service-session",    permission: "service_programme:read" },
+                { name: "Prayer Schedule", href: "/prayer",             permission: "prayer:read" },
+            ],
         },
         {
-            name: "People Management",
+            name: "People",
             icon: Users,
             subItems: [
-                { name: "Manage Workers", href: "/workers" },
-                { name: "Manage Members", href: "/members" }
-            ]
+                { name: "Members",        href: "/members",          permission: "members:read" },
+                { name: "Workers",        href: "/workers",          permission: "departments:read" },
+                { name: "Attendance",     href: "/attendance",       permission: "attendance:read" },
+                { name: "Leave Requests", href: "/leave",            permission: "leave:read" },
+                { name: "Birthdays",      href: "/birthday",         permission: "members:read" },
+                { name: "Admin Users",    href: "/admin-management", permission: "admin:read" },
+            ],
         },
         {
-            name: "Ministries",
+            name: "Ministry",
             icon: MicVocalIcon,
             subItems: [
-                { name: "Children's Ministry", href: "/childrens-ministry" },
-                { name: "Classes", href: "/classes" },
-                { name: "Connect Center", href: "/connect-center" },
-                { name: "Follow up", href: "/follow-up" },
-                { name: "Sunday School", href: "/sunday-school" }
-            ]
+                { name: "Departments",      href: "/departments",    permission: "departments:read" },
+                { name: "Classes",          href: "/classes",        permission: "classes:read" },
+                { name: "Children's Church",href: "/childrens-church", permission: "children_church:read" },
+                { name: "Sunday School",    href: "/sunday-school",  permission: "sunday_school:read" },
+                { name: "Follow Up",        href: "/follow-up",      permission: "follow_up:read" },
+            ],
         },
         {
-            name: "Attendance",
-            href: "/attendance",
-            icon: CalendarCheck
+            name: "Announcements",
+            href: "/announcements",
+            icon: Megaphone,
+            permission: "announcements:read",
         },
         {
-            name: "Departments",
-            href: "/departments",
-            icon: Network
+            name: "System",
+            icon: Settings2,
+            subItems: [
+                { name: "Audit Trail",       href: "/audit-logs",        permission: "audit:read" },
+                { name: "Email Logs",        href: "/email-logs",         permission: "email_logs:read" },
+                { name: "Incident Reports",  href: "/incident-reports",   permission: "incident_report:read" },
+                { name: "Module Settings",   href: "/system-settings",    permission: "admin:read" },
+            ],
+        },
+        {
+            name: "Facility",
+            icon: Building2,
+            subItems: [
+                { name: "Inventories",    href: "/inventories",    permission: "asset_management:read" },
+                { name: "Facility Rental",href: "/facility-rental",permission: "facility_rental:read" },
+            ],
         },
         {
             name: "Finances",
-            href: "/finances",
-            icon: Wallet
+            icon: Wallet,
+            subItems: [
+                { name: "Reports",            href: "/finances/reports",            permission: "finance:report" },
+                { name: "Finance Requests",   href: "/finances/requests",           permission: "finance:approve" },
+                { name: "Tithe & Giving",     href: "/finances/tithes",            permission: "tithe:read" },
+                { name: "Giving Records",     href: "/finances/offerings",          permission: "finance:read" },
+                { name: "Journal Entries",    href: "/finances/journal-entries",    permission: "finance:read" },
+                { name: "Petty Cash",         href: "/finances/petty-cash",         permission: "finance:read" },
+                { name: "Budgets",            href: "/finances/budgets",            permission: "finance:read" },
+                { name: "Pledges",            href: "/finances/pledges",            permission: "finance:read" },
+                { name: "Chart of Accounts",  href: "/finances/accounts",           permission: "finance:read" },
+                { name: "Funds",              href: "/finances/funds",              permission: "finance:read" },
+                { name: "Accounting Periods", href: "/finances/accounting-periods", permission: "finance:read" },
+                { name: "Reconciliation",     href: "/finances/reconciliation",     permission: "finance:reconcile" },
+                { name: "External Payees",    href: "/finances/external-payees",    permission: "finance:read" },
+                { name: "Bank Import Profiles", href: "/finances/bank-import-profiles", permission: "finance:read" },
+                { name: "Recurring Entries",  href: "/finances/recurring-entries",  permission: "finance:read" },
+            ],
         },
-        {
-            name: "Inventories",
-            href: "/inventories",
-            icon: Boxes
-        }
     ];
+
+    const isNavItemVisible = (item: NavItem): boolean => {
+        if (item.subItems) {
+            return getVisibleSubItems(item).length > 0;
+        }
+        return !item.permission || hasPermission(item.permission);
+    };
+
+    const getVisibleSubItems = (item: NavItem): SubNavItem[] => {
+        if (!item.subItems) return [];
+        return item.subItems.filter(sub =>
+            sub.comingSoon || !sub.permission || hasPermission(sub.permission)
+        );
+    };
+
+    useEffect(() => {
+        const activeGroup = navigationData.find(item =>
+            item.subItems?.some(sub => !sub.comingSoon && pathname.startsWith(sub.href))
+        );
+        if (activeGroup) setOpenDropdown(activeGroup.name);
+    }, [pathname]);
 
     const toggleDropdown = (name: string) => {
         if (isMinimized) {
@@ -104,8 +247,7 @@ export default function Sidebar() {
 
     return (
         <aside
-            className={`h-screen bg-[#121212] text-[#FFFFFF] flex flex-col justify-between border-r border-black font-sans select-none relative transition-all duration-300 ${isMinimized ? "w-20" : "w-64"
-                }`}
+            className={`h-screen bg-[#121212] text-[#FFFFFF] flex flex-col justify-between border-r border-black font-sans select-none relative transition-all duration-300 ${isMinimized ? "w-20" : "w-64"}`}
         >
             <button
                 onClick={() => setIsMinimized(!isMinimized)}
@@ -115,111 +257,74 @@ export default function Sidebar() {
             </button>
 
             <div className="flex flex-col overflow-x-hidden">
-                <div className={`p-8 border-b border-white/10 flex items-center ${isMinimized ? "justify-center px-4" : "space-x-3"}`}>
-                    <img
-                        src="https://i.ibb.co/cX1MnZ5z/DC-LOGO.png"
-                        alt="RCCG Discovery Centre Logo"
-                        className="w-12 h-6 object-contain invert brightness-0 text-white shrink-0"
-                    />
-                    {!isMinimized && (
-                        <div className="text-xs tracking-widest font-semibold uppercase text-[#8A817C] truncate">
-                            Discovery Hub
+                <div className={`p-6 border-b border-white/10 flex items-center ${isMinimized ? "justify-center" : ""}`}>
+                    {isMinimized ? (
+                        <div className="w-8 h-8 bg-white/10 flex items-center justify-center shrink-0">
+                            <span className="text-xs font-bold text-white tracking-tight">DH</span>
+                        </div>
+                    ) : (
+                        <div className="min-w-0 w-full overflow-hidden">
+                            <div className="text-sm font-bold text-white truncate">
+                                {process.env.NEXT_PUBLIC_PRODUCT_NAME ?? "Discovery Hub"}
+                            </div>
+                            <div className="text-[10px] tracking-widest font-light text-[#8A817C] mt-0.5 truncate">
+                                {process.env.NEXT_PUBLIC_CHURCH_NAME ?? "Your Church"}
+                            </div>
                         </div>
                     )}
                 </div>
 
                 <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-                    {navigationData.map((item) => {
-                        const Icon = item.icon;
-
+                    {navigationData.filter(isNavItemVisible).map((item) => {
                         if (item.subItems) {
-                            const isDropdownOpen = openDropdown === item.name && !isMinimized;
-                            const hasActiveChild = item.subItems.some(sub => pathname === sub.href);
-
+                            const visibleSubItems = getVisibleSubItems(item);
                             return (
-                                <div key={item.name} className="">
-                                    <button
-                                        onClick={() => toggleDropdown(item.name)}
-                                        title={isMinimized ? item.name : undefined}
-                                        className={`w-full text-left py-1 text-xs tracking-wider font-semibold uppercase transition-colors flex items-center justify-between rounded-lg ${isMinimized ? "px-0 justify-center" : "px-4"
-                                            } ${hasActiveChild ? "text-[#FFFFFF]" : "text-[#8A817C] hover:text-[#FFFFFF]"}`}
-                                    >
-                                        <div className="flex items-center min-w-0 space-x-2">
-                                            <div className={`p-2 rounded-xl transition-colors ${hasActiveChild ? "bg-[#8A817C]/30 text-[#FFFFFF]" : "bg-transparent"}`}>
-                                                <Icon className="w-4 h-4 shrink-0" />
-                                            </div>
-                                            {!isMinimized && <span className="truncate">{item.name}</span>}
-                                        </div>
-                                        {!isMinimized && (
-                                            <span className="text-[10px] shrink-0 ml-2">
-                                                {isDropdownOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                                            </span>
-                                        )}
-                                    </button>
-
-                                    {isDropdownOpen && (
-                                        <div className="bg-[#1C1C1C] border-l border-[#8A817C]/30 pl-2 ml-6 rounded-r-lg">
-                                            {item.subItems.map((subItem) => {
-                                                const isSubActive = pathname === subItem.href;
-                                                return (
-                                                    <Link
-                                                        key={subItem.name}
-                                                        href={subItem.href}
-                                                        className={`block px-4 py-2 text-xs tracking-wider uppercase font-medium transition-colors rounded-md ${isSubActive
-                                                            ? "text-[#FFFFFF] bg-[#8A817C]/20"
-                                                            : "text-[#8A817C] hover:text-[#FFFFFF]"
-                                                            }`}
-                                                    >
-                                                        {subItem.name}
-                                                    </Link>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
+                                <NavDropdown
+                                    key={item.name}
+                                    item={item}
+                                    pathname={pathname}
+                                    isMinimized={isMinimized}
+                                    isOpen={openDropdown === item.name && !isMinimized}
+                                    onToggle={() => toggleDropdown(item.name)}
+                                    visibleSubItems={visibleSubItems}
+                                />
                             );
                         }
-
-                        const isActive = pathname === item.href;
                         return (
-                            <Link
+                            <NavLink
                                 key={item.name}
-                                href={item.href || "#"}
-                                title={isMinimized ? item.name : undefined}
-                                className={`flex items-center text-xs tracking-wider font-semibold uppercase transition-colors rounded-lg ${isMinimized ? "px-2 justify-center py-1" : "px-4 py-1"
-                                    } ${isActive && !isMinimized ? "text-[#FFFFFF] bg-[#8A817C]/20" : "text-[#8A817C] hover:text-[#FFFFFF]"}`}
-                            >
-                                <div className="flex items-center space-x-2  min-w-0 w-full">
-                                    <div className={`p-2 rounded-xl transition-colors ${isActive && isMinimized ? "bg-[#8A817C]/30 text-[#FFFFFF]" : "bg-transparent"}`}>
-                                        <Icon className="w-4 h-4 shrink-0" />
-                                    </div>
-                                    {!isMinimized && <span className="truncate">{item.name}</span>}
-                                </div>
-                            </Link>
+                                item={item}
+                                pathname={pathname}
+                                isMinimized={isMinimized}
+                            />
                         );
                     })}
                 </nav>
             </div>
 
             <div className={`p-6 space-y-2 border-t border-white/10 transition-all duration-300 ${isMinimized ? "text-center px-2" : ""}`}>
-                <div className={`w-full flex items-center space-x-3 text-xs font-bold p-3 text-[#8A817C] hover:text-white rounded-sm ${isMinimized ? "bg-transparent" : "bg-white/10"}`} onClick={logout}>
-                    <div className={`p-2 rounded-xl transition-colors bg-transparent`}>
+                {!isMinimized && (adminName || adminRoleName) && (
+                    <div className="flex items-center gap-2 mb-3 px-1">
+                        <UserCircle className="w-4 h-4 text-[#8A817C] shrink-0" />
+                        <div className="min-w-0">
+                            {adminName && <p className="text-[10px] text-[#FFFFFF]/70 font-medium truncate">{adminName}</p>}
+                            {adminRoleName && <p className="text-[9px] text-[#8A817C] truncate">{adminRoleName}</p>}
+                        </div>
+                    </div>
+                )}
+                <button
+                    type="button"
+                    onClick={logout}
+                    className={`w-full flex items-center space-x-3 text-xs font-bold p-3 text-[#8A817C] hover:text-white rounded-sm ${isMinimized ? "bg-transparent" : "bg-white/10"}`}
+                >
+                    <div className="p-2 rounded-xl transition-colors bg-transparent">
                         <LogOut className="w-4 h-4 shrink-0" />
                     </div>
                     {!isMinimized && "Logout"}
-                </div>
-                {!isMinimized ? (
-                    <>
-                        <div className="text-[10px] tracking-widest font-semibold uppercase text-[#8A817C] truncate">
-                            RCCG Discovery Centre
-                        </div>
-                        <div className="text-[9px] text-[#8A817C]/60 font-mono mt-1">
-                            v2.0.26 &bull; Dev Team
-                        </div>
-                    </>
-                ) : (
-                    <div className="text-[10px] font-mono font-semibold text-[#8A817C]">
-                        ’26
+                </button>
+                {!isMinimized && (
+                    <div className="text-[9px] text-[#8A817C]/60 font-mono mt-1">
+                        v{process.env.NEXT_PUBLIC_APP_VERSION}
                     </div>
                 )}
             </div>

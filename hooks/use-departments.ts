@@ -48,6 +48,15 @@ export interface RemoveLeadPayload {
     type: "head" | "assistant";
 }
 
+export interface BulkAssignDepartmentPayload {
+    memberIds: string[];
+}
+
+export interface BulkAssignDepartmentResult {
+    updated: number;
+    skipped: number;
+}
+
 export interface DepartmentPagination {
     page: number;
     limit: number;
@@ -223,6 +232,27 @@ export function useDepartments() {
         }
     }, []);
 
+    const bulkAssignDepartment = useCallback(async (
+        departmentId: string,
+        payload: BulkAssignDepartmentPayload
+    ): Promise<BulkAssignDepartmentResult> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            const res = await api.post(`/departments/${departmentId}/bulk-assign`, payload);
+            return res.data?.data as BulkAssignDepartmentResult;
+        } catch (err: any) {
+            const message =
+                err?.response?.data?.message ||
+                err?.message ||
+                "Failed to bulk assign department.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
     const fetchDepartmentWorkers = useCallback(async (
         departmentId: string,
         page = 1,
@@ -271,6 +301,7 @@ export function useDepartments() {
         deleteDepartment,
         assignLead,
         removeLead,
+        bulkAssignDepartment,
         fetchDepartmentLeads,
         fetchDepartmentWorkers,
     };

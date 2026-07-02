@@ -18,6 +18,7 @@ import {
 import { withAuth } from "@/utils/auth/with-auth";
 import { useVenues, Venue } from "@/hooks/use-venues";
 import Error from "@/components/layout/error";
+import { TableEmptyState } from "@/components/ui/table-empty-state";
 
 const fetchCoordinates = async (
     targetAddress: string
@@ -64,6 +65,8 @@ export default withAuth(function VenuesPage() {
     const [name, setName] = useState("");
     const [address, setAddress] = useState("");
     const [isGeocoding, setIsGeocoding] = useState(false);
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
 
     // Inline edit state
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -100,7 +103,7 @@ export default withAuth(function VenuesPage() {
         setIsGeocoding(true);
         try {
             const coords = await fetchCoordinates(address);
-            await createVenue({
+            const created = await createVenue({
                 name,
                 address,
                 latitude: coords.lat,
@@ -108,6 +111,8 @@ export default withAuth(function VenuesPage() {
             });
             setName("");
             setAddress("");
+            setSelectedVenue(created);
+            setShowCreateForm(false);
         } finally {
             setIsGeocoding(false);
         }
@@ -118,6 +123,8 @@ export default withAuth(function VenuesPage() {
         setEditingId(venue.id);
         setEditName(venue.name);
         setEditAddress(venue.address);
+        setSelectedVenue(venue);
+        setShowCreateForm(false);
     };
 
     const cancelEdit = () => {
@@ -127,27 +134,62 @@ export default withAuth(function VenuesPage() {
     };
 
     const handleUpdate = async (venueId: string) => {
-        await updateVenue(venueId, {
+        const updated = await updateVenue(venueId, {
             name: editName,
             address: editAddress,
         });
+        setSelectedVenue(updated);
         cancelEdit();
     };
 
     // Delete
     const handleDelete = async (venueId: string) => {
         await deleteVenue(venueId);
+        if (selectedVenue?.id === venueId) setSelectedVenue(null);
     };
+
+    const openCreateForm = () => {
+        setShowCreateForm(true);
+        setSelectedVenue(null);
+        cancelEdit();
+    };
+
+    const openVenue = (venue: Venue) => {
+        setSelectedVenue(venue);
+        setShowCreateForm(false);
+        cancelEdit();
+    };
+
+    const closePanel = () => {
+        setShowCreateForm(false);
+        setSelectedVenue(null);
+        cancelEdit();
+    };
+
+    const panelOpen = showCreateForm || selectedVenue !== null;
 
     return (
         <div className="space-y-10 font-sans">
-            <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#121212]">
-                    Physical Venue Infrastructure
-                </h1>
-                <p className="text-xs uppercase tracking-widest font-semibold text-[#8A817C] mt-1">
-                    Map site logistics and synchronize automated geometric spatial tracking nodes
-                </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-light tracking-tight text-[#121212]">
+                        Venues & Spaces
+                    </h1>
+                    <p className="text-xs uppercase tracking-widest font-semibold text-[#8A817C] mt-1">
+                        Add and manage the spaces your congregation uses for events and services
+                    </p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="text-xs font-mono text-[#8A817C]">{venues.length} venue{venues.length !== 1 ? "s" : ""}</span>
+                    <button
+                        type="button"
+                        onClick={openCreateForm}
+                        className="flex items-center gap-1.5 h-9 px-4 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        Add Venue
+                    </button>
+                </div>
             </div>
 
             {error && (
@@ -172,67 +214,8 @@ export default withAuth(function VenuesPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                {/* Create form */}
-                <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#121212]/10 p-8 rounded-xl">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-[#121212] mb-6 flex items-center space-x-2">
-                        <Plus className="w-4 h-4 text-[#8A817C]" />
-                        <span>Map New Site Venue</span>
-                    </h2>
-
-                    <form onSubmit={handleCreateVenue} className="space-y-5">
-                        <div>
-                            <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                Venue Label Designation
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="e.g., Main Auditorium"
-                                className="w-full h-11 px-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                Physical Address Mapping
-                            </label>
-                            <div className="relative">
-                                <MapPin className="absolute left-3 top-3.5 w-4 h-4 text-[#8A817C]" />
-                                <input
-                                    type="text"
-                                    required
-                                    value={address}
-                                    onChange={(e) => setAddress(e.target.value)}
-                                    placeholder="e.g., 123 Church Road, Lagos, Nigeria"
-                                    className="w-full h-11 pl-10 pr-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
-                                />
-                            </div>
-                            <p className="text-[10px] text-[#8A817C] mt-2 font-mono leading-relaxed">
-                                System handles coordinate geocoding strings dynamically via remote map projection databases.
-                            </p>
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={isGeocoding || isSubmitting || !name || !address}
-                            className="w-full h-12 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 rounded-xl mt-6"
-                        >
-                            <RefreshCw className={`w-3.5 h-3.5 ${isGeocoding || isSubmitting ? "animate-spin" : ""}`} />
-                            <span>
-                                {isGeocoding
-                                    ? "Resolving Geographic Vectors..."
-                                    : isSubmitting
-                                        ? "Saving..."
-                                        : "Save Location Node"}
-                            </span>
-                        </button>
-                    </form>
-                </div>
-
                 {/* Table */}
-                <div className="lg:col-span-7 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col">
+                <div className={`${panelOpen ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col transition-all`}>
                     {isLoading ? (
                         <div className="p-12 text-center text-xs text-[#8A817C] font-light">
                             Loading venue registries...
@@ -243,10 +226,10 @@ export default withAuth(function VenuesPage() {
                                 <thead>
                                     <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
                                         <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">
-                                            Site Mapping Descriptor
+                                            Venue
                                         </th>
                                         <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">
-                                            Spatial Coordinates
+                                            Coordinates
                                         </th>
                                         <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] text-right">
                                             Actions
@@ -256,18 +239,27 @@ export default withAuth(function VenuesPage() {
                                 <tbody className="divide-y divide-[#121212]/5 text-[#121212]">
                                     {paginatedVenues.length === 0 ? (
                                         <tr>
-                                            <td
-                                                colSpan={3}
-                                                className="p-12 text-center text-xs text-[#8A817C] font-light"
-                                            >
-                                                No structural site locations logged into tracking networks.
+                                            <td colSpan={3} className="p-12 text-center">
+                                                <TableEmptyState
+                                                    title={
+                                                        searchQuery.trim()
+                                                            ? "No venues match the current search."
+                                                            : "No venues registered yet."
+                                                    }
+                                                    action={
+                                                        !searchQuery.trim()
+                                                            ? { label: "Add Venue", onClick: openCreateForm }
+                                                            : undefined
+                                                    }
+                                                />
                                             </td>
                                         </tr>
                                     ) : (
                                         paginatedVenues.map((venue) => (
                                             <tr
                                                 key={venue.id}
-                                                className="hover:bg-[#F4F1EA]/10 transition-colors"
+                                                onClick={() => openVenue(venue)}
+                                                className={`cursor-pointer transition-colors ${selectedVenue?.id === venue.id ? "bg-[#F4F1EA]/50" : "hover:bg-[#F4F1EA]/10"}`}
                                             >
                                                 <td className="p-4 max-w-[280px]">
                                                     {editingId === venue.id ? (
@@ -305,7 +297,7 @@ export default withAuth(function VenuesPage() {
                                                         <span>Lng: {venue.longitude}°</span>
                                                     </div>
                                                 </td>
-                                                <td className="p-4 text-right">
+                                                <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                                                     {editingId === venue.id ? (
                                                         <div className="flex items-center justify-end space-x-1">
                                                             <button
@@ -376,7 +368,134 @@ export default withAuth(function VenuesPage() {
                         </div>
                     )}
                 </div>
+
+                {panelOpen && (
+                    <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl relative overflow-hidden">
+                        <button
+                            type="button"
+                            onClick={closePanel}
+                            className="absolute top-4 right-4 p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/20 rounded-md z-10 transition-colors"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+
+                        {showCreateForm && (
+                            <div className="p-6">
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1">New Venue</div>
+                                <h2 className="text-lg font-light tracking-tight text-[#121212] mb-6 pr-8">Add Venue</h2>
+
+                                <form onSubmit={handleCreateVenue} className="space-y-5">
+                                    <div>
+                                        <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
+                                            Venue Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value)}
+                                            placeholder="e.g., Main Auditorium"
+                                            className="w-full h-11 px-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
+                                            Address
+                                        </label>
+                                        <div className="relative">
+                                            <MapPin className="absolute left-3 top-3.5 w-4 h-4 text-[#8A817C]" />
+                                            <input
+                                                type="text"
+                                                required
+                                                value={address}
+                                                onChange={(e) => setAddress(e.target.value)}
+                                                placeholder="e.g., 123 Church Road, Lagos, Nigeria"
+                                                className="w-full h-11 pl-10 pr-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={isGeocoding || isSubmitting || !name || !address}
+                                        className="w-full h-12 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 rounded-xl"
+                                    >
+                                        <RefreshCw className={`w-3.5 h-3.5 ${isGeocoding || isSubmitting ? "animate-spin" : "hidden"}`} />
+                                        <span>{isGeocoding ? "Resolving..." : isSubmitting ? "Saving..." : "Add Venue"}</span>
+                                    </button>
+                                </form>
+                            </div>
+                        )}
+
+                        {!showCreateForm && selectedVenue && (
+                            <div className="flex flex-col h-full">
+                                <div className="p-6 border-b border-[#121212]/5">
+                                    <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1">Venue Detail</div>
+                                    <h2 className="text-lg font-light tracking-tight text-[#121212] pr-8">{selectedVenue.name}</h2>
+                                    <div className="text-xs text-[#8A817C] mt-2 flex items-start gap-1.5">
+                                        <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                                        <span>{selectedVenue.address}</span>
+                                    </div>
+                                </div>
+
+                                <div className="p-6 space-y-6">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="p-4 bg-[#F4F1EA]/30 border border-[#121212]/5 rounded-lg">
+                                            <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1">Latitude</div>
+                                            <div className="text-sm font-mono text-[#121212]">{selectedVenue.latitude}°</div>
+                                        </div>
+                                        <div className="p-4 bg-[#F4F1EA]/30 border border-[#121212]/5 rounded-lg">
+                                            <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1">Longitude</div>
+                                            <div className="text-sm font-mono text-[#121212]">{selectedVenue.longitude}°</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#121212] flex items-center space-x-2">
+                                            <Pencil className="w-4 h-4 text-[#8A817C]" />
+                                            <span>Edit Venue</span>
+                                        </h3>
+                                        <div className="space-y-2">
+                                            <input
+                                                value={editingId === selectedVenue.id ? editName : selectedVenue.name}
+                                                onFocus={() => startEdit(selectedVenue)}
+                                                onChange={(e) => setEditName(e.target.value)}
+                                                className="w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                                            />
+                                            <input
+                                                value={editingId === selectedVenue.id ? editAddress : selectedVenue.address}
+                                                onFocus={() => startEdit(selectedVenue)}
+                                                onChange={(e) => setEditAddress(e.target.value)}
+                                                className="w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#8A817C] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleUpdate(selectedVenue.id)}
+                                            disabled={isSubmitting || editingId !== selectedVenue.id}
+                                            className="w-full h-10 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors disabled:opacity-40 rounded-lg"
+                                        >
+                                            Save Changes
+                                        </button>
+                                    </div>
+
+                                    <div className="pt-4 border-t border-[#121212]/5">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDelete(selectedVenue.id)}
+                                            disabled={isSubmitting}
+                                            className="w-full h-10 border border-red-200 text-red-600 text-xs font-semibold uppercase tracking-widest hover:bg-red-50 transition-colors disabled:opacity-40 rounded-lg"
+                                        >
+                                            Delete Venue
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
-});
+}, { requiredPermission: 'venues:read' });

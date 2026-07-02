@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -9,17 +9,19 @@ import { withAuth } from "@/utils/auth/with-auth";
 import {
     Megaphone, FileText, Send, Trash2, Calendar, User, Clock,
     Bold, Italic, Underline as UnderlineIcon, List, ListOrdered,
-    Heading1, Heading2, Undo, Redo, ChevronLeft, ChevronRight,
-    RefreshCw, Pencil, X, Check, Building2, UserCircle, Globe,
+    Heading1, Heading2, Undo, Redo,
+    RefreshCw, Pencil, X, Check, Building2, UserCircle, Globe, Users, HardHat,
 } from "lucide-react";
 import {
     useAnnouncements,
     Announcement,
     AnnouncementAudience,
+    AnnouncementFilters,
     CreateAnnouncementPayload,
 } from "@/hooks/use-announcements";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { useDepartments } from "@/hooks/use-departments";
-import { useMembers } from "@/hooks/use-member";
+import { api } from "@/utils/auth/axios-client";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -54,6 +56,22 @@ function AudienceBadge({ announcement }: { announcement: Announcement }) {
             </span>
         );
     }
+    if (announcement.audience === "WORKERS_ONLY") {
+        return (
+            <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-amber-50 border border-amber-100 text-amber-700 text-[9px] font-semibold uppercase tracking-wider rounded">
+                <HardHat className="w-2.5 h-2.5" />
+                <span>Workers Only</span>
+            </span>
+        );
+    }
+    if (announcement.audience === "MEMBERS_ONLY") {
+        return (
+            <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-green-50 border border-green-100 text-green-700 text-[9px] font-semibold uppercase tracking-wider rounded">
+                <Users className="w-2.5 h-2.5" />
+                <span>Members Only</span>
+            </span>
+        );
+    }
     if (announcement.audience === "DEPARTMENT") {
         return (
             <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 text-[9px] font-semibold uppercase tracking-wider rounded">
@@ -79,6 +97,126 @@ function SkeletonCard() {
             <div className="h-5 w-2/3 bg-[#F4F1EA] rounded" />
             <div className="h-3 w-full bg-[#F4F1EA] rounded" />
             <div className="h-3 w-4/5 bg-[#F4F1EA] rounded" />
+        </div>
+    );
+}
+
+// ─── Member search combobox ───────────────────────────────────────────────────
+
+interface MemberResult {
+    id: string;
+    firstname: string;
+    lastname: string;
+    email: string;
+}
+
+interface MemberSearchInputProps {
+    value: string;
+    onChange: (id: string) => void;
+}
+
+function MemberSearchInput({ value, onChange }: MemberSearchInputProps) {
+    const [query, setQuery] = useState("");
+    const [results, setResults] = useState<MemberResult[]>([]);
+    const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [selectedName, setSelectedName] = useState("");
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        if (!value) { setSelectedName(""); }
+    }, [value]);
+
+    React.useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
+
+    const doSearch = async (q: string) => {
+        if (!q.trim()) { setResults([]); setOpen(false); return; }
+        setLoading(true);
+        try {
+            const res = await api.get(`/members?page=1&limit=8&search=${encodeURIComponent(q)}`);
+            const list: MemberResult[] = res.data?.data?.data ?? [];
+            setResults(list);
+            setOpen(list.length > 0);
+        } catch {
+            setResults([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const q = e.target.value;
+        setQuery(q);
+        if (!q) { onChange(""); setSelectedName(""); }
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => doSearch(q), 300);
+    };
+
+    const handleSelect = (m: MemberResult) => {
+        onChange(m.id);
+        setSelectedName(`${m.firstname} ${m.lastname}`);
+        setQuery("");
+        setResults([]);
+        setOpen(false);
+    };
+
+    const handleClear = () => {
+        onChange("");
+        setSelectedName("");
+        setQuery("");
+        setResults([]);
+        setOpen(false);
+    };
+
+    return (
+        <div ref={wrapperRef} className="relative">
+            {selectedName ? (
+                <div className="flex items-center gap-3 h-11 px-4 bg-[#F4F1EA]/40 border border-[#121212]/10 rounded-lg">
+                    <UserCircle className="w-4 h-4 text-[#8A817C] shrink-0" />
+                    <span className="text-sm text-[#121212] font-light flex-1 truncate">{selectedName}</span>
+                    <button type="button" onClick={handleClear} className="p-0.5 text-[#8A817C] hover:text-[#121212] transition-colors">
+                        <X className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            ) : (
+                <div className="relative">
+                    <input
+                        type="text"
+                        value={query}
+                        onChange={handleInput}
+                        onFocus={() => results.length > 0 && setOpen(true)}
+                        placeholder="Type a name or email to search…"
+                        className="w-full h-11 px-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                    />
+                    {loading && (
+                        <RefreshCw className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8A817C] animate-spin pointer-events-none" />
+                    )}
+                </div>
+            )}
+            {open && results.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#121212]/10 rounded-xl shadow-lg z-20 overflow-hidden max-h-60 overflow-y-auto">
+                    {results.map((m) => (
+                        <button
+                            key={m.id}
+                            type="button"
+                            onMouseDown={(e) => { e.preventDefault(); handleSelect(m); }}
+                            className="w-full text-left px-4 py-3 hover:bg-[#F4F1EA]/60 transition-colors border-b border-[#121212]/5 last:border-0"
+                        >
+                            <div className="text-sm text-[#121212] font-light">{m.firstname} {m.lastname}</div>
+                            <div className="text-[11px] text-[#8A817C] font-mono">{m.email}</div>
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
@@ -143,22 +281,28 @@ export default withAuth(function AnnouncementsPage() {
     const {
         announcements,
         pagination,
+        filters,
         isLoading,
         isSubmitting,
         error,
         goToPage,
         refetch,
+        applyFilters,
         createAnnouncement,
         updateAnnouncement,
         deleteAnnouncement,
     } = useAnnouncements(10);
 
     const { departments } = useDepartments();
-    const { members } = useMembers(100);
 
     const [form, setForm] = useState(defaultForm);
+    const [memberInputKey, setMemberInputKey] = useState(0);
     const [createError, setCreateError] = useState<string | null>(null);
     const [createSuccess, setCreateSuccess] = useState<string | null>(null);
+
+    const [audienceFilter, setAudienceFilter] = useState<AnnouncementAudience | "">("");
+    const [titleSearch, setTitleSearch] = useState("");
+    const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Inline edit
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -225,6 +369,7 @@ export default withAuth(function AnnouncementsPage() {
         try {
             await createAnnouncement(payload);
             setForm(defaultForm);
+            setMemberInputKey((k) => k + 1);
             editor.commands.clearContent();
             setCreateSuccess("Announcement published successfully.");
             setTimeout(() => setCreateSuccess(null), 3000);
@@ -267,7 +412,7 @@ export default withAuth(function AnnouncementsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-light tracking-tight text-[#121212]">
-                        Announcements CMS
+                        Announcements
                     </h1>
                     <p className="text-xs uppercase tracking-widest font-semibold text-[#8A817C] mt-1">
                         Publish broadcasts to everyone, a department, or an individual member
@@ -342,7 +487,13 @@ export default withAuth(function AnnouncementsPage() {
                                 Target Audience
                             </label>
                             <div className="grid grid-cols-3 gap-2">
-                                {(["ALL", "DEPARTMENT", "INDIVIDUAL"] as const).map((aud) => (
+                                {([
+                                    ["ALL", "Everyone"],
+                                    ["WORKERS_ONLY", "Workers"],
+                                    ["MEMBERS_ONLY", "Members"],
+                                    ["DEPARTMENT", "Department"],
+                                    ["INDIVIDUAL", "Individual"],
+                                ] as const).map(([aud, label]) => (
                                     <button
                                         key={aud}
                                         type="button"
@@ -352,7 +503,7 @@ export default withAuth(function AnnouncementsPage() {
                                                 : "bg-white text-[#8A817C] border-[#121212]/10 hover:text-[#121212]"
                                             }`}
                                     >
-                                        {aud === "ALL" ? "Everyone" : aud === "DEPARTMENT" ? "Department" : "Individual"}
+                                        {label}
                                     </button>
                                 ))}
                             </div>
@@ -382,19 +533,11 @@ export default withAuth(function AnnouncementsPage() {
                                 <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
                                     Select Member
                                 </label>
-                                <select
-                                    required
+                                <MemberSearchInput
+                                    key={memberInputKey}
                                     value={form.targetMemberId}
-                                    onChange={(e) => setForm((p) => ({ ...p, targetMemberId: e.target.value }))}
-                                    className="w-full h-11 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
-                                >
-                                    <option value="">-- Select member --</option>
-                                    {members.map((m) => (
-                                        <option key={m.id} value={m.id}>
-                                            {fullName(m)} — {m.email}
-                                        </option>
-                                    ))}
-                                </select>
+                                    onChange={(id) => setForm((p) => ({ ...p, targetMemberId: id }))}
+                                />
                             </div>
                         )}
 
@@ -471,7 +614,7 @@ export default withAuth(function AnnouncementsPage() {
 
                 {/* Feed */}
                 <div className="lg:col-span-6 bg-[#FFFFFF] border border-[#121212]/10 p-8 rounded-xl flex flex-col">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-[#121212] mb-6 flex items-center space-x-2">
+                    <h2 className="text-sm font-semibold uppercase tracking-wider text-[#121212] mb-4 flex items-center space-x-2">
                         <FileText className="w-4 h-4 text-[#8A817C]" />
                         <span>
                             Announcement Feed
@@ -479,11 +622,40 @@ export default withAuth(function AnnouncementsPage() {
                         </span>
                     </h2>
 
+                    <div className="flex flex-wrap gap-2 mb-6">
+                        <input
+                            type="text"
+                            value={titleSearch}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setTitleSearch(val);
+                                if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+                                searchDebounceRef.current = setTimeout(() => {
+                                    applyFilters({ search: val || undefined, audience: audienceFilter || undefined } as AnnouncementFilters);
+                                }, 400);
+                            }}
+                            placeholder="Search by title…"
+                            className="h-8 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] focus:outline-none rounded-lg min-w-[180px] flex-1"
+                        />
+                        {(["", "ALL", "WORKERS_ONLY", "MEMBERS_ONLY", "DEPARTMENT", "INDIVIDUAL"] as const).map((val) => {
+                            const label = val === "" ? "All" : val === "ALL" ? "Everyone" : val === "WORKERS_ONLY" ? "Workers" : val === "MEMBERS_ONLY" ? "Members" : val === "DEPARTMENT" ? "Dept" : "Individual";
+                            return (
+                                <button key={val} type="button" onClick={() => {
+                                    setAudienceFilter(val);
+                                    applyFilters({ search: titleSearch || undefined, audience: val || undefined });
+                                }}
+                                    className={`h-8 px-3 text-[10px] font-semibold uppercase tracking-wider rounded-lg transition-colors whitespace-nowrap ${audienceFilter === val ? "bg-[#121212] text-white" : "bg-[#F4F1EA] text-[#8A817C] hover:text-[#121212]"}`}>
+                                    {label}
+                                </button>
+                            );
+                        })}
+                    </div>
+
                     {isLoading ? (
                         <div className="space-y-4">
                             {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
                         </div>
-                    ) : announcements.length === 0 ? (
+                    ) : announcements.length === 0 && !filters.search && !filters.audience ? (
                         <div className="flex-1 border-2 border-dashed border-[#121212]/10 flex flex-col items-center justify-center text-center p-12 bg-[#F4F1EA]/20 rounded-xl">
                             <Megaphone className="w-8 h-8 text-[#8A817C]/40 mb-3" />
                             <div className="text-xs uppercase tracking-wider font-semibold text-[#121212]">
@@ -492,6 +664,12 @@ export default withAuth(function AnnouncementsPage() {
                             <p className="text-xs text-[#8A817C] font-light max-w-xs mt-1">
                                 Compose your first broadcast using the form on the left.
                             </p>
+                        </div>
+                    ) : announcements.length === 0 ? (
+                        <div className="flex-1 border-2 border-dashed border-[#121212]/10 flex flex-col items-center justify-center text-center p-12 bg-[#F4F1EA]/20 rounded-xl">
+                            <Megaphone className="w-8 h-8 text-[#8A817C]/40 mb-3" />
+                            <div className="text-xs uppercase tracking-wider font-semibold text-[#121212]">No matches</div>
+                            <p className="text-xs text-[#8A817C] font-light max-w-xs mt-1">No announcements match the current filter.</p>
                         </div>
                     ) : (
                         <>
@@ -639,33 +817,16 @@ export default withAuth(function AnnouncementsPage() {
                                 })}
                             </div>
 
-                            {pagination && pagination.totalPages > 1 && (
-                                <div className="pt-4 mt-2 border-t border-[#121212]/10 flex items-center justify-between">
-                                    <span className="text-xs font-mono text-[#8A817C]">
-                                        Page {pagination.page} of {pagination.totalPages}
-                                    </span>
-                                    <div className="flex space-x-1">
-                                        <button
-                                            disabled={pagination.page <= 1 || isLoading}
-                                            onClick={() => goToPage(pagination.page - 1)}
-                                            className="p-2 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212] hover:bg-[#F4F1EA]"
-                                        >
-                                            <ChevronLeft className="w-3.5 h-3.5" />
-                                        </button>
-                                        <button
-                                            disabled={pagination.page >= pagination.totalPages || isLoading}
-                                            onClick={() => goToPage(pagination.page + 1)}
-                                            className="p-2 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212] hover:bg-[#F4F1EA]"
-                                        >
-                                            <ChevronRight className="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+                            <PaginationBar
+                                pagination={pagination}
+                                onPage={goToPage}
+                                isLoading={isLoading}
+                                label="announcements"
+                            />
                         </>
                     )}
                 </div>
             </div>
         </div>
     );
-});
+}, { requiredPermission: 'announcements:read' });

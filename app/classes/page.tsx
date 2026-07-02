@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
+import { useRouter } from "next/navigation";
 import {
     GraduationCap, Plus, X, Check, Pencil, Trash2, RefreshCw,
-    ChevronLeft, ChevronRight, Users, UserPlus, Calendar,
-    ShieldAlert, CheckCircle2, Eye,
+    Users, UserPlus,
+    ShieldAlert, CheckCircle2, MousePointerClick, UserRoundPlus,
 } from "lucide-react";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import {
     useClasses,
     ChurchClass,
@@ -16,6 +18,7 @@ import {
     CreateClassPayload,
 } from "@/hooks/use-classes";
 import { useMembers } from "@/hooks/use-member";
+import { useWorkers } from "@/hooks/use-workers";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -29,10 +32,15 @@ const formatDate = (iso: string | null) => {
     });
 };
 
-const formatClassType = (type: ClassType) =>
-    type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+const CLASS_TYPES: ClassType[] = ["BELIEVERS", "BAPTISMAL", "WORKERS_IN_TRAINING", "BIBLE_COLLEGE", "SCHOOL_OF_DISCIPLESHIP"];
 
-const CLASS_TYPES: ClassType[] = ["BELIEVERS", "BAPTISMAL", "WORKERS_IN_TRAINING"];
+const CLASS_TYPE_LABELS: Record<ClassType, string> = {
+    BELIEVERS: "Believers",
+    BAPTISMAL: "Baptismal",
+    WORKERS_IN_TRAINING: "Workers in Training",
+    BIBLE_COLLEGE: "Bible College",
+    SCHOOL_OF_DISCIPLESHIP: "School of Discipleship",
+};
 
 // ─── Badges ───────────────────────────────────────────────────────────────────
 
@@ -41,10 +49,12 @@ function ClassTypeBadge({ type }: { type: ClassType }) {
         BELIEVERS: "bg-blue-50 border-blue-100 text-blue-700",
         BAPTISMAL: "bg-purple-50 border-purple-100 text-purple-700",
         WORKERS_IN_TRAINING: "bg-[#EADCC9] border-[#EADCC9] text-[#121212]",
+        BIBLE_COLLEGE: "bg-amber-50 border-amber-100 text-amber-700",
+        SCHOOL_OF_DISCIPLESHIP: "bg-green-50 border-green-100 text-green-700",
     };
     return (
         <span className={`inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border ${map[type]}`}>
-            {formatClassType(type)}
+            {CLASS_TYPE_LABELS[type]}
         </span>
     );
 }
@@ -74,6 +84,102 @@ function SkeletonRow({ cols }: { cols: number }) {
     );
 }
 
+// ─── Searchable combobox ──────────────────────────────────────────────────────
+
+interface ComboOption { id: string; label: string; sub?: string; }
+
+function PersonCombobox({
+    options,
+    value,
+    onChange,
+    placeholder = "Search by name…",
+    required,
+}: {
+    options: ComboOption[];
+    value: string;
+    onChange: (id: string) => void;
+    placeholder?: string;
+    required?: boolean;
+}) {
+    const [query, setQuery] = useState("");
+    const [open, setOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const selected = useMemo(() => options.find((o) => o.id === value), [options, value]);
+
+    const filtered = useMemo(() => {
+        const q = query.toLowerCase();
+        const list = q
+            ? options.filter((o) => o.label.toLowerCase().includes(q) || o.sub?.toLowerCase().includes(q))
+            : options;
+        return list.slice(0, 60);
+    }, [query, options]);
+
+    useEffect(() => {
+        const onDown = (e: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                setOpen(false);
+                setQuery("");
+            }
+        };
+        document.addEventListener("mousedown", onDown);
+        return () => document.removeEventListener("mousedown", onDown);
+    }, []);
+
+    const select = (id: string) => { onChange(id); setQuery(""); setOpen(false); };
+    const clear = (e: React.MouseEvent) => { e.stopPropagation(); onChange(""); setQuery(""); };
+
+    return (
+        <div ref={containerRef} className="relative">
+            {/* hidden input so browser required validation works */}
+            {required && <input tabIndex={-1} required value={value} onChange={() => {}} className="sr-only" />}
+            <div
+                className="flex items-center w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 rounded-lg focus-within:border-[#121212] transition-colors cursor-text gap-2"
+                onClick={() => { setOpen(true); }}
+            >
+                {selected && !open ? (
+                    <>
+                        <span className="flex-1 text-sm text-[#121212] font-light truncate">{selected.label}</span>
+                        <button type="button" onClick={clear} className="shrink-0 text-[#8A817C] hover:text-[#121212]">
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    </>
+                ) : (
+                    <input
+                        autoFocus={open}
+                        type="text"
+                        value={query}
+                        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+                        onFocus={() => setOpen(true)}
+                        placeholder={selected ? selected.label : placeholder}
+                        className="flex-1 bg-transparent text-sm text-[#121212] font-light outline-none placeholder:text-[#8A817C]/60"
+                    />
+                )}
+            </div>
+            {open && (
+                <div className="absolute z-30 top-full mt-1 w-full bg-white border border-[#121212]/10 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {filtered.length === 0 ? (
+                        <div className="p-3 text-xs text-[#8A817C] text-center">No results</div>
+                    ) : (
+                        filtered.map((o) => (
+                            <button
+                                key={o.id}
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => select(o.id)}
+                                className={`w-full text-left px-3 py-2.5 hover:bg-[#F4F1EA] transition-colors ${o.id === value ? "bg-[#F4F1EA]/70" : ""}`}
+                            >
+                                <div className="text-xs font-medium text-[#121212]">{o.label}</div>
+                                {o.sub && <div className="text-[11px] text-[#8A817C] font-mono mt-0.5 truncate">{o.sub}</div>}
+                            </button>
+                        ))
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ─── Default form ─────────────────────────────────────────────────────────────
 
 const defaultForm: CreateClassPayload = {
@@ -90,6 +196,8 @@ const defaultForm: CreateClassPayload = {
 type PanelTab = "details" | "enrollments";
 
 const ClassesPage = () => {
+    const router = useRouter();
+
     const {
         classes,
         pagination,
@@ -106,28 +214,43 @@ const ClassesPage = () => {
         enrollMember,
         fetchEnrollments,
         updateEnrollmentStatus,
+        closeClass,
     } = useClasses("", 10);
 
-    const { members } = useMembers(100);
+    const { workers } = useWorkers(200);
+    const { members } = useMembers(200);
+
+    const facilitatorOptions = useMemo<ComboOption[]>(() =>
+        workers.map((w) => ({ id: w.id, label: fullName(w), sub: w.email })),
+        [workers]
+    );
+
+    // Panel state
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const [selectedClass, setSelectedClass] = useState<ChurchClass | null>(null);
+    const panelOpen = showCreateForm || selectedClass !== null;
 
     // Create form
     const [createForm, setCreateForm] = useState<CreateClassPayload>(defaultForm);
     const [createError, setCreateError] = useState<string | null>(null);
     const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
-    // Edit
+    // Edit (inline in table)
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState({ name: "", description: "", startDate: "", endDate: "" });
+
+    // Facilitator edit (in detail panel)
+    const [editingFacilitator, setEditingFacilitator] = useState(false);
+    const [facilitatorDraft, setFacilitatorDraft] = useState("");
 
     // Delete confirm
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
-    // Detail panel
-    const [selectedClass, setSelectedClass] = useState<ChurchClass | null>(null);
+    // Enrollments
     const [panelTab, setPanelTab] = useState<PanelTab>("details");
     const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
     const [enrollmentsLoading, setEnrollmentsLoading] = useState(false);
-    const [enrollmentsPagination, setEnrollmentsPagination] = useState<any>(null);
+    const [enrollmentsPagination, setEnrollmentsPagination] = useState<{ page: number; limit: number; totalPages: number; totalCount: number } | null>(null);
     const [enrollmentsPage, setEnrollmentsPage] = useState(1);
 
     // Enroll form
@@ -135,22 +258,62 @@ const ClassesPage = () => {
     const [enrollSuccess, setEnrollSuccess] = useState<string | null>(null);
     const [enrollError, setEnrollError] = useState<string | null>(null);
 
+    // Close class
+    const [closeSuccess, setCloseSuccess] = useState<string | null>(null);
+    const [closeError, setCloseError] = useState<string | null>(null);
+
+    // Overdue: ACTIVE classes whose end date is in the past
+    const today = new Date().toISOString().split("T")[0];
+    const overdueClasses = useMemo(
+        () => classes.filter((c) => c.status === "ACTIVE" && c.endDate && c.endDate < today),
+        [classes, today]
+    );
+
+    // ── Panel controls ────────────────────────────────────────────────────────
+
+    const openCreateForm = () => {
+        setShowCreateForm(true);
+        setSelectedClass(null);
+        setCreateError(null);
+        setCreateSuccess(null);
+        setCreateForm(defaultForm);
+    };
+
+    const closePanel = () => {
+        setShowCreateForm(false);
+        setSelectedClass(null);
+    };
+
+    const selectClass = (c: ChurchClass) => {
+        setSelectedClass(c);
+        setShowCreateForm(false);
+        setPanelTab("details");
+        setEnrollMemberId("");
+        setEnrollSuccess(null);
+        setEnrollError(null);
+        loadEnrollments(c.id, 1);
+    };
+
     // ── Create ────────────────────────────────────────────────────────────────
+
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         setCreateError(null);
         setCreateSuccess(null);
         try {
             await createClass(createForm);
-            setCreateForm(defaultForm);
             setCreateSuccess("Class created successfully.");
-            setTimeout(() => setCreateSuccess(null), 3000);
+            setTimeout(() => {
+                setCreateSuccess(null);
+                setShowCreateForm(false);
+            }, 2000);
         } catch (err: any) {
             setCreateError(err?.message ?? "Failed to create class.");
         }
     };
 
-    // ── Edit ──────────────────────────────────────────────────────────────────
+    // ── Edit (inline) ─────────────────────────────────────────────────────────
+
     const startEdit = (c: ChurchClass) => {
         setEditingId(c.id);
         setEditForm({
@@ -172,6 +335,7 @@ const ClassesPage = () => {
     };
 
     // ── Delete ────────────────────────────────────────────────────────────────
+
     const handleDelete = async (classId: string) => {
         try {
             await deleteClass(classId);
@@ -182,23 +346,52 @@ const ClassesPage = () => {
         }
     };
 
+    // ── Facilitator ───────────────────────────────────────────────────────────
+
+    const startEditFacilitator = () => {
+        setFacilitatorDraft(selectedClass?.facilitator?.id ?? "");
+        setEditingFacilitator(true);
+    };
+
+    const handleSaveFacilitator = async () => {
+        if (!selectedClass) return;
+        try {
+            const updated = await updateClass(selectedClass.id, { facilitatorId: facilitatorDraft || undefined });
+            setSelectedClass(updated);
+            setEditingFacilitator(false);
+        } catch {
+            // surfaced via hook error
+        }
+    };
+
+    // ── Close class ───────────────────────────────────────────────────────────
+
+    const handleCloseClass = async (classId: string) => {
+        setCloseError(null);
+        setCloseSuccess(null);
+        try {
+            const result = await closeClass(classId);
+            if (selectedClass?.id === classId) {
+                setSelectedClass((prev) => prev ? { ...prev, status: "CLOSED" } : prev);
+            }
+            setCloseSuccess(`Class closed. ${result.closedEnrollments} enrollment(s) marked complete.`);
+            setTimeout(() => setCloseSuccess(null), 4000);
+        } catch (err: any) {
+            setCloseError(err?.message ?? "Failed to close class.");
+        }
+    };
+
     // ── Enrollments ───────────────────────────────────────────────────────────
+
     const loadEnrollments = async (classId: string, page = 1) => {
         setEnrollmentsLoading(true);
         const { enrollments, pagination } = await fetchEnrollments(classId, page);
         setEnrollments(enrollments);
-        setEnrollmentsPagination(pagination);
+        setEnrollmentsPagination(
+            pagination ? { page: pagination.page, limit: pagination.limit ?? 10, totalPages: pagination.totalPages, totalCount: pagination.totalCount } : null
+        );
         setEnrollmentsPage(page);
         setEnrollmentsLoading(false);
-    };
-
-    const selectClass = (c: ChurchClass) => {
-        setSelectedClass(c);
-        setPanelTab("details");
-        setEnrollMemberId("");
-        setEnrollSuccess(null);
-        setEnrollError(null);
-        loadEnrollments(c.id, 1);
     };
 
     const handleEnroll = async (e: React.FormEvent) => {
@@ -226,14 +419,15 @@ const ClassesPage = () => {
         }
     };
 
-    // Members not already enrolled (best-effort filter using current enrollments list)
-    const enrollableMembers = useMemo(() => {
+    const enrollableOptions = useMemo<ComboOption[]>(() => {
         const enrolledIds = new Set(enrollments.map((e) => e.member.id));
-        return members.filter((m) => !enrolledIds.has(m.id));
+        return members
+            .filter((m) => !enrolledIds.has(m.id))
+            .map((m) => ({ id: m.id, label: fullName(m), sub: m.email }));
     }, [members, enrollments]);
 
     return (
-        <div className="space-y-10 font-sans">
+        <div className="space-y-8 font-sans">
 
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -245,14 +439,30 @@ const ClassesPage = () => {
                         Manage believers, baptismal, and workers-in-training class tracks
                     </p>
                 </div>
-                <button
-                    onClick={refetch}
-                    disabled={isLoading}
-                    className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40 self-start sm:self-auto"
-                    title="Refresh"
-                >
-                    <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-                </button>
+                <div className="flex items-center gap-3 self-start sm:self-auto">
+                    <button
+                        onClick={refetch}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
+                    <button
+                        onClick={() => router.push("/classes/bulk-enroll")}
+                        className="flex items-center gap-2 px-4 py-2 border border-[#121212]/20 text-[#121212] text-xs font-semibold uppercase tracking-widest hover:bg-[#F4F1EA] transition-colors rounded-lg"
+                    >
+                        <UserRoundPlus className="w-3.5 h-3.5" />
+                        Bulk Enrol
+                    </button>
+                    <button
+                        onClick={openCreateForm}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors rounded-lg"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        New Class
+                    </button>
+                </div>
             </div>
 
             {error && (
@@ -262,161 +472,73 @@ const ClassesPage = () => {
                 </div>
             )}
 
+            {/* Overdue banner */}
+            {overdueClasses.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">
+                        {overdueClasses.length} class{overdueClasses.length > 1 ? "es" : ""} past end date — ready to close
+                    </p>
+                    <div className="space-y-1.5">
+                        {overdueClasses.map((c) => (
+                            <div key={c.id} className="flex items-center justify-between gap-4">
+                                <span className="text-xs text-amber-900 font-light">
+                                    <span className="font-medium">{c.name}</span>
+                                    <span className="text-amber-600 ml-2">— ended {formatDate(c.endDate)}</span>
+                                </span>
+                                <button
+                                    onClick={() => handleCloseClass(c.id)}
+                                    disabled={isSubmitting}
+                                    className="shrink-0 px-3 py-1 text-[10px] font-bold uppercase tracking-wider bg-amber-700 text-white hover:bg-amber-800 rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                    {closeSuccess && (
+                        <p className="text-xs text-green-700 font-medium flex items-center gap-1.5 pt-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />{closeSuccess}
+                        </p>
+                    )}
+                    {closeError && (
+                        <p className="text-xs text-red-700 font-medium pt-1">{closeError}</p>
+                    )}
+                </div>
+            )}
+
             {/* Type filter */}
-            <div className="flex bg-[#F4F1EA] p-1 border border-[#121212]/5 rounded-xl w-fit flex-wrap">
+            <div className="flex bg-[#F4F1EA] p-1 border border-[#121212]/5 rounded-xl w-fit flex-wrap gap-0.5">
                 <button
                     onClick={() => applyTypeFilter("")}
                     disabled={isLoading}
-                    className={`px-4 py-2 text-[10px] font-semibold uppercase tracking-wider rounded-lg transition-colors disabled:opacity-40 ${typeFilter === "" ? "bg-[#121212] text-white" : "text-[#8A817C] hover:text-[#121212]"
-                        }`}
+                    className={`px-4 py-2 text-[10px] font-semibold uppercase tracking-wider rounded-lg transition-colors disabled:opacity-40 ${typeFilter === "" ? "bg-[#121212] text-white" : "text-[#8A817C] hover:text-[#121212]"}`}
                 >
-                    All Classes
+                    All
                 </button>
                 {CLASS_TYPES.map((t) => (
                     <button
                         key={t}
                         onClick={() => applyTypeFilter(t)}
                         disabled={isLoading}
-                        className={`px-4 py-2 text-[10px] font-semibold uppercase tracking-wider rounded-lg transition-colors disabled:opacity-40 ${typeFilter === t ? "bg-[#121212] text-white" : "text-[#8A817C] hover:text-[#121212]"
-                            }`}
+                        className={`px-4 py-2 text-[10px] font-semibold uppercase tracking-wider rounded-lg transition-colors disabled:opacity-40 ${typeFilter === t ? "bg-[#121212] text-white" : "text-[#8A817C] hover:text-[#121212]"}`}
                     >
-                        {formatClassType(t)}
+                        {CLASS_TYPE_LABELS[t]}
                     </button>
                 ))}
             </div>
 
-            {/* Create + Table */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-
-                {/* Create form */}
-                <div className="lg:col-span-4 bg-[#FFFFFF] border border-[#121212]/10 p-6 rounded-xl">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-[#121212] mb-6 flex items-center space-x-2">
-                        <Plus className="w-4 h-4 text-[#8A817C]" />
-                        <span>Create Class</span>
-                    </h2>
-
-                    {createSuccess && (
-                        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-100 rounded-lg text-xs text-green-700 mb-4">
-                            <CheckCircle2 className="w-4 h-4 shrink-0" />
-                            {createSuccess}
-                        </div>
-                    )}
-                    {createError && (
-                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700 mb-4">
-                            <ShieldAlert className="w-4 h-4 shrink-0" />
-                            {createError}
-                        </div>
-                    )}
-
-                    <form onSubmit={handleCreate} className="space-y-5">
-                        <div>
-                            <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                Class Name
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                value={createForm.name}
-                                onChange={(e) => setCreateForm((p) => ({ ...p, name: e.target.value }))}
-                                placeholder="e.g., New Believers Class"
-                                className="w-full h-11 px-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                Class Type
-                            </label>
-                            <select
-                                value={createForm.type}
-                                onChange={(e) => setCreateForm((p) => ({ ...p, type: e.target.value as ClassType }))}
-                                className="w-full h-11 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
-                            >
-                                {CLASS_TYPES.map((t) => (
-                                    <option key={t} value={t}>{formatClassType(t)}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                Description
-                            </label>
-                            <textarea
-                                rows={3}
-                                value={createForm.description}
-                                onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
-                                placeholder="Foundation class for new members..."
-                                className="w-full p-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg resize-none"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                Facilitator
-                            </label>
-                            <select
-                                required
-                                value={createForm.facilitatorId}
-                                onChange={(e) => setCreateForm((p) => ({ ...p, facilitatorId: e.target.value }))}
-                                className="w-full h-11 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
-                            >
-                                <option value="">-- Select facilitator --</option>
-                                {members.map((m) => (
-                                    <option key={m.id} value={m.id}>
-                                        {fullName(m)} — {m.email}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
-                                    Start Date
-                                </label>
-                                <input
-                                    type="date"
-                                    required
-                                    value={createForm.startDate}
-                                    onChange={(e) => setCreateForm((p) => ({ ...p, startDate: e.target.value }))}
-                                    className="w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
-                                    End Date
-                                </label>
-                                <input
-                                    type="date"
-                                    required
-                                    value={createForm.endDate}
-                                    onChange={(e) => setCreateForm((p) => ({ ...p, endDate: e.target.value }))}
-                                    className="w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
-                                />
-                            </div>
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="w-full h-12 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 rounded-xl"
-                        >
-                            {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <GraduationCap className="w-3.5 h-3.5" />}
-                            <span>{isSubmitting ? "Creating..." : "Create Class"}</span>
-                        </button>
-                    </form>
-                </div>
+            {/* Table + Right Panel */}
+            <div className={`grid grid-cols-1 gap-6 ${panelOpen ? "lg:grid-cols-12" : ""}`}>
 
                 {/* Table */}
-                <div className="lg:col-span-8 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col">
+                <div className={`${panelOpen ? "lg:col-span-7" : ""} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col`}>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
                                     <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Class</th>
-                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Facilitator</th>
-                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Duration</th>
+                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] hidden sm:table-cell">Facilitator</th>
+                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] hidden md:table-cell">Duration</th>
                                     <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -433,9 +555,8 @@ const ClassesPage = () => {
                                     classes.map((c) => (
                                         <tr
                                             key={c.id}
-                                            onClick={() => selectClass(c)}
-                                            className={`transition-colors cursor-pointer ${selectedClass?.id === c.id ? "bg-[#F4F1EA]/50" : "hover:bg-[#F4F1EA]/10"
-                                                }`}
+                                            onClick={() => editingId !== c.id && deletingId !== c.id && selectClass(c)}
+                                            className={`transition-colors ${editingId === c.id || deletingId === c.id ? "" : "cursor-pointer"} ${selectedClass?.id === c.id ? "bg-[#F4F1EA]/50" : "hover:bg-[#F4F1EA]/10"}`}
                                         >
                                             <td className="p-4">
                                                 {editingId === c.id ? (
@@ -448,15 +569,22 @@ const ClassesPage = () => {
                                                 ) : (
                                                     <>
                                                         <div className="text-sm font-medium text-[#121212]">{c.name}</div>
-                                                        <div className="mt-1"><ClassTypeBadge type={c.type} /></div>
+                                                        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                                            <ClassTypeBadge type={c.type} />
+                                                            {c.status === "CLOSED" && (
+                                                                <span className="inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border bg-[#F4F1EA] border-[#121212]/10 text-[#8A817C]">
+                                                                    Closed
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </>
                                                 )}
                                             </td>
-                                            <td className="p-4 text-xs text-[#121212]">
-                                                <div className="font-medium">{fullName(c.facilitator)}</div>
-                                                <div className="text-[#8A817C] font-mono mt-0.5">{c.facilitator?.email}</div>
+                                            <td className="p-4 text-xs text-[#121212] hidden sm:table-cell">
+                                                <div className="font-medium">{c.facilitator ? fullName(c.facilitator) : "—"}</div>
+                                                <div className="text-[#8A817C] font-mono mt-0.5">{c.facilitator?.email ?? ""}</div>
                                             </td>
-                                            <td className="p-4 text-xs font-mono text-[#121212]">
+                                            <td className="p-4 text-xs font-mono text-[#121212] hidden md:table-cell">
                                                 {editingId === c.id ? (
                                                     <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
                                                         <input
@@ -515,12 +643,6 @@ const ClassesPage = () => {
                                                 ) : (
                                                     <div className="flex items-center justify-end gap-1">
                                                         <button
-                                                            onClick={() => selectClass(c)}
-                                                            className="p-2 text-[#8A817C] hover:text-[#121212] border border-[#121212]/10 hover:border-[#121212] rounded-lg transition-colors"
-                                                        >
-                                                            <Eye className="w-3.5 h-3.5" />
-                                                        </button>
-                                                        <button
                                                             onClick={() => startEdit(c)}
                                                             className="p-2 text-[#8A817C] hover:text-[#121212] rounded-lg hover:bg-[#F4F1EA] transition-colors"
                                                         >
@@ -542,237 +664,398 @@ const ClassesPage = () => {
                         </table>
                     </div>
 
-                    {pagination && pagination.totalPages > 1 && (
-                        <div className="p-4 border-t border-[#121212]/10 bg-[#F4F1EA]/10 flex items-center justify-between">
-                            <span className="text-xs font-mono text-[#8A817C]">
-                                Page {pagination.page} of {pagination.totalPages}
-                                <span className="ml-2 text-[#121212]/30">({pagination.totalCount} total)</span>
-                            </span>
-                            <div className="flex space-x-1">
-                                <button
-                                    disabled={pagination.page <= 1 || isLoading}
-                                    onClick={() => goToPage(pagination.page - 1)}
-                                    className="p-2 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212] hover:bg-[#F4F1EA]"
-                                >
-                                    <ChevronLeft className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                    disabled={pagination.page >= pagination.totalPages || isLoading}
-                                    onClick={() => goToPage(pagination.page + 1)}
-                                    className="p-2 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212] hover:bg-[#F4F1EA]"
-                                >
-                                    <ChevronRight className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
+                    <PaginationBar
+                        pagination={pagination}
+                        onPage={goToPage}
+                        isLoading={isLoading}
+                        label="classes"
+                    />
+
+                    {!panelOpen && (
+                        <div className="p-4 border-t border-[#121212]/5 text-center text-[11px] text-[#8A817C] font-light flex items-center justify-center gap-2">
+                            <MousePointerClick className="w-3.5 h-3.5" />
+                            Click any row to view class details and enrollments
                         </div>
                     )}
                 </div>
-            </div>
 
-            {/* Detail panel */}
-            {selectedClass && (
-                <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl relative">
-                    <button
-                        onClick={() => setSelectedClass(null)}
-                        className="absolute top-6 right-6 p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/10 rounded-md z-10"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
+                {/* Right panel */}
+                {panelOpen && (
+                    <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl relative flex flex-col">
 
-                    <div className="p-6 border-b border-[#121212]/5">
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1">
-                            Class Detail
-                        </div>
-                        <h2 className="text-xl font-light tracking-tight text-[#121212] pr-10">
-                            {selectedClass.name}
-                        </h2>
-                        <div className="flex items-center gap-2 mt-2">
-                            <ClassTypeBadge type={selectedClass.type} />
-                            <span className="text-xs font-mono text-[#8A817C]">
-                                {formatDate(selectedClass.startDate)} → {formatDate(selectedClass.endDate)}
-                            </span>
-                        </div>
-
-                        <div className="flex bg-[#F4F1EA] p-1 border border-[#121212]/5 rounded-xl mt-4 w-fit">
-                            {(["details", "enrollments"] as const).map((tab) => (
-                                <button
-                                    key={tab}
-                                    onClick={() => setPanelTab(tab)}
-                                    className={`flex items-center space-x-1.5 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider rounded-lg transition-colors ${panelTab === tab ? "bg-[#121212] text-white" : "text-[#8A817C] hover:text-[#121212]"
-                                        }`}
-                                >
-                                    {tab === "details" ? <GraduationCap className="w-3 h-3" /> : <Users className="w-3 h-3" />}
-                                    <span>{tab === "details" ? "Details" : "Enrollments"}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Details tab */}
-                    {panelTab === "details" && (
-                        <div className="p-6 space-y-4">
-                            <p className="text-xs text-[#121212]/80 font-light leading-relaxed bg-[#F4F1EA]/30 p-4 border border-[#121212]/5 rounded-lg">
-                                {selectedClass.description || "No description provided."}
-                            </p>
-                            <div className="grid grid-cols-2 gap-4 font-mono text-xs">
-                                <div className="p-4 bg-[#F4F1EA]/20 border border-[#121212]/5 rounded-lg">
-                                    <span className="text-[#8A817C] block text-[10px] font-semibold uppercase tracking-widest mb-1">
-                                        Facilitator
-                                    </span>
-                                    <span className="text-[#121212] font-medium">{fullName(selectedClass.facilitator)}</span>
-                                    <div className="text-[#8A817C] mt-0.5">{selectedClass.facilitator.email}</div>
+                        {/* Panel header */}
+                        <div className="p-5 border-b border-[#121212]/5 flex items-start justify-between gap-4">
+                            <div>
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1">
+                                    {showCreateForm ? "New Class" : "Class Detail"}
                                 </div>
-                                <div className="p-4 bg-[#F4F1EA]/20 border border-[#121212]/5 rounded-lg">
-                                    <span className="text-[#8A817C] block text-[10px] font-semibold uppercase tracking-widest mb-1">
-                                        Duration
-                                    </span>
-                                    <span className="text-[#121212]">
-                                        {formatDate(selectedClass.startDate)} — {formatDate(selectedClass.endDate)}
-                                    </span>
-                                </div>
+                                {selectedClass && (
+                                    <>
+                                        <h2 className="text-lg font-light tracking-tight text-[#121212] pr-2">
+                                            {selectedClass.name}
+                                        </h2>
+                                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                            <ClassTypeBadge type={selectedClass.type} />
+                                            {selectedClass.status === "CLOSED" ? (
+                                                <span className="inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border bg-[#F4F1EA] border-[#121212]/10 text-[#8A817C]">Closed</span>
+                                            ) : (
+                                                <span className="inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border bg-green-50 border-green-100 text-green-700">Active</span>
+                                            )}
+                                            <span className="text-[11px] font-mono text-[#8A817C]">
+                                                {formatDate(selectedClass.startDate)} → {formatDate(selectedClass.endDate)}
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
+                            <button
+                                onClick={closePanel}
+                                className="shrink-0 p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/10 rounded-md"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
                         </div>
-                    )}
 
-                    {/* Enrollments tab */}
-                    {panelTab === "enrollments" && (
-                        <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-                            {/* Enroll form */}
-                            <div className="lg:col-span-4 bg-[#F4F1EA]/20 border border-[#121212]/10 p-5 rounded-xl space-y-4 h-fit">
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-[#121212] flex items-center gap-2">
-                                    <UserPlus className="w-4 h-4 text-[#8A817C]" />
-                                    Enroll Member
-                                </h3>
-
-                                {enrollSuccess && (
-                                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-100 rounded-lg text-xs text-green-700">
+                        {/* Create form */}
+                        {showCreateForm && (
+                            <div className="p-5 flex-1 overflow-y-auto">
+                                {createSuccess && (
+                                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-100 rounded-lg text-xs text-green-700 mb-4">
                                         <CheckCircle2 className="w-4 h-4 shrink-0" />
-                                        {enrollSuccess}
+                                        {createSuccess}
                                     </div>
                                 )}
-                                {enrollError && (
-                                    <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700">
+                                {createError && (
+                                    <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700 mb-4">
                                         <ShieldAlert className="w-4 h-4 shrink-0" />
-                                        {enrollError}
+                                        {createError}
                                     </div>
                                 )}
 
-                                <form onSubmit={handleEnroll} className="space-y-3">
-                                    <select
-                                        required
-                                        value={enrollMemberId}
-                                        onChange={(e) => setEnrollMemberId(e.target.value)}
-                                        className="w-full h-10 px-3 bg-white border border-[#121212]/10 text-xs text-[#121212] focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
-                                    >
-                                        <option value="">-- Select member --</option>
-                                        {enrollableMembers.map((m) => (
-                                            <option key={m.id} value={m.id}>
-                                                {fullName(m)} — {m.email}
-                                            </option>
-                                        ))}
-                                    </select>
+                                <form onSubmit={handleCreate} className="space-y-4">
+                                    <div>
+                                        <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
+                                            Class Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={createForm.name}
+                                            onChange={(e) => setCreateForm((p) => ({ ...p, name: e.target.value }))}
+                                            placeholder="e.g., New Believers Class"
+                                            className="w-full h-10 px-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
+                                            Class Type
+                                        </label>
+                                        <select
+                                            value={createForm.type}
+                                            onChange={(e) => setCreateForm((p) => ({ ...p, type: e.target.value as ClassType }))}
+                                            className="w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
+                                        >
+                                            {CLASS_TYPES.map((t) => (
+                                                <option key={t} value={t}>{CLASS_TYPE_LABELS[t]}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
+                                            Description
+                                        </label>
+                                        <textarea
+                                            rows={3}
+                                            value={createForm.description}
+                                            onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
+                                            placeholder="Foundation class for new members..."
+                                            className="w-full p-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg resize-none"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
+                                            Facilitator
+                                        </label>
+                                        <PersonCombobox
+                                            options={facilitatorOptions}
+                                            value={createForm.facilitatorId}
+                                            onChange={(id) => setCreateForm((p) => ({ ...p, facilitatorId: id }))}
+                                            placeholder="Search workers by name…"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
+                                                Start Date
+                                            </label>
+                                            <input
+                                                type="date"
+                                                required
+                                                value={createForm.startDate}
+                                                onChange={(e) => setCreateForm((p) => ({ ...p, startDate: e.target.value }))}
+                                                className="w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
+                                                End Date
+                                            </label>
+                                            <input
+                                                type="date"
+                                                required
+                                                value={createForm.endDate}
+                                                onChange={(e) => setCreateForm((p) => ({ ...p, endDate: e.target.value }))}
+                                                className="w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                                            />
+                                        </div>
+                                    </div>
+
                                     <button
                                         type="submit"
-                                        disabled={isSubmitting || !enrollMemberId}
-                                        className="w-full h-10 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors disabled:opacity-40 flex items-center justify-center gap-2 rounded-lg"
+                                        disabled={isSubmitting}
+                                        className="w-full h-11 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 rounded-xl"
                                     >
-                                        {isSubmitting && <RefreshCw className="w-3 h-3 animate-spin" />}
-                                        Enroll
+                                        {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <GraduationCap className="w-3.5 h-3.5" />}
+                                        {isSubmitting ? "Creating..." : "Create Class"}
                                     </button>
                                 </form>
                             </div>
+                        )}
 
-                            {/* Enrollment list */}
-                            <div className="lg:col-span-8">
-                                <div className="border border-[#121212]/10 rounded-xl overflow-hidden">
-                                    <table className="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
-                                                <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Member</th>
-                                                <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Enrolled</th>
-                                                <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-[#121212]/5 text-[#121212]">
-                                            {enrollmentsLoading ? (
-                                                Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} cols={3} />)
-                                            ) : enrollments.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={3} className="p-12 text-center text-xs text-[#8A817C] font-light">
-                                                        No enrollments yet.
-                                                    </td>
-                                                </tr>
-                                            ) : (
-                                                enrollments.map((enr) => (
-                                                    <tr key={enr.id} className="hover:bg-[#F4F1EA]/10 transition-colors">
-                                                        <td className="p-4">
-                                                            <div className="text-sm font-medium text-[#121212]">
-                                                                {fullName(enr.member)}
-                                                            </div>
-                                                            <div className="text-xs font-mono text-[#8A817C] mt-0.5">
-                                                                {enr.member.email}
-                                                            </div>
-                                                        </td>
-                                                        <td className="p-4 text-xs font-mono text-[#8A817C]">
-                                                            {formatDate(enr.enrolledAt)}
-                                                            {enr.completedAt && (
-                                                                <div className="text-green-700 mt-0.5">
-                                                                    Completed: {formatDate(enr.completedAt)}
-                                                                </div>
-                                                            )}
-                                                        </td>
-                                                        <td className="p-4">
-                                                            <select
-                                                                value={enr.status}
-                                                                onChange={(e) =>
-                                                                    handleStatusChange(enr.id, e.target.value as EnrollmentStatus)
-                                                                }
-                                                                disabled={isSubmitting}
-                                                                className="h-8 px-2 bg-white border border-[#121212]/10 text-xs text-[#121212] focus:outline-none rounded-md appearance-none disabled:opacity-50"
-                                                            >
-                                                                <option value="IN_PROGRESS">In Progress</option>
-                                                                <option value="COMPLETED">Completed</option>
-                                                                <option value="CANCELLED">Cancelled</option>
-                                                            </select>
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                    </table>
+                        {/* Class detail */}
+                        {selectedClass && (
+                            <>
+                                {/* Tabs */}
+                                <div className="px-5 pt-4 border-b border-[#121212]/5">
+                                    <div className="flex bg-[#F4F1EA] p-1 border border-[#121212]/5 rounded-xl w-fit">
+                                        {(["details", "enrollments"] as const).map((tab) => (
+                                            <button
+                                                key={tab}
+                                                onClick={() => setPanelTab(tab)}
+                                                className={`flex items-center gap-1.5 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider rounded-lg transition-colors ${panelTab === tab ? "bg-[#121212] text-white" : "text-[#8A817C] hover:text-[#121212]"}`}
+                                            >
+                                                {tab === "details" ? <GraduationCap className="w-3 h-3" /> : <Users className="w-3 h-3" />}
+                                                {tab === "details" ? "Details" : "Enrollments"}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
 
-                                {enrollmentsPagination && enrollmentsPagination.totalPages > 1 && (
-                                    <div className="mt-4 flex items-center justify-between">
-                                        <span className="text-xs font-mono text-[#8A817C]">
-                                            Page {enrollmentsPagination.page} of {enrollmentsPagination.totalPages}
-                                        </span>
-                                        <div className="flex space-x-1">
-                                            <button
-                                                disabled={enrollmentsPage <= 1 || enrollmentsLoading}
-                                                onClick={() => loadEnrollments(selectedClass.id, enrollmentsPage - 1)}
-                                                className="p-2 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212] hover:bg-[#F4F1EA]"
-                                            >
-                                                <ChevronLeft className="w-3.5 h-3.5" />
-                                            </button>
-                                            <button
-                                                disabled={enrollmentsPage >= enrollmentsPagination.totalPages || enrollmentsLoading}
-                                                onClick={() => loadEnrollments(selectedClass.id, enrollmentsPage + 1)}
-                                                className="p-2 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212] hover:bg-[#F4F1EA]"
-                                            >
-                                                <ChevronRight className="w-3.5 h-3.5" />
-                                            </button>
+                                {/* Details tab */}
+                                {panelTab === "details" && (
+                                    <div className="p-5 space-y-4 flex-1 overflow-y-auto">
+                                        <p className="text-xs text-[#121212]/80 font-light leading-relaxed bg-[#F4F1EA]/30 p-4 border border-[#121212]/5 rounded-lg">
+                                            {selectedClass.description || "No description provided."}
+                                        </p>
+                                        <div className="space-y-3 text-xs">
+                                            {/* Facilitator — editable */}
+                                            <div className="p-4 bg-[#F4F1EA]/20 border border-[#121212]/5 rounded-lg">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="text-[#8A817C] text-[10px] font-semibold uppercase tracking-widest">
+                                                        Facilitator
+                                                    </span>
+                                                    {!editingFacilitator ? (
+                                                        <button
+                                                            onClick={startEditFacilitator}
+                                                            className="text-[10px] font-semibold uppercase tracking-wider text-[#8A817C] hover:text-[#121212] transition-colors flex items-center gap-1"
+                                                        >
+                                                            <Pencil className="w-3 h-3" /> Change
+                                                        </button>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={handleSaveFacilitator}
+                                                                disabled={isSubmitting}
+                                                                className="text-[10px] font-semibold uppercase tracking-wider text-green-700 hover:text-green-800 disabled:opacity-40"
+                                                            >
+                                                                Save
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setEditingFacilitator(false)}
+                                                                className="text-[10px] font-semibold uppercase tracking-wider text-[#8A817C] hover:text-[#121212]"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {editingFacilitator ? (
+                                                    <PersonCombobox
+                                                        options={facilitatorOptions}
+                                                        value={facilitatorDraft}
+                                                        onChange={setFacilitatorDraft}
+                                                        placeholder="Search workers by name…"
+                                                    />
+                                                ) : (
+                                                    <div className="font-mono">
+                                                        <span className="font-medium text-[#121212]">
+                                                            {selectedClass.facilitator ? fullName(selectedClass.facilitator) : "—"}
+                                                        </span>
+                                                        <div className="text-[#8A817C] mt-0.5">{selectedClass.facilitator?.email ?? ""}</div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="p-4 bg-[#F4F1EA]/20 border border-[#121212]/5 rounded-lg font-mono">
+                                                <span className="text-[#8A817C] block text-[10px] font-semibold uppercase tracking-widest mb-1">
+                                                    Duration
+                                                </span>
+                                                <span className="text-[#121212]">
+                                                    {formatDate(selectedClass.startDate)} — {formatDate(selectedClass.endDate)}
+                                                </span>
+                                            </div>
                                         </div>
+
+                                        {selectedClass.status !== "CLOSED" && (
+                                            <div className="border-t border-[#121212]/5 pt-4 space-y-2">
+                                                {closeSuccess && (
+                                                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-100 rounded-lg text-xs text-green-700">
+                                                        <CheckCircle2 className="w-4 h-4 shrink-0" />{closeSuccess}
+                                                    </div>
+                                                )}
+                                                {closeError && (
+                                                    <div className="p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700">
+                                                        {closeError}
+                                                    </div>
+                                                )}
+                                                <button
+                                                    onClick={() => handleCloseClass(selectedClass.id)}
+                                                    disabled={isSubmitting}
+                                                    className="w-full h-10 border border-[#121212]/20 text-[#121212] text-xs font-semibold uppercase tracking-widest hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-colors disabled:opacity-40 rounded-lg"
+                                                >
+                                                    Close This Class
+                                                </button>
+                                                <p className="text-[10px] text-[#8A817C] text-center">
+                                                    Marks the class closed and completes all in-progress enrollments
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
+
+                                {/* Enrollments tab */}
+                                {panelTab === "enrollments" && (
+                                    <div className="p-5 flex-1 overflow-y-auto space-y-4">
+
+                                        {/* Enroll form — hidden when class is closed */}
+                                        {selectedClass.status !== "CLOSED" && (
+                                        <div className="bg-[#F4F1EA]/20 border border-[#121212]/10 p-4 rounded-xl space-y-3">
+                                            <h3 className="text-xs font-bold uppercase tracking-wider text-[#121212] flex items-center gap-2">
+                                                <UserPlus className="w-3.5 h-3.5 text-[#8A817C]" />
+                                                Enroll Member
+                                            </h3>
+
+                                            {enrollSuccess && (
+                                                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-100 rounded-lg text-xs text-green-700">
+                                                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                                                    {enrollSuccess}
+                                                </div>
+                                            )}
+                                            {enrollError && (
+                                                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700">
+                                                    <ShieldAlert className="w-4 h-4 shrink-0" />
+                                                    {enrollError}
+                                                </div>
+                                            )}
+
+                                            <form onSubmit={handleEnroll} className="space-y-2">
+                                                <PersonCombobox
+                                                    options={enrollableOptions}
+                                                    value={enrollMemberId}
+                                                    onChange={setEnrollMemberId}
+                                                    placeholder="Search members by name…"
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    disabled={isSubmitting || !enrollMemberId}
+                                                    className="w-full h-9 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5 rounded-lg"
+                                                >
+                                                    {isSubmitting && <RefreshCw className="w-3 h-3 animate-spin" />}
+                                                    Enroll Member
+                                                </button>
+                                            </form>
+                                        </div>
+                                        )}
+
+                                        {/* Enrollment list */}
+                                        <div className="border border-[#121212]/10 rounded-xl overflow-hidden">
+                                            <table className="w-full text-left border-collapse">
+                                                <thead>
+                                                    <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
+                                                        <th className="p-3 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Member</th>
+                                                        <th className="p-3 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] hidden sm:table-cell">Enrolled</th>
+                                                        <th className="p-3 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Status</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-[#121212]/5 text-[#121212]">
+                                                    {enrollmentsLoading ? (
+                                                        Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} cols={3} />)
+                                                    ) : enrollments.length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan={3} className="p-8 text-center text-xs text-[#8A817C] font-light">
+                                                                No enrollments yet.
+                                                            </td>
+                                                        </tr>
+                                                    ) : (
+                                                        enrollments.map((enr) => (
+                                                            <tr key={enr.id} className="hover:bg-[#F4F1EA]/10 transition-colors">
+                                                                <td className="p-3">
+                                                                    <div className="text-xs font-medium text-[#121212]">
+                                                                        {fullName(enr.member)}
+                                                                    </div>
+                                                                    <div className="text-[11px] font-mono text-[#8A817C] mt-0.5 truncate max-w-[120px]">
+                                                                        {enr.member.email}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="p-3 text-[11px] font-mono text-[#8A817C] hidden sm:table-cell">
+                                                                    {formatDate(enr.enrolledAt)}
+                                                                    {enr.completedAt && (
+                                                                        <div className="text-green-700 mt-0.5">
+                                                                            ✓ {formatDate(enr.completedAt)}
+                                                                        </div>
+                                                                    )}
+                                                                </td>
+                                                                <td className="p-3">
+                                                                    <select
+                                                                        value={enr.status}
+                                                                        onChange={(e) =>
+                                                                            handleStatusChange(enr.id, e.target.value as EnrollmentStatus)
+                                                                        }
+                                                                        disabled={isSubmitting}
+                                                                        className="h-7 px-2 bg-white border border-[#121212]/10 text-[10px] text-[#121212] focus:outline-none rounded-md appearance-none disabled:opacity-50 w-full"
+                                                                    >
+                                                                        <option value="IN_PROGRESS">In Progress</option>
+                                                                        <option value="COMPLETED">Completed</option>
+                                                                        <option value="CANCELLED">Cancelled</option>
+                                                                    </select>
+                                                                </td>
+                                                            </tr>
+                                                        ))
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <PaginationBar
+                                            pagination={enrollmentsPagination}
+                                            onPage={(p) => loadEnrollments(selectedClass.id, p)}
+                                            isLoading={enrollmentsLoading}
+                                            label="enrollments"
+                                        />
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
 
-export default withAuth(ClassesPage);
+export default withAuth(ClassesPage, { requiredPermission: 'classes:read' });

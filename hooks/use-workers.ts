@@ -157,6 +157,23 @@ export function useWorkers(defaultLimit = 10) {
         }
     }, []);
 
+    const purgeDevice = useCallback(async (memberId: string): Promise<void> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            await api.delete(`/members/${memberId}/device`);
+        } catch (err: any) {
+            const message =
+                err?.response?.data?.message ||
+                err?.message ||
+                "Failed to purge device token.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
     useEffect(() => {
         fetchWorkers(1, "ALL");
     }, [fetchWorkers]);
@@ -174,5 +191,6 @@ export function useWorkers(defaultLimit = 10) {
         refetch: () => fetchWorkers(page, statusFilter),
         updateWorkerProfile,
         revokeWorker,
+        purgeDevice,
     };
 }
