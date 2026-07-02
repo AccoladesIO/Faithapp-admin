@@ -33,7 +33,7 @@ interface SessionRunnerProps {
 
 function SessionRunner({ programme, onEnded }: SessionRunnerProps) {
     const {
-        anchor, session, isSubmitting, error,
+        anchor, session, isSubmitting, error, clearError,
         fetchLatestSession, fetchState, advance, rewind,
         pauseSession, resumeSession, endSession,
     } = useServiceSession();
@@ -284,7 +284,7 @@ function SessionRunner({ programme, onEnded }: SessionRunnerProps) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 const LiveSessionPage = () => {
-    const { programmes, isLoading, error, fetchProgrammes } = useServiceProgramme();
+    const { programmes, isLoading, error, clearError, fetchProgrammes } = useServiceProgramme();
     const [tick, setTick] = useState(0);
 
     useEffect(() => { fetchProgrammes(1); }, [fetchProgrammes]);
@@ -319,7 +319,7 @@ const LiveSessionPage = () => {
                 </div>
             </div>
 
-            {error && <Error error={error} />}
+            {error && <Error error={error} onDismiss={clearError} />}
 
             {isLoading ? (
                 <div className="space-y-4">

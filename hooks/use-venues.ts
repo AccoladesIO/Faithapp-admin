@@ -111,11 +111,14 @@ export function useVenues() {
         fetchVenues();
     }, [fetchVenues]);
 
+    const clearError = useCallback(() => setError(null), []);
     return {
         venues,
         isLoading,
         isSubmitting,
         error,
+
+        clearError,
         fetchVenues,
         createVenue,
         updateVenue,

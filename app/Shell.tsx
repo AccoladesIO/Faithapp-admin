@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/layout/side-bar";
 import { HelpDrawer, WelcomeTour, useHelpSystem } from "@/components/layout/help-system";
@@ -24,6 +25,8 @@ const ROUTE_MAP: Record<string, [string, string]> = {
     "/attendance":                        ["People",    "Attendance"],
     "/birthday":                          ["People",    "Birthdays"],
     "/admin-management":                  ["People",    "Admin Users"],
+    "/leave":                             ["People",    "Worker Leave"],
+    "/profile":                           ["",          "My Profile"],
     "/departments":                       ["Ministry",  "Departments"],
     "/classes":                           ["Ministry",  "Classes"],
     "/childrens-church":                  ["Ministry",  "Children's Church"],
@@ -96,14 +99,14 @@ export default function Shell({ children }: ShellProps) {
                             <HelpCircle className="w-3.5 h-3.5" />
                             Help
                         </button>
-                        <div className="text-right">
-                            <div className="text-xs font-medium text-[#121212]">
+                        <Link href="/profile" className="text-right group">
+                            <div className="text-xs font-medium text-[#121212] group-hover:text-[#8A817C] transition-colors">
                                 {adminName ?? "Admin User"}
                             </div>
                             <div className="text-[10px] text-[#8A817C] uppercase tracking-wider font-semibold">
                                 {adminRoleName ?? "—"}
                             </div>
-                        </div>
+                        </Link>
                     </div>
                 </header>
 

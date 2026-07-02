@@ -242,7 +242,8 @@ export function useAdminRoles() {
 
     useEffect(() => { fetchRoles(); }, [fetchRoles]);
 
-    return { roles, isLoading, isSubmitting, error, fetchRoles, createRole, updateRole, deleteRole };
+    const clearError = useCallback(() => setError(null), []);
+    return { roles, isLoading, isSubmitting, error, clearError, fetchRoles, createRole, updateRole, deleteRole };
 }
 
 export function useAdminUsers() {
@@ -315,5 +316,6 @@ export function useAdminUsers() {
 
     useEffect(() => { fetchAdmins(); }, [fetchAdmins]);
 
-    return { admins, isLoading, isSubmitting, error, fetchAdmins, grantAdmin, updateAdmin, revokeAdmin };
+    const clearError = useCallback(() => setError(null), []);
+    return { admins, isLoading, isSubmitting, error, clearError, fetchAdmins, grantAdmin, updateAdmin, revokeAdmin };
 }

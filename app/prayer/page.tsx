@@ -213,7 +213,7 @@ function ProgramsTab({
     selectedProgramId: string | null;
     onSelect: (id: string) => void;
 }) {
-    const { programs, isLoading, isSubmitting, error, fetchPrograms, createProgram, updateProgram, cloneProgram, deactivateProgram } = hook;
+    const { programs, isLoading, isSubmitting, error, clearError, fetchPrograms, createProgram, updateProgram, cloneProgram, deactivateProgram } = hook;
 
     type PanelMode = "create" | "edit" | "clone" | null;
     const [panelMode, setPanelMode] = useState<PanelMode>(null);
@@ -297,7 +297,7 @@ function ProgramsTab({
                 </button>
             </div>
 
-            {error && <Error error={error} />}
+            {error && <Error error={error} onDismiss={clearError} />}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 <div className={`${panelOpen ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden`}>
@@ -449,7 +449,7 @@ function ProgramsTab({
 // ─── Day Configs Tab ──────────────────────────────────────────────────────────
 
 function DayConfigsTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>; programId: string }) {
-    const { dayConfigs, isLoading, isSubmitting, error, fetchDayConfigs, createDayConfig, updateDayConfig } = hook;
+    const { dayConfigs, isLoading, isSubmitting, error, clearError, fetchDayConfigs, createDayConfig, updateDayConfig } = hook;
     const [panelMode, setPanelMode] = useState<"create" | "edit" | null>(null);
     const [selected, setSelected] = useState<PrayerDayConfig | null>(null);
     const [formDow, setFormDow] = useState(0);
@@ -492,7 +492,7 @@ function DayConfigsTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>
                 <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C]">{dayConfigs.length} day config{dayConfigs.length !== 1 ? "s" : ""}</span>
                 <button onClick={openCreate} className={`flex items-center gap-2 ${primaryCls}`}><Plus className="w-3.5 h-3.5" /> Add Day Config</button>
             </div>
-            {error && <Error error={error} />}
+            {error && <Error error={error} onDismiss={clearError} />}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 <div className={`${panelOpen ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden`}>
                     <div className="overflow-x-auto">
@@ -589,7 +589,7 @@ function DayConfigsTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>
 type RuleType = "ROLE_FREQUENCY" | "MIN_LEADERS_PER_MEETING" | "MAX_PER_MEETING";
 
 function RulesTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>; programId: string }) {
-    const { rules, isLoading, isSubmitting, error, fetchRules, createRule, updateRule } = hook;
+    const { rules, isLoading, isSubmitting, error, clearError, fetchRules, createRule, updateRule } = hook;
     const [panelMode, setPanelMode] = useState<"create" | "edit" | null>(null);
     const [selectedRule, setSelectedRule] = useState<PrayerScheduleRule | null>(null);
     const [formType, setFormType] = useState<RuleType>("MAX_PER_MEETING");
@@ -627,7 +627,7 @@ function RulesTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>; pro
                 <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C]">{rules.length} rule{rules.length !== 1 ? "s" : ""}</span>
                 <button onClick={openCreate} className={`flex items-center gap-2 ${primaryCls}`}><Plus className="w-3.5 h-3.5" /> Add Rule</button>
             </div>
-            {error && <Error error={error} />}
+            {error && <Error error={error} onDismiss={clearError} />}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 <div className={`${panelOpen ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden`}>
                     <table className="w-full text-left border-collapse">
@@ -733,7 +733,7 @@ function RulesTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>; pro
 // ─── Fixed Assignments Tab ────────────────────────────────────────────────────
 
 function FixedAssignmentsTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>; programId: string }) {
-    const { fixedAssignments, dayConfigs, isLoading, isSubmitting, error, fetchFixedAssignments, fetchDayConfigs, createFixedAssignment, deleteFixedAssignment } = hook;
+    const { fixedAssignments, dayConfigs, isLoading, isSubmitting, error, clearError, fetchFixedAssignments, fetchDayConfigs, createFixedAssignment, deleteFixedAssignment } = hook;
     const [showPanel, setShowPanel] = useState(false);
     const [workerProfileId, setWorkerProfileId] = useState("");
     const [workerDisplayName, setWorkerDisplayName] = useState("");
@@ -773,7 +773,7 @@ function FixedAssignmentsTab({ hook, programId }: { hook: ReturnType<typeof useP
                     className="w-full sm:w-72 h-9 pl-9 pr-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg" />
                 {search && <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8A817C] hover:text-[#121212]"><X className="w-3.5 h-3.5" /></button>}
             </div>
-            {error && <Error error={error} />}
+            {error && <Error error={error} onDismiss={clearError} />}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 <div className={`${showPanel ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden`}>
                     <table className="w-full text-left border-collapse">
@@ -857,7 +857,7 @@ function RosterTab({
     programId: string;
     program: PrayerProgram;
 }) {
-    const { roster, isLoading, isSubmitting, error, fetchRoster, generateMeetings, openSelection, closeSelection, autoAssign, manualAssign, removeEntry, validateRoster, rescheduleEntry } = hook;
+    const { roster, isLoading, isSubmitting, error, clearError, fetchRoster, generateMeetings, openSelection, closeSelection, autoAssign, manualAssign, removeEntry, validateRoster, rescheduleEntry } = hook;
 
     const now = new Date();
     const [month, setMonth] = useState(now.getMonth() + 1);
@@ -1143,7 +1143,7 @@ function RosterTab({
                 </div>
             )}
 
-            {error && <Error error={error} />}
+            {error && <Error error={error} onDismiss={clearError} />}
 
             {/* Main content */}
             {isLoading ? (

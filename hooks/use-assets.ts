@@ -248,12 +248,15 @@ export function useAssets(defaultLimit = 20) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    const clearError = useCallback(() => setError(null), []);
     return {
         assets,
         pagination,
         isLoading,
         isSubmitting,
         error,
+
+        clearError,
         fetchAssets,
         createAsset,
         updateAsset,

@@ -371,7 +371,7 @@ function SundaySchoolPage() {
             </div>
 
             {/* Global error */}
-            {ss.error && <Error error={ss.error} />}
+            {ss.error && <Error error={ss.error} onDismiss={ss.clearError} />}
 
             {/* Tabs */}
             <div className="flex bg-[#F4F1EA] p-1 border border-[#121212]/5 rounded-xl w-fit">

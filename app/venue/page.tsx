@@ -56,6 +56,7 @@ export default withAuth(function VenuesPage() {
         isLoading,
         isSubmitting,
         error,
+        clearError,
         createVenue,
         updateVenue,
         deleteVenue,
@@ -193,7 +194,7 @@ export default withAuth(function VenuesPage() {
             </div>
 
             {error && (
-                <Error error={error}/>
+                <Error error={error} onDismiss={clearError} />
             )}
 
             {/* Search */}

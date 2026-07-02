@@ -1034,6 +1034,7 @@ function CreateProgrammePanel({
 function ProgrammesTab({ hook }: { hook: ReturnType<typeof useServiceProgramme> }) {
     const {
         programmes, pagination, isLoading, isSubmitting, error,
+        clearError,
         fetchProgrammes, createProgramme, goToPage, fetchServiceSlots,
     } = hook;
 
@@ -1081,7 +1082,7 @@ function ProgrammesTab({ hook }: { hook: ReturnType<typeof useServiceProgramme> 
                 </button>
             </div>
 
-            {error && <Error error={error} />}
+            {error && <Error error={error} onDismiss={clearError} />}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 {/* List */}
@@ -1180,7 +1181,7 @@ function ProgrammesTab({ hook }: { hook: ReturnType<typeof useServiceProgramme> 
 // ─── Templates tab ────────────────────────────────────────────────────────────
 
 function TemplatesTab({ hook }: { hook: ReturnType<typeof useServiceProgramme> }) {
-    const { templates, isLoading, isSubmitting, error, fetchTemplates, deleteTemplate } = hook;
+    const { templates, isLoading, isSubmitting, error, clearError, fetchTemplates, deleteTemplate } = hook;
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
     useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
@@ -1194,7 +1195,7 @@ function TemplatesTab({ hook }: { hook: ReturnType<typeof useServiceProgramme> }
             <p className="text-xs text-[#8A817C] font-light">
                 Templates are auto-saved when a programme with "Save as Template" enabled completes its session.
             </p>
-            {error && <Error error={error} />}
+            {error && <Error error={error} onDismiss={clearError} />}
             <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">

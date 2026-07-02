@@ -323,6 +323,7 @@ export function useServiceProgramme(defaultLimit = 10) {
         fetchProgrammes(page);
     }, [fetchProgrammes]);
 
+    const clearError = useCallback(() => setError(null), []);
     return {
         programmes,
         pagination,
@@ -330,6 +331,8 @@ export function useServiceProgramme(defaultLimit = 10) {
         isLoading,
         isSubmitting,
         error,
+
+        clearError,
         fetchProgrammes,
         fetchProgramme,
         createProgramme,

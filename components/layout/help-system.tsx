@@ -619,6 +619,39 @@ const HELP: Record<string, PageHelp> = {
         ],
     },
 
+    // ── Profile & settings ─────────────────────────────────────────────────────
+
+    "/profile": {
+        title: "My Profile",
+        summary: "View your admin account details — personal information pulled from your member record, your assigned role and the full list of permissions that role grants. Permissions shown here determine exactly which sections of the portal you can access.",
+        tips: [
+            "Your profile details come from your member record. Ask another admin to update your name, phone or other personal fields in the Members module.",
+            "Permissions with a green tick are active on your account. Greyed-out permissions require a role change — contact a super-admin.",
+            "Your role is assigned by another admin. If your permissions seem wrong, ask the admin who manages access to review your role.",
+            "Use the Change Password button to update your portal login password at any time.",
+        ],
+        tasks: [
+            { label: "Change your password", how: "Change Password button at the top right of this page" },
+            { label: "Update your personal details", how: "Ask an admin with Members Write permission to edit your member record" },
+            { label: "Request additional permissions", how: "Ask a super-admin to update your role or create a new role with the required permissions" },
+        ],
+    },
+    "/system-settings": {
+        title: "Module Settings",
+        summary: "Enable or disable individual modules across the portal. Turning a module off hides it from the sidebar and removes its routes — useful for churches that don't use every feature. Required modules cannot be disabled.",
+        tips: [
+            "Disabling a module only hides the UI — it does not delete existing data. Re-enabling it restores full access.",
+            "Required modules (marked with a lock icon) cannot be toggled — they are essential for the portal to function correctly.",
+            "Changes take effect immediately for all admins without a page refresh.",
+            "Only admins with Admin Write permission can change module settings.",
+        ],
+        tasks: [
+            { label: "Disable a module", how: "Toggle the switch on the module row to Off — confirms immediately" },
+            { label: "Re-enable a module", how: "Toggle the switch back to On — the module reappears in the sidebar" },
+            { label: "Check if a module is required", how: "Required modules show a lock icon and their toggle is disabled" },
+        ],
+    },
+
     // ── System pages ───────────────────────────────────────────────────────────
 
     "/audit-logs": {

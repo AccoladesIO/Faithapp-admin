@@ -287,6 +287,7 @@ export function useDepartments() {
         fetchDepartmentKeys();
     }, [fetchDepartments, fetchDepartmentKeys]);
 
+    const clearError = useCallback(() => setError(null), []);
     return {
         departments,
         departmentKeys,
@@ -294,6 +295,8 @@ export function useDepartments() {
         isLoading,
         isSubmitting,
         error,
+
+        clearError,
         fetchDepartments,
         fetchDepartmentKeys,
         createDepartment,

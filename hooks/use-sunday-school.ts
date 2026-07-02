@@ -342,6 +342,7 @@ export function useSundaySchool(defaultLimit = 10) {
         }
     }, [fetchSessions]);
 
+    const clearError = useCallback(() => setError(null), []);
     return {
         classes,
         classPagination,
@@ -352,6 +353,8 @@ export function useSundaySchool(defaultLimit = 10) {
         isLoading,
         isSubmitting,
         error,
+
+        clearError,
         fetchClasses,
         createClass,
         updateClass,

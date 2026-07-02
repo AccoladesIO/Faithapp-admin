@@ -513,6 +513,7 @@ export function useChildrenChurch(defaultLimit = 10) {
         fetchChildren({ page: childPage });
     }, [fetchChildren, childPage]);
 
+    const clearError = useCallback(() => setError(null), []);
     return {
         ageGroups,
         classGroups,
@@ -525,6 +526,8 @@ export function useChildrenChurch(defaultLimit = 10) {
         isLoading,
         isSubmitting,
         error,
+
+        clearError,
         recomputeAgeGroups,
         fetchAgeGroups,
         createAgeGroup,

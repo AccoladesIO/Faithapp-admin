@@ -170,6 +170,7 @@ export function useFinanceRequests(defaultLimit = 10) {
         }
     }, []);
 
+    const clearError = useCallback(() => setError(null), []);
     return {
         requests,
         pagination,
@@ -177,6 +178,8 @@ export function useFinanceRequests(defaultLimit = 10) {
         isLoading,
         isSubmitting,
         error,
+
+        clearError,
         fetchRequests,
         approveRequest,
         rejectRequest,
