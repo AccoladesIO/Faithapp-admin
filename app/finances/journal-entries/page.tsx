@@ -24,6 +24,7 @@ import {
     LineType,
 } from "@/hooks/use-journal-entries";
 import { useAccounts } from "@/hooks/use-accounts";
+import { toLocalDate } from "@/utils/parse-local-time";
 
 const STATUS_CONFIG: Record<JournalEntryStatus, { label: string; cls: string; Icon: React.FC<{ className?: string }> }> = {
     PENDING_APPROVAL: { label: "Pending Approval", cls: "bg-amber-100 text-amber-800", Icon: Clock },
@@ -61,7 +62,7 @@ export default withAuth(function JournalEntriesPage() {
     const [draftFilters, setDraftFilters] = useState<JournalEntryFilters>({});
     const [form, setForm] = useState<{ description: string; entryDate: string; reference: string; lines: CreateJournalLinePayload[] }>({
         description: "",
-        entryDate: new Date().toISOString().slice(0, 10),
+        entryDate: toLocalDate(),
         reference: "",
         lines: [{ ...EMPTY_LINE }, { ...EMPTY_LINE, type: "CREDIT" }],
     });
@@ -106,7 +107,7 @@ export default withAuth(function JournalEntriesPage() {
             };
             await createEntry(payload);
             setShowCreate(false);
-            setForm({ description: "", entryDate: new Date().toISOString().slice(0, 10), reference: "", lines: [{ ...EMPTY_LINE }, { ...EMPTY_LINE, type: "CREDIT" }] });
+            setForm({ description: "", entryDate: toLocalDate(), reference: "", lines: [{ ...EMPTY_LINE }, { ...EMPTY_LINE, type: "CREDIT" }] });
         } catch (e: any) {
             setActionError(e.message);
         }

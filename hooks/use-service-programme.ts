@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
+import { toLocalDate } from "@/utils/parse-local-time";
 
 export type ServiceSlotType =
     | "SPEAKER"
@@ -298,7 +299,7 @@ export function useServiceProgramme(defaultLimit = 10) {
         try {
             const res = await api.get("/events?page=1&limit=100");
             const events: any[] = res.data?.data?.data ?? res.data?.data ?? [];
-            const today = new Date().toISOString().split("T")[0];
+            const today = toLocalDate();
             const options: ServiceSlotOption[] = [];
             for (const event of events) {
                 const eventEnd: string = event.endDate ?? event.eventDate ?? "";

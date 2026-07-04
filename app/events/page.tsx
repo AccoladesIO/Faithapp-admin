@@ -11,7 +11,7 @@ import { useEvents, ServiceSlot, CreateEventPayload } from "@/hooks/use-events";
 import { useEventConfigs, CreateEventConfigPayload } from "@/hooks/use-event-configs";
 import { useVenues } from "@/hooks/use-venues";
 import Error from "@/components/layout/error";
-import { toInputDateTime, toPayloadDateTime } from "@/utils/parse-local-time";
+import { toInputDateTime, toPayloadDateTime, toLocalDate } from "@/utils/parse-local-time";
 
 // ─── Reusable offset input ────────────────────────────────────────────────────
 
@@ -165,7 +165,7 @@ const defaultConfigForm: CreateEventConfigPayload = {
 
 export default withAuth(function AdminEventsPage() {
     const [activeTab, setActiveTab] = useState<"events" | "configs">("events");
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toLocalDate();
 
     const { events, pagination: eventPagination, isLoading: eventsLoading, isSubmitting: eventSubmitting, error: eventError, clearError: clearEventError, fetchEvents, createEvent, updateEvent, deleteEvent } = useEvents();
     const [upcomingOnly, setUpcomingOnly] = useState(false);
