@@ -22,6 +22,7 @@ import {
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { useDepartments } from "@/hooks/use-departments";
 import { api } from "@/utils/auth/axios-client";
+import { toInputDateTime } from "@/utils/parse-local-time";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -381,7 +382,7 @@ export default withAuth(function AnnouncementsPage() {
     const startEdit = (a: Announcement) => {
         setEditingId(a.id);
         setEditTitle(a.title);
-        setEditExpiresAt(a.expiresAt ? a.expiresAt.slice(0, 16) : "");
+        setEditExpiresAt(a.expiresAt ? toInputDateTime(a.expiresAt) : "");
     };
 
     const handleSaveEdit = async (id: string) => {

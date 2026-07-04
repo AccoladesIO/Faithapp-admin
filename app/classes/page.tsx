@@ -19,6 +19,7 @@ import {
 } from "@/hooks/use-classes";
 import { useMembers } from "@/hooks/use-member";
 import { useWorkers } from "@/hooks/use-workers";
+import { toLocalDate } from "@/utils/parse-local-time";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -263,7 +264,7 @@ const ClassesPage = () => {
     const [closeError, setCloseError] = useState<string | null>(null);
 
     // Overdue: ACTIVE classes whose end date is in the past
-    const today = new Date().toISOString().split("T")[0];
+    const today = toLocalDate();
     const overdueClasses = useMemo(
         () => classes.filter((c) => c.status === "ACTIVE" && c.endDate && c.endDate < today),
         [classes, today]

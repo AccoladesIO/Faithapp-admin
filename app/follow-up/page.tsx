@@ -22,6 +22,7 @@ import {
 } from "@/hooks/use-follow-up";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { useEvents, ChurchEvent } from "@/hooks/use-events";
+import { toLocalDate } from "@/utils/parse-local-time";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -44,7 +45,7 @@ const formatDateTime = (iso: string | null | undefined) => {
     });
 };
 
-const toIsoDate = (d: Date) => d.toISOString().split("T")[0];
+const toIsoDate = (d: Date) => toLocalDate(d);
 
 const todayIso = () => toIsoDate(new Date());
 

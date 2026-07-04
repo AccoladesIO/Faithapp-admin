@@ -56,3 +56,13 @@ export function toInputDateTime(iso: string): string {
     const offsetMs = d.getTimezoneOffset() * 60 * 1000;
     return new Date(d.getTime() - offsetMs).toISOString().slice(0, 16);
 }
+
+/**
+ * Returns a Date as "YYYY-MM-DD" in the device's local timezone.
+ * Defaults to today. Use instead of new Date().toISOString().slice(0, 10),
+ * which returns the UTC date and can be yesterday for UTC+ users after midnight.
+ */
+export function toLocalDate(d: Date = new Date()): string {
+    const offsetMs = d.getTimezoneOffset() * 60 * 1000;
+    return new Date(d.getTime() - offsetMs).toISOString().slice(0, 10);
+}
