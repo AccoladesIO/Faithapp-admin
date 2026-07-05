@@ -15,16 +15,21 @@ const budget = {
     id: "b1", name: "Operating Budget",
     account: { id: "a1", name: "Expenses", code: "5000" },
     fund: { id: "f1", name: "General", type: "UNRESTRICTED" as const },
-    totalAmount: 100000, fromDate: "2026-01-01", toDate: "2026-12-31",
-    actuals: 65000, utilizationPct: 65, alert80SentAt: null, alert100SentAt: null,
+    period: "ANNUAL" as const,
+    amount: 100000,
+    startDate: "2026-01-01", endDate: "2026-12-31",
+    isActive: true,
+    alert80SentAt: null, alert100SentAt: null,
     createdAt: "", updatedAt: "",
 };
+
+const paged = { data: { data: { data: [budget], page: 1, limit: 20, totalCount: 1, totalPages: 1 } } };
 
 beforeEach(() => jest.clearAllMocks());
 
 describe("useBudgets", () => {
     it("fetches budgets on mount", async () => {
-        mockGet.mockResolvedValueOnce({ data: { data: { data: [budget], page: 1, limit: 20, totalCount: 1, totalPages: 1 } } });
+        mockGet.mockResolvedValueOnce(paged);
         const { result } = renderHook(() => useBudgets());
 
         await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -40,7 +45,7 @@ describe("useBudgets", () => {
     });
 
     it("creates a budget and prepends to list", async () => {
-        mockGet.mockResolvedValueOnce({ data: { data: { data: [budget], page: 1, limit: 20, totalCount: 1, totalPages: 1 } } });
+        mockGet.mockResolvedValueOnce(paged);
         const created = { ...budget, id: "b2", name: "New Budget" };
         mockPost.mockResolvedValueOnce({ data: { data: created } });
 
@@ -48,28 +53,34 @@ describe("useBudgets", () => {
         await waitFor(() => expect(result.current.isLoading).toBe(false));
 
         await act(async () => {
-            await result.current.createBudget({ name: "New Budget", accountId: "a1", fundId: "f1", totalAmount: 50000, fromDate: "2026-01-01", toDate: "2026-12-31" });
+            await result.current.createBudget({
+                name: "New Budget", accountId: "a1", fundId: "f1",
+                period: "ANNUAL", amount: 50000,
+                startDate: "2026-01-01", endDate: "2026-12-31",
+            });
         });
 
-        expect(mockPost).toHaveBeenCalledWith("/admin/finance/budgets", expect.objectContaining({ name: "New Budget" }));
+        expect(mockPost).toHaveBeenCalledWith("/admin/finance/budgets", expect.objectContaining({ name: "New Budget", amount: 50000 }));
         expect(result.current.budgets[0].id).toBe("b2");
     });
 
     it("updates a budget in-place", async () => {
-        mockGet.mockResolvedValueOnce({ data: { data: { data: [budget], page: 1, limit: 20, totalCount: 1, totalPages: 1 } } });
-        const updated = { ...budget, name: "Updated Budget" };
+        mockGet.mockResolvedValueOnce(paged);
+        const updated = { ...budget, name: "Updated Budget", amount: 120000 };
         mockPatch.mockResolvedValueOnce({ data: { data: updated } });
 
         const { result } = renderHook(() => useBudgets());
         await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-        await act(async () => { await result.current.updateBudget("b1", { name: "Updated Budget" }); });
+        await act(async () => { await result.current.updateBudget("b1", { name: "Updated Budget", amount: 120000 }); });
 
+        expect(mockPatch).toHaveBeenCalledWith("/admin/finance/budgets/b1", { name: "Updated Budget", amount: 120000 });
         expect(result.current.budgets[0].name).toBe("Updated Budget");
+        expect(result.current.budgets[0].amount).toBe(120000);
     });
 
     it("deactivates a budget in-place", async () => {
-        mockGet.mockResolvedValueOnce({ data: { data: { data: [budget], page: 1, limit: 20, totalCount: 1, totalPages: 1 } } });
+        mockGet.mockResolvedValueOnce(paged);
         const deactivated = { ...budget, isActive: false };
         mockPatch.mockResolvedValueOnce({ data: { data: deactivated } });
 

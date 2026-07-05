@@ -14,6 +14,7 @@ import { useDepartments } from "@/hooks/use-departments";
 import { PromoteToWorkerPayload } from "@/hooks/use-member";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fullName = (m: Member) =>
@@ -282,14 +283,7 @@ export default withAuth(function MembersPage() {
             </div>
 
             {/* Global error */}
-            {error && (
-                <div className="bg-red-50 border border-red-200 p-4 rounded-lg text-xs text-red-700">
-                    <strong className="block font-semibold uppercase tracking-wider text-[11px] mb-1">
-                        Error
-                    </strong>
-                    {error}
-                </div>
-            )}
+            <DismissibleError message={error} />
 
             {/* Filters */}
             <div className="flex flex-col xl:flex-row gap-6 items-center justify-between bg-[#FFFFFF] border border-[#121212]/10 p-6 rounded-xl">

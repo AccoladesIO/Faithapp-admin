@@ -10,8 +10,8 @@ import { withAuth } from "@/utils/auth/with-auth";
 import { useEvents, ServiceSlot, CreateEventPayload } from "@/hooks/use-events";
 import { useEventConfigs, CreateEventConfigPayload } from "@/hooks/use-event-configs";
 import { useVenues } from "@/hooks/use-venues";
-import Error from "@/components/layout/error";
 import { toInputDateTime, toPayloadDateTime, toLocalDate } from "@/utils/parse-local-time";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 // ─── Reusable offset input ────────────────────────────────────────────────────
 
@@ -416,9 +416,7 @@ export default withAuth(function AdminEventsPage() {
                 </div>
             </div>
 
-            {(eventError || configError) && (
-                <Error error={eventError || configError || "An unexpected error occurred."} onDismiss={() => { clearEventError(); clearConfigError(); }} />
-            )}
+            <DismissibleError message={eventError ?? configError} />
 
             {/* ── EVENTS TAB ───────────────────────────────────────────────── */}
             {activeTab === "events" && (

@@ -20,6 +20,7 @@ import {
 import { useMembers } from "@/hooks/use-member";
 import { useWorkers } from "@/hooks/use-workers";
 import { toLocalDate } from "@/utils/parse-local-time";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -466,12 +467,7 @@ const ClassesPage = () => {
                 </div>
             </div>
 
-            {error && (
-                <div className="bg-red-50 border border-red-200 p-4 rounded-lg text-xs text-red-700">
-                    <strong className="block font-semibold uppercase tracking-wider text-[11px] mb-1">Error</strong>
-                    {error}
-                </div>
-            )}
+            <DismissibleError message={error} />
 
             {/* Overdue banner */}
             {overdueClasses.length > 0 && (

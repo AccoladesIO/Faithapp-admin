@@ -8,11 +8,11 @@ import {
 import Link from "next/link";
 import { withAuth } from "@/utils/auth/with-auth";
 import { useServiceProgramme, ServiceProgramme, ServiceProgrammeSlot } from "@/hooks/use-service-programme";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 import {
     useServiceSession, SessionAnchor, PauseReason,
     PAUSE_REASON_LABELS, calcElapsedSeconds, formatMMSS,
 } from "@/hooks/use-service-session";
-import Error from "@/components/layout/error";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -137,9 +137,7 @@ function SessionRunner({ programme, onEnded }: SessionRunnerProps) {
                 </div>
             </div>
 
-            {error && (
-                <div className="mx-5 mt-3 p-2 bg-red-50 border border-red-100 rounded-lg text-[11px] text-red-700">{error}</div>
-            )}
+            <DismissibleError message={error} />
 
             {/* Current slot */}
             <div className="px-5 py-4 border-b border-[#121212]/5">
@@ -319,7 +317,7 @@ const LiveSessionPage = () => {
                 </div>
             </div>
 
-            {error && <Error error={error} onDismiss={clearError} />}
+            <DismissibleError message={error} />
 
             {isLoading ? (
                 <div className="space-y-4">

@@ -12,6 +12,7 @@ import {
     AttendanceRecord,
 } from "@/hooks/use-attendance";
 import { PaginationBar } from "@/components/ui/pagination-bar";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -353,12 +354,7 @@ export default withAuth(function AttendancePage() {
             {/* ── HISTORY TAB ────────────────────────────────────────────────────── */}
             {activeTab === "history" && (
                 <div className="space-y-6">
-                    {error && (
-                        <div className="bg-red-50 border border-red-200 p-4 rounded-lg text-xs text-red-700">
-                            <strong className="block font-semibold uppercase tracking-wider text-[11px] mb-1">Error</strong>
-                            {error}
-                        </div>
-                    )}
+                    <DismissibleError message={error} />
 
                     {/* Filters */}
                     <form

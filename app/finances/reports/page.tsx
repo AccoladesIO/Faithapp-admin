@@ -1,5 +1,7 @@
 "use client";
 
+import { DismissibleError } from "@/components/ui/dismissible-error";
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
 import {
@@ -23,9 +25,8 @@ import { usePledges } from "@/hooks/use-pledges";
 import { useBudgets } from "@/hooks/use-budgets";
 import { api } from "@/utils/auth/axios-client";
 import type { Member } from "@/hooks/use-member";
+import { formatCurrency } from "@/utils/currency";
 
-const fmt = (n: number | string) =>
-    `₦${Number(n).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const fmtDate = (iso: string) =>
     new Date(iso).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -324,7 +325,7 @@ function ReportResultTable({ data }: Readonly<{ data: unknown }>) {
                                 {keys.map((k) => {
                                     const val = row[k];
                                     let display: string;
-                                    if (typeof val === "number") display = fmt(val);
+                                    if (typeof val === "number") display = formatCurrency(val);
                                     else if (val == null) display = "—";
                                     else display = String(val);
                                     return <td key={k} className="p-3 text-[#121212] font-mono">{display}</td>;
@@ -349,7 +350,7 @@ function ReportResultTable({ data }: Readonly<{ data: unknown }>) {
                     {entries.map(([k, v]) => (
                         <div key={k} className="bg-[#F4F1EA]/40 rounded-xl p-4">
                             <div className="text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">{k.replace(/([A-Z])/g, " $1").trim()}</div>
-                            <div className="font-mono text-sm text-[#121212]">{typeof v === "number" ? fmt(v) : String(v ?? "—")}</div>
+                            <div className="font-mono text-sm text-[#121212]">{typeof v === "number" ? formatCurrency(v) : String(v ?? "—")}</div>
                         </div>
                     ))}
                 </div>
@@ -405,12 +406,7 @@ export default withAuth(function ReportsPage() {
                 </button>
             </div>
 
-            {error && (
-                <div className="flex items-center space-x-2 text-red-600 text-xs bg-red-50 border border-red-200 p-4 rounded-xl">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{error}</span>
-                </div>
-            )}
+                            <DismissibleError message={error} />
 
             {/* Tabs */}
             <div className="border-b border-[#121212]/10">
@@ -445,15 +441,15 @@ export default withAuth(function ReportsPage() {
                                 <>
                                     <div className="bg-white border border-[#121212]/10 p-6 rounded-xl">
                                         <div className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] flex items-center space-x-1.5 mb-3"><TrendingUp className="w-3.5 h-3.5" /><span>MTD Income</span></div>
-                                        <div className="text-2xl font-light text-[#121212] font-mono">{fmt(dashboard?.mtdIncome ?? 0)}</div>
+                                        <div className="text-2xl font-light text-[#121212] font-mono">{formatCurrency(dashboard?.mtdIncome ?? 0)}</div>
                                     </div>
                                     <div className="bg-white border border-[#121212]/10 p-6 rounded-xl">
                                         <div className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] flex items-center space-x-1.5 mb-3"><TrendingDown className="w-3.5 h-3.5" /><span>MTD Expenses</span></div>
-                                        <div className="text-2xl font-light text-[#121212] font-mono">{fmt(dashboard?.mtdExpenses ?? 0)}</div>
+                                        <div className="text-2xl font-light text-[#121212] font-mono">{formatCurrency(dashboard?.mtdExpenses ?? 0)}</div>
                                     </div>
                                     <div className={`border p-6 rounded-xl ${(dashboard?.mtdNet ?? 0) >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
                                         <div className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] flex items-center space-x-1.5 mb-3"><Activity className="w-3.5 h-3.5" /><span>MTD Net</span></div>
-                                        <div className={`text-2xl font-light font-mono ${(dashboard?.mtdNet ?? 0) >= 0 ? "text-green-800" : "text-red-800"}`}>{fmt(dashboard?.mtdNet ?? 0)}</div>
+                                        <div className={`text-2xl font-light font-mono ${(dashboard?.mtdNet ?? 0) >= 0 ? "text-green-800" : "text-red-800"}`}>{formatCurrency(dashboard?.mtdNet ?? 0)}</div>
                                     </div>
                                 </>
                             )}
@@ -481,7 +477,7 @@ export default withAuth(function ReportsPage() {
                                     <div className="bg-white border border-[#121212]/10 p-6 rounded-xl">
                                         <div className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] flex items-center space-x-1.5 mb-3"><PieChart className="w-3.5 h-3.5" /><span>Active Pledges</span></div>
                                         <div className="text-2xl font-light text-[#121212] font-mono">{dashboard?.activePledgeCount ?? 0}</div>
-                                        <p className="text-[10px] text-[#8A817C] mt-1">Outstanding: {fmt(dashboard?.totalOutstandingPledges ?? 0)}</p>
+                                        <p className="text-[10px] text-[#8A817C] mt-1">Outstanding: {formatCurrency(dashboard?.totalOutstandingPledges ?? 0)}</p>
                                     </div>
                                 </>
                             )}
@@ -520,7 +516,7 @@ export default withAuth(function ReportsPage() {
                                                         <td className="p-4 text-xs font-medium text-[#121212]">{fb.fund.name}</td>
                                                         <td className="p-4"><span className={`inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded ${typeCls}`}>{fb.fund.type}</span></td>
                                                         <td className="p-4 font-mono text-xs text-[#8A817C]">{fb.accountCount}</td>
-                                                        <td className="p-4 font-mono text-xs font-medium text-[#121212]">{fmt(fb.totalBalance)}</td>
+                                                        <td className="p-4 font-mono text-xs font-medium text-[#121212]">{formatCurrency(fb.totalBalance)}</td>
                                                     </tr>
                                                 );
                                             })
@@ -547,8 +543,8 @@ export default withAuth(function ReportsPage() {
                                             {dashboard.budgetsNearLimit.map((b) => (
                                                 <tr key={b.budgetId} className="hover:bg-[#F4F1EA]/20 transition-colors">
                                                     <td className="p-4 text-xs font-medium text-[#121212]">{b.name}</td>
-                                                    <td className="p-4 font-mono text-xs text-[#121212]">{fmt(b.amount)}</td>
-                                                    <td className="p-4 font-mono text-xs text-[#121212]">{fmt(b.actuals)}</td>
+                                                    <td className="p-4 font-mono text-xs text-[#121212]">{formatCurrency(b.amount)}</td>
+                                                    <td className="p-4 font-mono text-xs text-[#121212]">{formatCurrency(b.actuals)}</td>
                                                     <td className="p-4">
                                                         <div className="flex items-center space-x-3">
                                                             <div className="flex-1 max-w-[120px] h-2 bg-[#F4F1EA] rounded-full overflow-hidden">

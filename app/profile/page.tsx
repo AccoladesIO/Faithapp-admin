@@ -19,7 +19,7 @@ import {
 import { withAuth } from "@/utils/auth/with-auth";
 import { useAdminProfile } from "@/hooks/use-admin-profile";
 import { PERMISSION_GROUPS } from "@/hooks/use-admin-management";
-import Error from "@/components/layout/error";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 const MONTHS = [
     "January", "February", "March", "April", "May", "June",
@@ -141,7 +141,7 @@ function ProfilePage() {
                 </Link>
             </div>
 
-            {error && <Error error={error} onDismiss={fetchProfile} />}
+            <DismissibleError message={error} />
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                 {/* ── Left: Personal Info ──────────────────────────────────── */}

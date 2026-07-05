@@ -3,6 +3,9 @@ import { api } from "@/utils/auth/axios-client";
 
 export type AccountType = "ASSET" | "LIABILITY" | "INCOME" | "EXPENSE";
 export type NormalBalance = "DEBIT" | "CREDIT";
+export type AccountSubtype =
+    | "BANK" | "CASH" | "PETTY_CASH" | "OFFERING" | "TITHE"
+    | "SALARY" | "UTILITIES" | "REMITTANCE" | "EQUIPMENT" | "OTHER";
 
 export interface FinanceAccount {
     id: string;
@@ -22,14 +25,15 @@ export interface CreateAccountPayload {
     name: string;
     code: string;
     type: AccountType;
-    subtype?: string;
+    subtype: AccountSubtype;
     normalBalance: NormalBalance;
     fundId?: string;
 }
 
 export interface UpdateAccountPayload {
     name?: string;
-    subtype?: string;
+    code?: string;
+    subtype?: AccountSubtype;
     isActive?: boolean;
 }
 

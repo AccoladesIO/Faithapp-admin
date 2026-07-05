@@ -1,8 +1,10 @@
 "use client";
 
+import { DismissibleError } from "@/components/ui/dismissible-error";
+
 import React, { useState } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
-import { Landmark, Plus, AlertCircle, X, RefreshCw, Pencil } from "lucide-react";
+import { Landmark, Plus, X, RefreshCw, Pencil } from "lucide-react";
 import { useFunds, Fund, CreateFundPayload, UpdateFundPayload, FundType } from "@/hooks/use-funds";
 
 function RowSkeleton() {
@@ -72,11 +74,7 @@ export default withAuth(function FundsPage() {
                 </div>
             </div>
 
-            {error && (
-                <div className="flex items-center space-x-2 text-red-600 text-xs bg-red-50 border border-red-200 p-4 rounded-xl">
-                    <AlertCircle className="w-4 h-4 shrink-0" /><span>{error}</span>
-                </div>
-            )}
+                            <DismissibleError message={error} />
 
             <div className="flex gap-6 items-start">
                 <div className="flex-1 min-w-0 bg-white border border-[#121212]/10 rounded-xl overflow-hidden">
@@ -126,7 +124,7 @@ export default withAuth(function FundsPage() {
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212] flex items-center space-x-2"><Landmark className="w-3.5 h-3.5" /><span>New Fund</span></p>
                             <button onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-[#8A817C]" /></button>
                         </div>
-                        {actionError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg">{actionError}</p>}
+                        <DismissibleError message={actionError} />
                         <div>
                             <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Name *</label>
                             <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Fund name"
@@ -159,7 +157,7 @@ export default withAuth(function FundsPage() {
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212]">Edit Fund</p>
                             <button onClick={() => setEditing(null)}><X className="w-4 h-4 text-[#8A817C]" /></button>
                         </div>
-                        {actionError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg">{actionError}</p>}
+                        <DismissibleError message={actionError} />
                         <div>
                             <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Name</label>
                             <input value={editForm.name ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}

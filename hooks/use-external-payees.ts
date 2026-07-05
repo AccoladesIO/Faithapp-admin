@@ -1,22 +1,27 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+export type ExternalPayeeType =
+    | "REMITTANCE" | "VENDOR" | "UTILITY" | "CONTRACTOR"
+    | "GOVERNMENT" | "MISSION" | "BENEVOLENCE" | "OTHER";
+
 export interface ExternalPayee {
     id: string;
     name: string;
-    category: string | null;
+    type: ExternalPayeeType | null;
     accountNumber: string | null;
     bankName: string | null;
     contactEmail: string | null;
     contactPhone: string | null;
     notes: string | null;
+    isActive: boolean;
     createdAt: string;
     updatedAt: string;
 }
 
 export interface CreatePayeePayload {
     name: string;
-    category?: string;
+    type: ExternalPayeeType;
     accountNumber?: string;
     bankName?: string;
     contactEmail?: string;
@@ -26,12 +31,13 @@ export interface CreatePayeePayload {
 
 export interface UpdatePayeePayload {
     name?: string;
-    category?: string;
+    type?: ExternalPayeeType;
     accountNumber?: string;
     bankName?: string;
     contactEmail?: string;
     contactPhone?: string;
     notes?: string;
+    isActive?: boolean;
 }
 
 export function useExternalPayees() {

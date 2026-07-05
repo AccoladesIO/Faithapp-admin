@@ -9,6 +9,7 @@ import {
     LockKeyhole, UnlockKeyhole,
 } from "lucide-react";
 import { PaginationBar } from "@/components/ui/pagination-bar";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 import {
     useSundaySchool,
     SSClass,
@@ -17,7 +18,6 @@ import {
     SSMember,
     AttendanceStatus,
 } from "@/hooks/use-sunday-school";
-import Error from "@/components/layout/error";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -371,7 +371,7 @@ function SundaySchoolPage() {
             </div>
 
             {/* Global error */}
-            {ss.error && <Error error={ss.error} onDismiss={ss.clearError} />}
+            <DismissibleError message={ss.error} />
 
             {/* Tabs */}
             <div className="flex bg-[#F4F1EA] p-1 border border-[#121212]/5 rounded-xl w-fit">

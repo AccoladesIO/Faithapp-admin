@@ -13,16 +13,20 @@ export interface BudgetAccount {
     code: string;
 }
 
+export type BudgetPeriod = "MONTHLY" | "ANNUAL" | "CUSTOM";
+
 export interface Budget {
     id: string;
     name: string;
     account: BudgetAccount;
     fund: BudgetFund;
-    totalAmount: number;
-    fromDate: string;
-    toDate: string;
-    actuals: number;
-    utilizationPct: number;
+    period: BudgetPeriod;
+    amount: number;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+    actuals?: number;
+    utilizationPct?: number;
     alert80SentAt: string | null;
     alert100SentAt: string | null;
     createdAt: string;
@@ -33,16 +37,17 @@ export interface CreateBudgetPayload {
     name: string;
     accountId: string;
     fundId: string;
-    totalAmount: number;
-    fromDate: string;
-    toDate: string;
+    period: BudgetPeriod;
+    amount: number;
+    startDate: string;
+    endDate: string;
 }
 
 export interface UpdateBudgetPayload {
     name?: string;
-    totalAmount?: number;
-    fromDate?: string;
-    toDate?: string;
+    amount?: number;
+    startDate?: string;
+    endDate?: string;
 }
 
 export function useBudgets() {
@@ -50,12 +55,15 @@ export function useBudgets() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [activeFilter, setActiveFilter] = useState<boolean | undefined>(undefined);
 
-    const fetchBudgets = useCallback(async () => {
+    const fetchBudgets = useCallback(async (isActive?: boolean) => {
         setIsLoading(true);
         setError(null);
         try {
-            const res = await api.get("/admin/finance/budgets");
+            const params = new URLSearchParams();
+            if (isActive !== undefined) params.set("isActive", String(isActive));
+            const res = await api.get(`/admin/finance/budgets${params.size ? `?${params}` : ""}`);
             const outer = res.data?.data;
             setBudgets(Array.isArray(outer) ? outer : (outer?.data ?? []));
         } catch (err: any) {
@@ -64,6 +72,11 @@ export function useBudgets() {
             setIsLoading(false);
         }
     }, []);
+
+    const applyFilter = useCallback((isActive?: boolean) => {
+        setActiveFilter(isActive);
+        fetchBudgets(isActive);
+    }, [fetchBudgets]);
 
     const createBudget = useCallback(
         async (payload: CreateBudgetPayload): Promise<Budget> => {
@@ -77,6 +90,27 @@ export function useBudgets() {
             } catch (err: any) {
                 const message =
                     err?.response?.data?.message || err?.message || "Failed to create budget.";
+                setError(message);
+                throw new Error(message);
+            } finally {
+                setIsSubmitting(false);
+            }
+        },
+        []
+    );
+
+    const updateBudget = useCallback(
+        async (id: string, payload: UpdateBudgetPayload): Promise<Budget> => {
+            setIsSubmitting(true);
+            setError(null);
+            try {
+                const res = await api.patch(`/admin/finance/budgets/${id}`, payload);
+                const updated: Budget = res.data?.data;
+                setBudgets((prev) => prev.map((b) => (b.id === id ? updated : b)));
+                return updated;
+            } catch (err: any) {
+                const message =
+                    err?.response?.data?.message || err?.message || "Failed to update budget.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -103,30 +137,32 @@ export function useBudgets() {
         }
     }, []);
 
-    const updateBudget = useCallback(
-        async (id: string, payload: UpdateBudgetPayload): Promise<Budget> => {
-            setIsSubmitting(true);
-            setError(null);
-            try {
-                const res = await api.patch(`/admin/finance/budgets/${id}`, payload);
-                const updated: Budget = res.data?.data;
-                setBudgets((prev) => prev.map((b) => (b.id === id ? updated : b)));
-                return updated;
-            } catch (err: any) {
-                const message =
-                    err?.response?.data?.message || err?.message || "Failed to update budget.";
-                setError(message);
-                throw new Error(message);
-            } finally {
-                setIsSubmitting(false);
-            }
-        },
-        []
-    );
+    const reactivateBudget = useCallback(async (id: string): Promise<Budget> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            const res = await api.patch(`/admin/finance/budgets/${id}/reactivate`);
+            const updated: Budget = res.data?.data;
+            setBudgets((prev) => prev.map((b) => (b.id === id ? updated : b)));
+            return updated;
+        } catch (err: any) {
+            const message = err?.response?.data?.message || err?.message || "Failed to reactivate budget.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
 
     useEffect(() => {
         fetchBudgets();
     }, [fetchBudgets]);
 
-    return { budgets, isLoading, isSubmitting, error, createBudget, updateBudget, deactivateBudget, refetch: fetchBudgets };
+    return {
+        budgets, isLoading, isSubmitting, error,
+        activeFilter,
+        applyFilter,
+        createBudget, updateBudget, deactivateBudget, reactivateBudget,
+        refetch: () => fetchBudgets(activeFilter),
+    };
 }

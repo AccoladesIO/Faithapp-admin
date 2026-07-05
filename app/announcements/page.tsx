@@ -23,6 +23,7 @@ import { PaginationBar } from "@/components/ui/pagination-bar";
 import { useDepartments } from "@/hooks/use-departments";
 import { api } from "@/utils/auth/axios-client";
 import { toInputDateTime } from "@/utils/parse-local-time";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -429,12 +430,7 @@ export default withAuth(function AnnouncementsPage() {
                 </button>
             </div>
 
-            {error && (
-                <div className="bg-red-50 border border-red-200 p-4 rounded-lg text-xs text-red-700">
-                    <strong className="block font-semibold uppercase tracking-wider text-[11px] mb-1">Error</strong>
-                    {error}
-                </div>
-            )}
+            <DismissibleError message={error} />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 

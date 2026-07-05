@@ -19,8 +19,8 @@ import {
     ServiceSlotType,
 } from "@/hooks/use-service-programme";
 import { api } from "@/utils/auth/axios-client";
-import Error from "@/components/layout/error";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 import {
     useServiceSession,
     SessionAnchor,
@@ -474,9 +474,7 @@ function LiveSessionSection({
                 </span>
             </div>
 
-            {error && (
-                <div className="mx-5 mb-3 p-2 bg-red-50 border border-red-100 rounded-lg text-[11px] text-red-700">{error}</div>
-            )}
+            <DismissibleError message={error} />
 
             {/* Current slot card */}
             {currentSlot && (
@@ -798,11 +796,7 @@ function ProgrammeDetailPanel({
                 <StatusFlow status={programme.status} />
             </div>
 
-            {panelError && (
-                <div className="mx-5 mt-4 p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700">
-                    {panelError}
-                </div>
-            )}
+            <DismissibleError message={panelError} />
 
             {/* Live session controls */}
             {isLive && anchor && liveSession && (
@@ -992,9 +986,7 @@ function CreateProgrammePanel({
                 </button>
             </div>
             <form onSubmit={handleSubmit} className="flex-1 p-5 space-y-4">
-                {localError && (
-                    <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{localError}</p>
-                )}
+                <DismissibleError message={localError} />
                 <div>
                     <label htmlFor="create-slot" className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
                         Service Slot
@@ -1082,7 +1074,7 @@ function ProgrammesTab({ hook }: { hook: ReturnType<typeof useServiceProgramme> 
                 </button>
             </div>
 
-            {error && <Error error={error} onDismiss={clearError} />}
+            <DismissibleError message={error} />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 {/* List */}
@@ -1195,7 +1187,7 @@ function TemplatesTab({ hook }: { hook: ReturnType<typeof useServiceProgramme> }
             <p className="text-xs text-[#8A817C] font-light">
                 Templates are auto-saved when a programme with "Save as Template" enabled completes its session.
             </p>
-            {error && <Error error={error} onDismiss={clearError} />}
+            <DismissibleError message={error} />
             <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">

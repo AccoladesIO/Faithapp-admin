@@ -18,8 +18,8 @@ import {
     Pencil, Check, ShieldAlert, CheckCircle2, ChevronLeft, ChevronRight,
     Users, Shield, Search, MousePointerClick,
 } from "lucide-react";
-import Error from "@/components/layout/error";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -457,13 +457,7 @@ export default withAuth(function AdminManagementPage() {
                 </div>
             </div>
 
-            {/* Global error */}
-            {(adminError || roleError) && (
-                <Error
-                    error={adminError ?? roleError ?? ""}
-                    onDismiss={() => { clearAdminError(); clearRoleError(); }}
-                />
-            )}
+            <DismissibleError message={adminError ?? roleError} />
 
             {/* Tabs */}
             <div className="flex bg-[#F4F1EA] p-1 border border-[#121212]/5 rounded-xl w-fit">

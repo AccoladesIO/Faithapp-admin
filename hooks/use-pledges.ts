@@ -12,9 +12,9 @@ export interface PledgeCampaign {
     startDate: string;
     endDate: string | null;
     isActive: boolean;
-    totalPledged: number;
-    totalPaid: number;
-    pledgeCount: number;
+    totalPledged: number | null;
+    totalPaid: number | null;
+    pledgeCount: number | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -22,9 +22,9 @@ export interface PledgeCampaign {
 export interface Pledge {
     id: string;
     campaign: { id: string; name: string };
-    member: { id: string; name: string; email: string } | null;
+    member: { id: string; firstname: string; lastname: string; email: string } | null;
+    guestName: string | null;
     totalAmount: number;
-    amountPaid: number;
     frequency: PledgeFrequency;
     startDate: string;
     status: PledgeStatus;
@@ -42,14 +42,16 @@ export interface PledgePagination {
 
 export interface CreateCampaignPayload {
     name: string;
+    fundId: string;
     description?: string;
     targetAmount: number;
     startDate: string;
-    endDate?: string;
+    endDate: string;
 }
 
 export interface CreatePledgePayload {
-    memberId: string;
+    memberId?: string;
+    guestName?: string;
     totalAmount: number;
     frequency: PledgeFrequency;
     startDate: string;

@@ -1,5 +1,7 @@
 "use client";
 
+import { DismissibleError } from "@/components/ui/dismissible-error";
+
 import React, { useState } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
 import {
@@ -8,7 +10,6 @@ import {
     CheckCircle2,
     XCircle,
     Clock,
-    AlertCircle,
     X,
     RefreshCw,
 } from "lucide-react";
@@ -20,6 +21,7 @@ import {
     CreatePettyCashPayload,
 } from "@/hooks/use-petty-cash";
 import { useAccounts } from "@/hooks/use-accounts";
+import { currencySymbol, formatCurrency, formatCurrencyInput, parseCurrencyInput } from "@/utils/currency";
 
 const STATUS_CONFIG: Record<PettyCashStatus, { label: string; cls: string; Icon: React.FC<{ className?: string }> }> = {
     PENDING: { label: "Pending", cls: "bg-amber-100 text-amber-800", Icon: Clock },
@@ -27,8 +29,6 @@ const STATUS_CONFIG: Record<PettyCashStatus, { label: string; cls: string; Icon:
     REJECTED: { label: "Rejected", cls: "bg-red-100 text-red-800", Icon: XCircle },
 };
 
-const fmt = (n: number | string) =>
-    `₦${Number(n).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
@@ -113,11 +113,7 @@ export default withAuth(function PettyCashPage() {
                 ))}
             </div>
 
-            {error && (
-                <div className="flex items-center space-x-2 text-red-600 text-xs bg-red-50 border border-red-200 p-4 rounded-xl">
-                    <AlertCircle className="w-4 h-4 shrink-0" /><span>{error}</span>
-                </div>
-            )}
+                            <DismissibleError message={error} />
 
             {/* Filter */}
             <div className="flex items-center space-x-3">
@@ -154,7 +150,7 @@ export default withAuth(function PettyCashPage() {
                                                     className={`cursor-pointer hover:bg-[#F4F1EA]/20 transition-colors ${selected?.id === r.id ? "bg-[#F4F1EA]/30" : ""}`}>
                                                     <td className="p-4 text-xs text-[#121212]">{r.fromAccount?.name ?? "—"}</td>
                                                     <td className="p-4 text-xs text-[#121212]">{r.toCashAccount?.name ?? "—"}</td>
-                                                    <td className="p-4 font-mono text-xs font-medium text-[#121212]">{fmt(r.amount)}</td>
+                                                    <td className="p-4 font-mono text-xs font-medium text-[#121212]">{formatCurrency(r.amount)}</td>
                                                     <td className="p-4">
                                                         <span className={`inline-flex items-center space-x-1 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded ${cfg.cls}`}>
                                                             <cfg.Icon className="w-3 h-3" /><span>{cfg.label}</span>
@@ -183,7 +179,7 @@ export default withAuth(function PettyCashPage() {
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212] flex items-center space-x-2"><Coins className="w-3.5 h-3.5" /><span>Request Replenishment</span></p>
                             <button onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-[#8A817C]" /></button>
                         </div>
-                        {actionError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg">{actionError}</p>}
+                        <DismissibleError message={actionError} />
                         <div className="space-y-3">
                             <div>
                                 <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">From Account *</label>
@@ -203,9 +199,12 @@ export default withAuth(function PettyCashPage() {
                             </div>
                             <div>
                                 <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Amount *</label>
-                                <input type="number" min={0} value={form.amount || ""} onChange={(e) => setForm((f) => ({ ...f, amount: Number(e.target.value) }))}
-                                    placeholder="0.00"
-                                    className="w-full h-10 px-3 border border-[#121212]/10 text-xs font-mono text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#8A817C] select-none pointer-events-none">{currencySymbol}</span>
+                                    <input type="text" inputMode="decimal" value={formatCurrencyInput(form.amount)} placeholder="0"
+                                        onChange={(e) => setForm((f) => ({ ...f, amount: parseCurrencyInput(e.target.value) }))}
+                                        className="w-full h-10 pl-7 pr-3 border border-[#121212]/10 text-xs font-mono text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Notes</label>
@@ -227,17 +226,17 @@ export default withAuth(function PettyCashPage() {
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212]">Replenishment</p>
                             <button onClick={() => setSelected(null)}><X className="w-4 h-4 text-[#8A817C]" /></button>
                         </div>
-                        {actionError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg">{actionError}</p>}
+                        <DismissibleError message={actionError} />
                         <div className="space-y-2 text-xs">
-                            <div className="flex justify-between"><span className="text-[#8A817C]">Amount</span><span className="font-mono font-semibold text-[#121212]">{fmt(selected.amount)}</span></div>
+                            <div className="flex justify-between"><span className="text-[#8A817C]">Amount</span><span className="font-mono font-semibold text-[#121212]">{formatCurrency(selected.amount)}</span></div>
                             <div className="flex justify-between"><span className="text-[#8A817C]">From</span><span>{selected.fromAccount?.name}</span></div>
                             <div className="flex justify-between"><span className="text-[#8A817C]">To</span><span>{selected.toCashAccount?.name}</span></div>
-                            <div className="flex justify-between"><span className="text-[#8A817C]">Requested by</span><span>{selected.requestedBy?.name ?? "—"}</span></div>
+                            <div className="flex justify-between"><span className="text-[#8A817C]">Requested by</span><span>{selected.requestedBy?.member ? `${selected.requestedBy.member.firstname} ${selected.requestedBy.member.lastname}` : "—"}</span></div>
                             <div className="flex justify-between items-center"><span className="text-[#8A817C]">Status</span>
                                 <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded ${STATUS_CONFIG[selected.status].cls}`}>{STATUS_CONFIG[selected.status].label}</span>
                             </div>
                             {selected.notes && <div><p className="text-[#8A817C] mb-1">Notes</p><p>{selected.notes}</p></div>}
-                            {selected.approvedBy && <div className="flex justify-between"><span className="text-[#8A817C]">Approved by</span><span>{selected.approvedBy.name}</span></div>}
+                            {selected.approvedBy && <div className="flex justify-between"><span className="text-[#8A817C]">Approved by</span><span>{selected.approvedBy.member ? `${selected.approvedBy.member.firstname} ${selected.approvedBy.member.lastname}` : "—"}</span></div>}
                             {selected.approvedAt && <div className="flex justify-between"><span className="text-[#8A817C]">Approved at</span><span className="font-mono">{fmtDate(selected.approvedAt)}</span></div>}
                         </div>
                         {selected.status === "PENDING" && (

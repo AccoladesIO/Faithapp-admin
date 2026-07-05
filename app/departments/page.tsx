@@ -15,8 +15,8 @@ import {
     DepartmentWorker,
 } from "@/hooks/use-departments";
 import { useMembers } from "@/hooks/use-member";
-import Error from "@/components/layout/error";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -318,10 +318,7 @@ fetchDepartments,
                 </div>
             </div>
 
-            {/* Global error */}
-            {error && (
-                <Error error={error} onDismiss={clearError} />
-            )}
+            <DismissibleError message={error} />
 
             {/* Search */}
             <div className="bg-[#FFFFFF] border border-[#121212]/10 p-6 rounded-xl">

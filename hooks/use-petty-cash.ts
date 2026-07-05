@@ -16,8 +16,8 @@ export interface PettyCashReplenishment {
     amount: number;
     notes: string | null;
     status: PettyCashStatus;
-    requestedBy: { id: string; name: string; email: string } | null;
-    approvedBy: { id: string; name: string; email: string } | null;
+    requestedBy: { id: string; member: { firstname: string; lastname: string } | null } | null;
+    approvedBy: { id: string; member: { firstname: string; lastname: string } | null } | null;
     approvedAt: string | null;
     journalEntry: { id: string } | null;
     createdAt: string;

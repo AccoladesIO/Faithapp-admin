@@ -23,6 +23,7 @@ import {
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { useEvents, ChurchEvent } from "@/hooks/use-events";
 import { toLocalDate } from "@/utils/parse-local-time";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -727,12 +728,7 @@ const FollowUpPage = () => {
                 </div>
             </div>
 
-            {error && (
-                <div className="bg-red-50 border border-red-200 p-4 rounded-lg text-xs text-red-700">
-                    <strong className="block font-semibold uppercase tracking-wider text-[11px] mb-1">Error</strong>
-                    {error}
-                </div>
-            )}
+            <DismissibleError message={error} />
 
             {/* Tabs */}
             <div className="flex flex-wrap gap-1">

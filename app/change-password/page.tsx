@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { authService } from "@/utils/auth/auth";
 import { useToast } from "@/context/toast-context";
 import { Eye, EyeOff, ShieldAlert } from "lucide-react";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 export default function ChangePasswordPage() {
     const [oldPassword, setOldPassword] = useState("");
@@ -60,14 +61,7 @@ export default function ChangePasswordPage() {
                     </div>
                 </div>
 
-                {error && (
-                    <div className="bg-[#fdfaf2] border border-dashed border-[#121212]/15 p-4 text-xs text-[#121212] font-light">
-                        <strong className="block font-semibold uppercase tracking-wider text-[11px] mb-1">
-                            Error
-                        </strong>
-                        {error}
-                    </div>
-                )}
+                <DismissibleError message={error} />
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div>

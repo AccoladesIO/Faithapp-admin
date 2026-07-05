@@ -1,8 +1,10 @@
 "use client";
 
+import { DismissibleError } from "@/components/ui/dismissible-error";
+
 import React, { useState } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
-import { CalendarDays, Plus, Lock, Unlock, AlertCircle, X, RefreshCw } from "lucide-react";
+import { CalendarDays, Plus, Lock, Unlock, X, RefreshCw } from "lucide-react";
 import { useAccountingPeriods, AccountingPeriod, PeriodStatus } from "@/hooks/use-accounting-periods";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -84,11 +86,7 @@ export default withAuth(function AccountingPeriodsPage() {
                 </div>
             </div>
 
-            {error && (
-                <div className="flex items-center space-x-2 text-red-600 text-xs bg-red-50 border border-red-200 p-4 rounded-xl">
-                    <AlertCircle className="w-4 h-4 shrink-0" /><span>{error}</span>
-                </div>
-            )}
+                            <DismissibleError message={error} />
 
             <div className="flex gap-6 items-start">
                 <div className="flex-1 min-w-0 bg-white border border-[#121212]/10 rounded-xl overflow-hidden">
@@ -133,7 +131,7 @@ export default withAuth(function AccountingPeriodsPage() {
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212] flex items-center space-x-2"><CalendarDays className="w-3.5 h-3.5" /><span>New Period</span></p>
                             <button onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-[#8A817C]" /></button>
                         </div>
-                        {actionError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg">{actionError}</p>}
+                        <DismissibleError message={actionError} />
                         <div>
                             <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Year *</label>
                             <input type="number" value={form.year} onChange={(e) => setForm((f) => ({ ...f, year: Number(e.target.value) }))} min={2000} max={2099}
@@ -162,7 +160,7 @@ export default withAuth(function AccountingPeriodsPage() {
                             </p>
                             <button onClick={() => setSelected(null)}><X className="w-4 h-4 text-[#8A817C]" /></button>
                         </div>
-                        {actionError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg">{actionError}</p>}
+                        <DismissibleError message={actionError} />
                         <div className="space-y-2 text-xs">
                             <div className="flex justify-between items-center">
                                 <span className="text-[#8A817C]">Status</span>
