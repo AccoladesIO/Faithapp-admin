@@ -13,7 +13,7 @@ import {
     ChildCheckInStatusEnum,
 } from "@/hooks/use-children-church";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import Error from "@/components/layout/error";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 type Tab = "age-groups" | "class-groups" | "check-ins";
 
@@ -236,7 +236,7 @@ const ChildrensChurchPage = () => {
                 </button>
             </div>
 
-            {error && <Error error={error} onDismiss={clearError} />}
+            <DismissibleError message={error} />
 
             <div className="flex bg-[#F4F1EA] p-1 border border-[#121212]/5 rounded-xl w-fit flex-wrap gap-0.5">
                 {TABS.map((t) => (

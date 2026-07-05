@@ -1,17 +1,26 @@
 "use client";
 
+import { DismissibleError } from "@/components/ui/dismissible-error";
+
 import React, { useState } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
-import { BarChart3, Plus, AlertCircle, X, RefreshCw, Pencil } from "lucide-react";
+import { BarChart3, Plus, X, RefreshCw, Pencil } from "lucide-react";
 import {
     useAccounts,
     FinanceAccount,
     CreateAccountPayload,
     UpdateAccountPayload,
     AccountType,
+    AccountSubtype,
     NormalBalance,
 } from "@/hooks/use-accounts";
+
+const SUBTYPES: AccountSubtype[] = [
+    "BANK", "CASH", "PETTY_CASH", "OFFERING", "TITHE",
+    "SALARY", "UTILITIES", "REMITTANCE", "EQUIPMENT", "OTHER",
+];
 import { useFunds } from "@/hooks/use-funds";
+import { formatCurrency } from "@/utils/currency";
 
 const TYPE_COLORS: Record<AccountType, string> = {
     ASSET: "bg-blue-100 text-blue-800",
@@ -20,13 +29,11 @@ const TYPE_COLORS: Record<AccountType, string> = {
     EXPENSE: "bg-red-100 text-red-800",
 };
 
-const fmt = (n: number | string) =>
-    `₦${Number(n).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function RowSkeleton() {
     return (
         <tr className="border-b border-[#121212]/5">
-            {[10, 35, 15, 20, 25].map((w, i) => (
+            {[10, 35, 15, 15, 20, 25, 5].map((w, i) => (
                 <td key={i} className="p-4">
                     <div className="h-3 bg-[#F4F1EA] rounded animate-pulse" style={{ width: `${w * 5}px` }} />
                 </td>
@@ -43,7 +50,7 @@ export default withAuth(function AccountsPage() {
     const [editing, setEditing] = useState<FinanceAccount | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
     const [typeFilter, setTypeFilter] = useState<AccountType | "">("");
-    const [form, setForm] = useState<CreateAccountPayload>({ name: "", code: "", type: "ASSET", normalBalance: "DEBIT", subtype: "", fundId: "" });
+    const [form, setForm] = useState<CreateAccountPayload>({ name: "", code: "", type: "ASSET", normalBalance: "DEBIT", subtype: "BANK", fundId: "" });
     const [editForm, setEditForm] = useState<UpdateAccountPayload>({});
 
     const filtered = typeFilter ? accounts.filter((a) => a.type === typeFilter) : accounts;
@@ -52,9 +59,9 @@ export default withAuth(function AccountsPage() {
         if (!form.name || !form.code) return;
         setActionError(null);
         try {
-            await createAccount({ ...form, subtype: form.subtype || undefined, fundId: form.fundId || undefined });
+            await createAccount({ ...form, fundId: form.fundId || undefined });
             setShowCreate(false);
-            setForm({ name: "", code: "", type: "ASSET", normalBalance: "DEBIT", subtype: "", fundId: "" });
+            setForm({ name: "", code: "", type: "ASSET", normalBalance: "DEBIT", subtype: "BANK", fundId: "" });
         } catch (e: any) { setActionError(e.message); }
     }
 
@@ -69,7 +76,7 @@ export default withAuth(function AccountsPage() {
 
     function openEdit(a: FinanceAccount) {
         setEditing(a);
-        setEditForm({ name: a.name, subtype: a.subtype ?? "", isActive: a.isActive });
+        setEditForm({ name: a.name, subtype: (a.subtype as AccountSubtype) ?? undefined, isActive: a.isActive });
         setShowCreate(false);
         setActionError(null);
     }
@@ -94,11 +101,7 @@ export default withAuth(function AccountsPage() {
                 </div>
             </div>
 
-            {error && (
-                <div className="flex items-center space-x-2 text-red-600 text-xs bg-red-50 border border-red-200 p-4 rounded-xl">
-                    <AlertCircle className="w-4 h-4 shrink-0" /><span>{error}</span>
-                </div>
-            )}
+                            <DismissibleError message={error} />
 
             {/* Type filter */}
             <div className="flex items-center space-x-2">
@@ -116,7 +119,7 @@ export default withAuth(function AccountsPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
-                                    {["Code", "Name", "Type", "Normal Balance", "Balance", ""].map((h) => (
+                                    {["Code", "Name", "Type", "Subtype", "Normal Balance", "Balance", ""].map((h) => (
                                         <th key={h} className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">{h}</th>
                                     ))}
                                 </tr>
@@ -124,7 +127,7 @@ export default withAuth(function AccountsPage() {
                             <tbody className="divide-y divide-[#121212]/5">
                                 {isLoading ? Array.from({ length: 6 }).map((_, i) => <RowSkeleton key={i} />) :
                                     filtered.length === 0 ? (
-                                        <tr><td colSpan={6} className="p-10 text-center text-xs text-[#8A817C] font-light">No accounts found.</td></tr>
+                                        <tr><td colSpan={7} className="p-10 text-center text-xs text-[#8A817C] font-light">No accounts found.</td></tr>
                                     ) : filtered.map((a) => (
                                         <tr key={a.id} className={`hover:bg-[#F4F1EA]/20 transition-colors ${!a.isActive ? "opacity-50" : ""}`}>
                                             <td className="p-4 font-mono text-xs text-[#8A817C]">{a.code}</td>
@@ -132,8 +135,9 @@ export default withAuth(function AccountsPage() {
                                             <td className="p-4">
                                                 <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded ${TYPE_COLORS[a.type]}`}>{a.type}</span>
                                             </td>
+                                            <td className="p-4 text-[10px] text-[#8A817C] uppercase tracking-wider">{a.subtype?.replace("_", " ") ?? "—"}</td>
                                             <td className="p-4 text-[10px] font-mono text-[#8A817C]">{a.normalBalance}</td>
-                                            <td className="p-4 font-mono text-xs font-medium text-[#121212]">{fmt(a.currentBalance)}</td>
+                                            <td className="p-4 font-mono text-xs font-medium text-[#121212]">{formatCurrency(a.currentBalance)}</td>
                                             <td className="p-4">
                                                 <button onClick={() => openEdit(a)} className="text-[#8A817C] hover:text-[#121212]">
                                                     <Pencil className="w-3.5 h-3.5" />
@@ -153,11 +157,10 @@ export default withAuth(function AccountsPage() {
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212] flex items-center space-x-2"><BarChart3 className="w-3.5 h-3.5" /><span>New Account</span></p>
                             <button onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-[#8A817C]" /></button>
                         </div>
-                        {actionError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg">{actionError}</p>}
+                        <DismissibleError message={actionError} />
                         {[
                             { label: "Code *", key: "code", placeholder: "e.g. 1001" },
                             { label: "Name *", key: "name", placeholder: "Account name" },
-                            { label: "Subtype", key: "subtype", placeholder: "e.g. Bank, Cash" },
                         ].map(({ label, key, placeholder }) => (
                             <div key={key}>
                                 <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">{label}</label>
@@ -166,6 +169,13 @@ export default withAuth(function AccountsPage() {
                                     className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
                             </div>
                         ))}
+                        <div>
+                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Subtype *</label>
+                            <select value={form.subtype} onChange={(e) => setForm((f) => ({ ...f, subtype: e.target.value as AccountSubtype }))}
+                                className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
+                                {SUBTYPES.map((s) => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
+                            </select>
+                        </div>
                         <div>
                             <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Type *</label>
                             <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as AccountType }))}
@@ -205,7 +215,7 @@ export default withAuth(function AccountsPage() {
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212]">Edit Account</p>
                             <button onClick={() => setEditing(null)}><X className="w-4 h-4 text-[#8A817C]" /></button>
                         </div>
-                        {actionError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg">{actionError}</p>}
+                        <DismissibleError message={actionError} />
                         <div className="text-[10px] font-mono text-[#8A817C] bg-[#F4F1EA]/40 rounded-lg px-3 py-2">
                             {editing.code} · {editing.type} · {editing.normalBalance}
                         </div>
@@ -216,8 +226,11 @@ export default withAuth(function AccountsPage() {
                         </div>
                         <div>
                             <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Subtype</label>
-                            <input value={editForm.subtype ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, subtype: e.target.value }))}
-                                className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
+                            <select value={editForm.subtype ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, subtype: e.target.value as AccountSubtype || undefined }))}
+                                className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
+                                <option value="">— unchanged —</option>
+                                {SUBTYPES.map((s) => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
+                            </select>
                         </div>
                         <label className="flex items-center space-x-2 cursor-pointer">
                             <input type="checkbox" checked={editForm.isActive ?? true} onChange={(e) => setEditForm((f) => ({ ...f, isActive: e.target.checked }))} className="rounded" />

@@ -29,7 +29,7 @@ import {
     ValidationReport,
 } from "@/hooks/use-prayer";
 import { api } from "@/utils/auth/axios-client";
-import Error from "@/components/layout/error";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -319,7 +319,7 @@ function ProgramsTab({
                 </div>
             </div>
 
-            {error && <Error error={error} onDismiss={clearError} />}
+            <DismissibleError message={error} />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 <div className={`${panelOpen ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden`}>
@@ -379,7 +379,7 @@ function ProgramsTab({
                             </h2>
                         </div>
                         <div className="p-6 space-y-4">
-                            {error && <div className="text-xs font-light text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
+                            <DismissibleError message={error} />
 
                             {/* Copy from — only on create */}
                             {panelMode === "create" && programs.length > 0 && (
@@ -514,7 +514,7 @@ function DayConfigsTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>
                 <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C]">{dayConfigs.length} day config{dayConfigs.length !== 1 ? "s" : ""}</span>
                 <button onClick={openCreate} className={`flex items-center gap-2 ${primaryCls}`}><Plus className="w-3.5 h-3.5" /> Add Day Config</button>
             </div>
-            {error && <Error error={error} onDismiss={clearError} />}
+            <DismissibleError message={error} />
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 <div className={`${panelOpen ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden`}>
                     <div className="overflow-x-auto">
@@ -649,7 +649,7 @@ function RulesTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>; pro
                 <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C]">{rules.length} rule{rules.length !== 1 ? "s" : ""}</span>
                 <button onClick={openCreate} className={`flex items-center gap-2 ${primaryCls}`}><Plus className="w-3.5 h-3.5" /> Add Rule</button>
             </div>
-            {error && <Error error={error} onDismiss={clearError} />}
+            <DismissibleError message={error} />
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 <div className={`${panelOpen ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden`}>
                     <table className="w-full text-left border-collapse">
@@ -699,7 +699,7 @@ function RulesTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>; pro
                             <h2 className="text-xl font-light tracking-tight text-[#121212] pr-10">{panelMode === "create" ? "Add Schedule Rule" : "Update Rule"}</h2>
                         </div>
                         <div className="p-6 space-y-4">
-                            {error && <div className="text-xs font-light text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
+                            <DismissibleError message={error} />
                             {panelMode === "create" && (
                                 <div>
                                     <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">Type</label>
@@ -795,7 +795,7 @@ function FixedAssignmentsTab({ hook, programId }: { hook: ReturnType<typeof useP
                     className="w-full sm:w-72 h-9 pl-9 pr-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg" />
                 {search && <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8A817C] hover:text-[#121212]"><X className="w-3.5 h-3.5" /></button>}
             </div>
-            {error && <Error error={error} onDismiss={clearError} />}
+            <DismissibleError message={error} />
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 <div className={`${showPanel ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden`}>
                     <table className="w-full text-left border-collapse">
@@ -828,7 +828,7 @@ function FixedAssignmentsTab({ hook, programId }: { hook: ReturnType<typeof useP
                             <h2 className="text-xl font-light tracking-tight text-[#121212] pr-10">Add Fixed Assignment</h2>
                         </div>
                         <div className="p-6 space-y-4">
-                            {error && <div className="text-xs font-light text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
+                            <DismissibleError message={error} />
                             <div>
                                 <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">Worker</label>
                                 <AssigneeCombobox audience="WORKERS" displayName={workerDisplayName} onChange={(p, name) => { setWorkerProfileId(p.workerProfileId ?? ""); setWorkerDisplayName(name); }} />
@@ -1165,7 +1165,7 @@ function RosterTab({
                 </div>
             )}
 
-            {error && <Error error={error} onDismiss={clearError} />}
+            <DismissibleError message={error} />
 
             {/* Main content */}
             {isLoading ? (

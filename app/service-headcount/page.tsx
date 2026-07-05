@@ -7,6 +7,7 @@ import {
     BarChart2, List, RefreshCw, TrendingUp, Trash2,
 } from "lucide-react";
 import { PaginationBar } from "@/components/ui/pagination-bar";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 import {
     useServiceHeadcount,
     ServiceHeadcount,
@@ -452,12 +453,7 @@ function ServiceHeadcountPage() {
                 </div>
             </div>
 
-            {error && (
-                <div className="bg-red-50 border border-red-200 p-4 rounded-lg text-xs text-red-700">
-                    <strong className="block font-semibold uppercase tracking-wider text-[11px] mb-1">Error</strong>
-                    {error}
-                </div>
-            )}
+            <DismissibleError message={error} />
 
             {/* Tabs */}
             <div className="flex gap-1">

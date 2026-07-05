@@ -6,6 +6,7 @@ import { useChurchSettings, ChurchSetting } from "@/hooks/use-church-settings";
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/context/toast-context";
 import { Settings2, RefreshCw, Lock } from "lucide-react";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 function ModuleRow({
     setting,
@@ -141,14 +142,7 @@ const SystemSettingsPage = withAuth(
                     </div>
                 )}
 
-                {error && (
-                    <div className="bg-[#fdfaf2] border border-dashed border-[#121212]/15 px-4 py-3 text-xs text-[#121212] font-light">
-                        <strong className="block font-semibold uppercase tracking-wider text-[11px] mb-0.5">
-                            Error
-                        </strong>
-                        {error}
-                    </div>
-                )}
+                <DismissibleError message={error} />
 
                 <div className="bg-white border border-[#121212]/10 px-6">
                     {isLoading ? (

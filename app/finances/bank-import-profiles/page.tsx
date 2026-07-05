@@ -1,8 +1,10 @@
 "use client";
 
+import { DismissibleError } from "@/components/ui/dismissible-error";
+
 import React, { useState } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
-import { Settings2, Plus, Pencil, Download, AlertCircle, X, RefreshCw, CheckCircle } from "lucide-react";
+import { Settings2, Plus, Pencil, Download, X, RefreshCw, CheckCircle } from "lucide-react";
 import {
     useBankImportProfiles,
     BankImportProfile,
@@ -134,12 +136,7 @@ export default withAuth(function BankImportProfilesPage() {
                 </div>
             </div>
 
-            {error && (
-                <div className="flex items-center space-x-2 text-red-600 text-xs bg-red-50 border border-red-200 p-4 rounded-xl">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{error}</span>
-                </div>
-            )}
+                            <DismissibleError message={error} />
 
             <div className="bg-white border border-[#121212]/10 rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">
@@ -226,12 +223,7 @@ export default withAuth(function BankImportProfilesPage() {
                         </div>
 
                         <div className="p-6 space-y-5 flex-1">
-                            {actionError && (
-                                <div className="text-red-600 text-xs bg-red-50 border border-red-200 p-3 rounded-lg flex items-center space-x-2">
-                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                                    <span>{actionError}</span>
-                                </div>
-                            )}
+                                                            <DismissibleError message={actionError} />
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="col-span-2">

@@ -17,8 +17,8 @@ import {
 } from "lucide-react";
 import { withAuth } from "@/utils/auth/with-auth";
 import { useVenues, Venue } from "@/hooks/use-venues";
-import Error from "@/components/layout/error";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 const fetchCoordinates = async (
     targetAddress: string
@@ -193,9 +193,7 @@ export default withAuth(function VenuesPage() {
                 </div>
             </div>
 
-            {error && (
-                <Error error={error} onDismiss={clearError} />
-            )}
+            <DismissibleError message={error} />
 
             {/* Search */}
             <div className="flex flex-col xl:flex-row gap-6 items-center justify-between bg-[#FFFFFF] border border-[#121212]/10 p-6 rounded-xl">

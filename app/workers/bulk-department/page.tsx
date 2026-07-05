@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useWorkers, Worker } from "@/hooks/use-workers";
 import { useDepartments } from "@/hooks/use-departments";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 const fullName = (w: Worker) =>
     [w.firstname, w.lastname].filter(Boolean).join(" ") || w.email;
@@ -107,11 +108,7 @@ function BulkDepartmentPage() {
                 </div>
             )}
 
-            {error && (
-                <div className="p-4 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm">
-                    {error}
-                </div>
-            )}
+            <DismissibleError message={error} />
 
             <div className="grid grid-cols-12 gap-4">
                 {/* Worker list */}

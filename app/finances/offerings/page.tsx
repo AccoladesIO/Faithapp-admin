@@ -1,5 +1,7 @@
 "use client";
 
+import { DismissibleError } from "@/components/ui/dismissible-error";
+
 import React, { useState, useMemo } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
 import {
@@ -22,6 +24,7 @@ import {
     OfferingFilters,
 } from "@/hooks/use-offerings";
 import { useFunds } from "@/hooks/use-funds";
+import { currencySymbol, formatCurrency, formatCurrencyInput, parseCurrencyInput } from "@/utils/currency";
 
 const OFFERING_TYPE_LABELS: Record<OfferingType, string> = {
     GENERAL: "General",
@@ -33,8 +36,6 @@ const OFFERING_TYPE_LABELS: Record<OfferingType, string> = {
 const SKELETON_WIDTHS = ["128px", "80px", "160px", "96px", "96px", "64px"];
 const SKELETON_KEYS = ["sk-date", "sk-type", "sk-fund", "sk-cash", "sk-transfer", "sk-status"];
 
-const fmt = (n: number | string) =>
-    `₦${Number(n).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
@@ -70,8 +71,8 @@ function CreateForm({
 }>) {
     const [createType, setCreateType] = useState<OfferingType>("GENERAL");
     const [createFundId, setCreateFundId] = useState("");
-    const [createCash, setCreateCash] = useState("");
-    const [createTransfer, setCreateTransfer] = useState("");
+    const [createCash, setCreateCash] = useState(0);
+    const [createTransfer, setCreateTransfer] = useState(0);
     const [createNotes, setCreateNotes] = useState("");
     const [error, setError] = useState<string | null>(null);
 
@@ -80,12 +81,12 @@ function CreateForm({
         setError(null);
         if (!createFundId) { setError("Please select a fund."); return; }
         const payload: CreateOfferingPayload = { fundId: createFundId, type: createType };
-        if (createCash) payload.cashAmount = Number.parseFloat(createCash);
-        if (createTransfer) payload.expectedTransferAmount = Number.parseFloat(createTransfer);
+        if (createCash) payload.cashAmount = createCash;
+        if (createTransfer) payload.expectedTransferAmount = createTransfer;
         if (createNotes) payload.notes = createNotes;
         try {
             await onSubmit(payload);
-            setCreateFundId(""); setCreateCash(""); setCreateTransfer(""); setCreateNotes("");
+            setCreateFundId(""); setCreateCash(0); setCreateTransfer(0); setCreateNotes("");
         } catch (err: any) {
             setError(err?.message ?? "Failed to record giving.");
         }
@@ -140,30 +141,34 @@ function CreateForm({
 
                 <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label htmlFor="create-cash" className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Cash (₦)</label>
-                        <input
-                            id="create-cash"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={createCash}
-                            onChange={(e) => setCreateCash(e.target.value)}
-                            placeholder="0.00"
-                            className="w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] focus:outline-none rounded-lg font-mono"
-                        />
+                        <label htmlFor="create-cash" className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Cash</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#8A817C] select-none pointer-events-none">{currencySymbol}</span>
+                            <input
+                                id="create-cash"
+                                type="text"
+                                inputMode="decimal"
+                                value={formatCurrencyInput(createCash)}
+                                onChange={(e) => setCreateCash(parseCurrencyInput(e.target.value))}
+                                placeholder="0"
+                                className="w-full h-10 pl-7 pr-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] focus:outline-none rounded-lg font-mono"
+                            />
+                        </div>
                     </div>
                     <div>
-                        <label htmlFor="create-transfer" className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Transfer (₦)</label>
-                        <input
-                            id="create-transfer"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={createTransfer}
-                            onChange={(e) => setCreateTransfer(e.target.value)}
-                            placeholder="0.00"
-                            className="w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] focus:outline-none rounded-lg font-mono"
-                        />
+                        <label htmlFor="create-transfer" className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Transfer</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#8A817C] select-none pointer-events-none">{currencySymbol}</span>
+                            <input
+                                id="create-transfer"
+                                type="text"
+                                inputMode="decimal"
+                                value={formatCurrencyInput(createTransfer)}
+                                onChange={(e) => setCreateTransfer(parseCurrencyInput(e.target.value))}
+                                placeholder="0"
+                                className="w-full h-10 pl-7 pr-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] focus:outline-none rounded-lg font-mono"
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -179,12 +184,7 @@ function CreateForm({
                     />
                 </div>
 
-                {error && (
-                    <div className="flex items-center space-x-2 text-red-600 text-xs">
-                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                        <span>{error}</span>
-                    </div>
-                )}
+                                    <DismissibleError message={error} />
 
                 <button
                     type="submit"
@@ -245,11 +245,11 @@ function DetailPanel({
             <div className="grid grid-cols-2 gap-4 border-y border-[#121212]/5 py-6 font-mono text-xs">
                 <div>
                     <span className="text-[#8A817C] block text-[10px] font-semibold uppercase tracking-widest mb-1">Cash Amount</span>
-                    <span className="text-[#121212] font-medium">{fmt(offering.cashAmount)}</span>
+                    <span className="text-[#121212] font-medium">{formatCurrency(offering.cashAmount)}</span>
                 </div>
                 <div>
                     <span className="text-[#8A817C] block text-[10px] font-semibold uppercase tracking-widest mb-1">Transfer Expected</span>
-                    <span className="text-[#121212]">{fmt(offering.expectedTransferAmount)}</span>
+                    <span className="text-[#121212]">{formatCurrency(offering.expectedTransferAmount)}</span>
                 </div>
                 <div>
                     <span className="text-[#8A817C] block text-[10px] font-semibold uppercase tracking-widest mb-1">Recorded</span>
@@ -391,13 +391,13 @@ export default withAuth(function OfferingsPage() {
                         <Layers className="w-3.5 h-3.5" /><span>Cash Received</span>
                     </div>
                     <div className="text-xl font-light text-[#121212] font-mono">
-                        {isLoading ? <div className="h-6 w-28 bg-[#F4F1EA] rounded animate-pulse" /> : fmt(stats.totalCash)}
+                        {isLoading ? <div className="h-6 w-28 bg-[#F4F1EA] rounded animate-pulse" /> : formatCurrency(stats.totalCash)}
                     </div>
                 </div>
                 <div className="bg-white border border-[#121212]/10 p-5 rounded-xl">
                     <div className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">Transfer Expected</div>
                     <div className="text-xl font-light text-[#121212] font-mono">
-                        {isLoading ? <div className="h-6 w-28 bg-[#F4F1EA] rounded animate-pulse" /> : fmt(stats.totalTransfer)}
+                        {isLoading ? <div className="h-6 w-28 bg-[#F4F1EA] rounded animate-pulse" /> : formatCurrency(stats.totalTransfer)}
                     </div>
                 </div>
                 <div className="bg-white border border-[#121212]/10 p-5 rounded-xl">
@@ -491,11 +491,7 @@ export default withAuth(function OfferingsPage() {
                 )}
 
                 <div className={`${tableColSpan} bg-white border border-[#121212]/10 rounded-xl overflow-hidden`}>
-                    {error && (
-                        <div className="p-4 border-b border-[#121212]/5 flex items-center space-x-2 text-red-600 text-xs bg-red-50">
-                            <AlertCircle className="w-3.5 h-3.5 shrink-0" /><span>{error}</span>
-                        </div>
-                    )}
+                                            <DismissibleError message={error} />
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -532,8 +528,8 @@ export default withAuth(function OfferingsPage() {
                                                     <div className="text-xs font-medium text-[#121212]">{o.fund.name}</div>
                                                     <div className="text-[10px] text-[#8A817C] uppercase tracking-wider mt-0.5">{o.fund.type}</div>
                                                 </td>
-                                                <td className="p-4 font-mono text-xs text-[#121212]">{fmt(o.cashAmount)}</td>
-                                                <td className="p-4 font-mono text-xs text-[#121212]">{fmt(o.expectedTransferAmount)}</td>
+                                                <td className="p-4 font-mono text-xs text-[#121212]">{formatCurrency(o.cashAmount)}</td>
+                                                <td className="p-4 font-mono text-xs text-[#121212]">{formatCurrency(o.expectedTransferAmount)}</td>
                                                 <td className="p-4">{statusBadge}</td>
                                             </tr>
                                         );

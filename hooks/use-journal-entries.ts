@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
-export type JournalEntryStatus = "PENDING_APPROVAL" | "POSTED" | "VOIDED";
-export type JournalEntryType = "STANDARD" | "REVERSAL" | "RECURRING";
+export type JournalEntryStatus = "DRAFT" | "PENDING_APPROVAL" | "POSTED" | "VOIDED";
+export type JournalEntryType = "STANDARD" | "OPENING_BALANCE" | "REVERSAL" | "RECURRING";
+export type JournalEntrySource = "MANUAL" | "CSV_IMPORT" | "VIRTUAL_ACCOUNT" | "PAYMENT_GATEWAY";
 export type LineType = "DEBIT" | "CREDIT";
 
 export interface JournalAccount {
@@ -14,9 +15,13 @@ export interface JournalAccount {
 export interface JournalEntryLine {
     id: string;
     account: JournalAccount;
-    type: LineType;
+    entryType: LineType;
     amount: number;
-    description: string | null;
+}
+
+export interface JournalAdminRef {
+    id: string;
+    member: { firstname: string; lastname: string; email: string };
 }
 
 export interface JournalEntry {
@@ -25,11 +30,11 @@ export interface JournalEntry {
     description: string;
     entryType: JournalEntryType;
     status: JournalEntryStatus;
-    entryDate: string;
+    date: string;
     idempotencyKey: string | null;
     lines: JournalEntryLine[];
-    createdBy: { id: string; name: string; email: string } | null;
-    approvedBy: { id: string; name: string; email: string } | null;
+    createdBy: JournalAdminRef | null;
+    approvedBy: JournalAdminRef | null;
     approvedAt: string | null;
     createdAt: string;
     updatedAt: string;
@@ -44,15 +49,18 @@ export interface JournalEntryPagination {
 
 export interface CreateJournalLinePayload {
     accountId: string;
-    type: LineType;
+    entryType: LineType;
     amount: number;
-    description?: string;
 }
 
 export interface CreateJournalEntryPayload {
+    date: string;
     description: string;
-    entryDate: string;
     reference?: string;
+    source: JournalEntrySource;
+    entryType: JournalEntryType;
+    accountingPeriodId: string;
+    idempotencyKey: string;
     lines: CreateJournalLinePayload[];
 }
 
@@ -181,6 +189,67 @@ export function useJournalEntries(defaultLimit = 20) {
         []
     );
 
+    const rejectEntry = useCallback(
+        async (id: string): Promise<JournalEntry> => {
+            setIsSubmitting(true);
+            setError(null);
+            try {
+                const res = await api.patch(`/admin/finance/journal-entries/${id}/reject`);
+                const updated: JournalEntry = res.data?.data;
+                setEntries((prev) => prev.map((e) => (e.id === id ? updated : e)));
+                return updated;
+            } catch (err: any) {
+                const message =
+                    err?.response?.data?.message || err?.message || "Failed to decline entry.";
+                setError(message);
+                throw new Error(message);
+            } finally {
+                setIsSubmitting(false);
+            }
+        },
+        []
+    );
+
+    const resubmitEntry = useCallback(
+        async (id: string): Promise<JournalEntry> => {
+            setIsSubmitting(true);
+            setError(null);
+            try {
+                const res = await api.patch(`/admin/finance/journal-entries/${id}/resubmit`);
+                const updated: JournalEntry = res.data?.data;
+                setEntries((prev) => prev.map((e) => (e.id === id ? updated : e)));
+                return updated;
+            } catch (err: any) {
+                const message =
+                    err?.response?.data?.message || err?.message || "Failed to resubmit entry.";
+                setError(message);
+                throw new Error(message);
+            } finally {
+                setIsSubmitting(false);
+            }
+        },
+        []
+    );
+
+    const deleteEntry = useCallback(
+        async (id: string): Promise<void> => {
+            setIsSubmitting(true);
+            setError(null);
+            try {
+                await api.delete(`/admin/finance/journal-entries/${id}`);
+                setEntries((prev) => prev.filter((e) => e.id !== id));
+            } catch (err: any) {
+                const message =
+                    err?.response?.data?.message || err?.message || "Failed to delete entry.";
+                setError(message);
+                throw new Error(message);
+            } finally {
+                setIsSubmitting(false);
+            }
+        },
+        []
+    );
+
     const voidEntry = useCallback(
         async (id: string): Promise<JournalEntry> => {
             setIsSubmitting(true);
@@ -219,6 +288,9 @@ export function useJournalEntries(defaultLimit = 20) {
         createEntry,
         fetchEntryById,
         approveEntry,
+        rejectEntry,
+        resubmitEntry,
+        deleteEntry,
         voidEntry,
         refetch: () => fetchEntries(page, filters),
     };

@@ -15,18 +15,17 @@ import {
     RefreshCw,
 } from "lucide-react";
 import { PaginationBar } from "@/components/ui/pagination-bar";
+import { DismissibleError } from "@/components/ui/dismissible-error";
+import { formatCurrency } from "@/utils/currency";
 import {
     useFinanceRequests,
     FinanceRequest,
     FinanceRequestStatus,
 } from "@/hooks/use-finance-request";
-import Error from "@/components/layout/error";
 
 const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
-const fmtMoney = (amount: number) =>
-    new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(amount);
 
 const fullName = (m: { firstname: string; lastname: string }) =>
     [m.firstname, m.lastname].filter(Boolean).join(" ");
@@ -154,7 +153,7 @@ function DetailPanel({ request, isSubmitting, onClose, onApprove, onReject }: De
                         </div>
                         <div>
                             <dt className="text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">Amount</dt>
-                            <dd className="text-base font-light text-[#121212]">{fmtMoney(request.amount)}</dd>
+                            <dd className="text-base font-light text-[#121212]">{formatCurrency(request.amount)}</dd>
                         </div>
                         <div className="col-span-2">
                             <dt className="text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">Reason</dt>
@@ -326,7 +325,7 @@ function AddCategoryModal({ isSubmitting, onClose, onSave }: AddCategoryModalPro
                             rows={2} placeholder="Brief description of this category"
                             value={description} onChange={(e) => setDescription(e.target.value)} />
                     </div>
-                    {localError && <p className="text-xs font-light text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-2">{localError}</p>}
+                    <DismissibleError message={localError} />
                     <div className="flex gap-2 pt-1">
                         <button onClick={handleSave} disabled={isSubmitting}
                             className="flex-1 flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 disabled:opacity-50 transition-colors justify-center">
@@ -406,7 +405,7 @@ function FinanceRequestsPage() {
                 <button className={tabCls("categories")} onClick={() => setActiveTab("categories")}>Categories</button>
             </div>
 
-            {error && <Error error={error} onDismiss={clearError} />}
+            <DismissibleError message={error} />
 
             {/* ── Requests tab ── */}
             {activeTab === "requests" && (
@@ -480,7 +479,7 @@ function FinanceRequestsPage() {
                                                     {!panelOpen && <td className="p-4 text-sm text-[#121212] font-light">{req.department.name}</td>}
                                                     <td className="p-4 text-sm text-[#121212] font-light">{req.category.name}</td>
                                                     {!panelOpen && <td className="p-4 text-sm text-[#8A817C] font-light max-w-[160px] truncate hidden md:table-cell" title={req.reason}>{req.reason}</td>}
-                                                    <td className="p-4 text-sm text-[#121212] font-light whitespace-nowrap">{fmtMoney(req.amount)}</td>
+                                                    <td className="p-4 text-sm text-[#121212] font-light whitespace-nowrap">{formatCurrency(req.amount)}</td>
                                                     <td className="p-4"><StatusBadge status={req.status} /></td>
                                                     <td className="p-4 text-sm text-[#8A817C] font-light whitespace-nowrap hidden sm:table-cell">{fmtDate(req.createdAt)}</td>
                                                     <td className="p-4">

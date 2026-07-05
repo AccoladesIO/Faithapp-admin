@@ -7,6 +7,7 @@ import {
     Wifi, Clock, RefreshCw, BookOpen, GraduationCap, Building2,
 } from "lucide-react";
 import { withAuth } from "@/utils/auth/with-auth";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 import {
     useDashboard,
     WeeklyAttendanceTrend,
@@ -170,12 +171,7 @@ export default withAuth(function DashboardPage() {
             </div>
 
             {/* ── Error ── */}
-            {error && (
-                <div className="bg-red-50 border border-red-200 p-4 rounded-lg text-xs text-red-700">
-                    <strong className="block font-semibold uppercase tracking-wider text-[11px] mb-1">Error</strong>
-                    {error}
-                </div>
-            )}
+            <DismissibleError message={error} />
 
             {/* ── Core metrics ── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">

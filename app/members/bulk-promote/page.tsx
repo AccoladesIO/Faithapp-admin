@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useMembers, BulkPromoteResult } from "@/hooks/use-member";
 import { useDepartments } from "@/hooks/use-departments";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 function BulkPromotePage() {
     const router = useRouter();
@@ -108,11 +109,7 @@ function BulkPromotePage() {
                 </div>
             )}
 
-            {error && (
-                <div className="p-4 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm">
-                    {error}
-                </div>
-            )}
+            <DismissibleError message={error} />
 
             <div className="grid grid-cols-12 gap-4">
                 {/* Member list */}

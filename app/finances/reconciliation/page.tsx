@@ -5,7 +5,6 @@ import { withAuth } from "@/utils/auth/with-auth";
 import {
     GitMerge,
     Upload,
-    AlertCircle,
     X,
     RefreshCw,
     ChevronDown,
@@ -13,9 +12,11 @@ import {
     SkipForward,
     Send,
 } from "lucide-react";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 import { useReconciliation, ReconciliationJob, ReconciliationJobStatus } from "@/hooks/use-reconciliation";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useAccountingPeriods } from "@/hooks/use-accounting-periods";
+import { formatCurrency } from "@/utils/currency";
 
 const JOB_STATUS_COLORS: Record<ReconciliationJobStatus, string> = {
     PENDING: "bg-amber-100 text-amber-800",
@@ -105,11 +106,8 @@ export default withAuth(function ReconciliationPage() {
                 </div>
             </div>
 
-            {(error || actionError) && (
-                <div className="flex items-center space-x-2 text-red-600 text-xs bg-red-50 border border-red-200 p-4 rounded-xl">
-                    <AlertCircle className="w-4 h-4 shrink-0" /><span>{error ?? actionError}</span>
-                </div>
-            )}
+            <DismissibleError message={error} />
+            <DismissibleError message={actionError} />
 
             {/* Upload panel */}
             {showUpload && (
@@ -211,7 +209,7 @@ export default withAuth(function ReconciliationPage() {
                                                     <td className="p-3 font-mono text-[10px] text-[#8A817C]">{row.date}</td>
                                                     <td className="p-3 text-[10px] text-[#121212] max-w-[140px] truncate">{row.narration}</td>
                                                     <td className="p-3 font-mono text-[10px] font-medium text-[#121212]">
-                                                        {Number(row.amount).toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+                                                        {formatCurrency(row.amount)}
                                                     </td>
                                                     <td className="p-3">
                                                         <span className={`text-[9px] font-bold uppercase tracking-wider ${row.creditDebit === "CREDIT" ? "text-green-700" : "text-red-700"}`}>{row.creditDebit}</span>

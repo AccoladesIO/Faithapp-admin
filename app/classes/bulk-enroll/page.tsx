@@ -10,6 +10,7 @@ import {
 import { useClasses, ChurchClass, ClassType } from "@/hooks/use-classes";
 import { useMembers, Member } from "@/hooks/use-member";
 import { api } from "@/utils/auth/axios-client";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

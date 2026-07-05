@@ -1,8 +1,10 @@
 "use client";
 
+import { DismissibleError } from "@/components/ui/dismissible-error";
+
 import React, { useState } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
-import { Repeat, Plus, Pencil, AlertCircle, X, RefreshCw, CheckCircle, XCircle } from "lucide-react";
+import { Repeat, Plus, Pencil, X, RefreshCw, CheckCircle, XCircle } from "lucide-react";
 import {
     useRecurringEntries,
     RecurringEntry,
@@ -11,9 +13,8 @@ import {
 } from "@/hooks/use-recurring-entries";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useFunds } from "@/hooks/use-funds";
+import { currencySymbol, formatCurrency, formatCurrencyInput, parseCurrencyInput } from "@/utils/currency";
 
-const fmt = (n: number) =>
-    `₦${Number(n).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const FREQ_LABELS: Record<RecurringFrequency, string> = {
     WEEKLY: "Weekly",
@@ -142,19 +143,9 @@ export default withAuth(function RecurringEntriesPage() {
                 </div>
             </div>
 
-            {error && (
-                <div className="flex items-center space-x-2 text-red-600 text-xs bg-red-50 border border-red-200 p-4 rounded-xl">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{error}</span>
-                </div>
-            )}
+                            <DismissibleError message={error} />
 
-            {actionError && (
-                <div className="flex items-center space-x-2 text-red-600 text-xs bg-red-50 border border-red-200 p-4 rounded-xl">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{actionError}</span>
-                </div>
-            )}
+                            <DismissibleError message={actionError} />
 
             <div className="bg-white border border-[#121212]/10 rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">
@@ -194,7 +185,7 @@ export default withAuth(function RecurringEntriesPage() {
                                             <div>{e.creditAccount.name}</div>
                                             <div className="font-mono text-[10px]">{e.creditAccount.code}</div>
                                         </td>
-                                        <td className="p-4 font-mono text-xs font-medium text-[#121212]">{fmt(e.amount)}</td>
+                                        <td className="p-4 font-mono text-xs font-medium text-[#121212]">{formatCurrency(e.amount)}</td>
                                         <td className="p-4">
                                             <span className={`inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded ${FREQ_COLORS[e.frequency]}`}>
                                                 {FREQ_LABELS[e.frequency]}
@@ -254,12 +245,7 @@ export default withAuth(function RecurringEntriesPage() {
                         </div>
 
                         <div className="p-6 space-y-4 flex-1">
-                            {actionError && (
-                                <div className="text-red-600 text-xs bg-red-50 border border-red-200 p-3 rounded-lg flex items-center space-x-2">
-                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                                    <span>{actionError}</span>
-                                </div>
-                            )}
+                                                            <DismissibleError message={actionError} />
 
                             {editing ? (
                                 <>
@@ -268,8 +254,13 @@ export default withAuth(function RecurringEntriesPage() {
                                         <input className="w-full border border-[#121212]/10 rounded-xl px-3 py-2.5 text-xs text-[#121212] focus:outline-none focus:ring-1 focus:ring-[#121212]/20" value={editForm.description ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))} />
                                     </div>
                                     <div>
-                                        <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">Amount (₦)</label>
-                                        <input type="number" min={0} className="w-full border border-[#121212]/10 rounded-xl px-3 py-2.5 text-xs text-[#121212] focus:outline-none focus:ring-1 focus:ring-[#121212]/20" value={editForm.amount ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, amount: Number(e.target.value) }))} />
+                                        <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">Amount</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#8A817C] select-none pointer-events-none">{currencySymbol}</span>
+                                            <input type="text" inputMode="decimal" value={formatCurrencyInput(editForm.amount ?? 0)} placeholder="0"
+                                                onChange={(e) => setEditForm((f) => ({ ...f, amount: parseCurrencyInput(e.target.value) }))}
+                                                className="w-full border border-[#121212]/10 rounded-xl pl-7 pr-3 py-2.5 text-xs font-mono text-[#121212] focus:outline-none focus:ring-1 focus:ring-[#121212]/20" />
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">Next Due Date</label>
@@ -300,8 +291,13 @@ export default withAuth(function RecurringEntriesPage() {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">Amount (₦)</label>
-                                            <input type="number" min={0} className="w-full border border-[#121212]/10 rounded-xl px-3 py-2.5 text-xs text-[#121212] focus:outline-none focus:ring-1 focus:ring-[#121212]/20" value={form.amount || ""} onChange={(e) => setForm((f) => ({ ...f, amount: Number(e.target.value) }))} />
+                                            <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">Amount</label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#8A817C] select-none pointer-events-none">{currencySymbol}</span>
+                                                <input type="text" inputMode="decimal" value={formatCurrencyInput(form.amount)} placeholder="0"
+                                                    onChange={(e) => setForm((f) => ({ ...f, amount: parseCurrencyInput(e.target.value) }))}
+                                                    className="w-full border border-[#121212]/10 rounded-xl pl-7 pr-3 py-2.5 text-xs font-mono text-[#121212] focus:outline-none focus:ring-1 focus:ring-[#121212]/20" />
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">Frequency</label>

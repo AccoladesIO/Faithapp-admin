@@ -1,5 +1,7 @@
 "use client";
 
+import { DismissibleError } from "@/components/ui/dismissible-error";
+
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
 import {
@@ -375,11 +377,7 @@ function AccountsTab() {
             </div>
 
             <div className="lg:col-span-8">
-                {error && (
-                    <div className="mb-4 flex items-center space-x-2 text-red-600 text-xs bg-red-50 border border-red-100 rounded-xl p-3">
-                        <AlertCircle className="w-3.5 h-3.5 shrink-0" /><span>{error}</span>
-                    </div>
-                )}
+                                    <DismissibleError message={error} />
                 {isLoading ? (
                     <div className="grid gap-4">
                         {[1, 2, 3].map((k) => (
@@ -510,11 +508,7 @@ function RecordsTab() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 <div className={`${tableColSpan} bg-white border border-[#121212]/10 rounded-xl overflow-hidden`}>
-                    {error && (
-                        <div className="p-3 border-b border-[#121212]/5 flex items-center space-x-2 text-red-600 text-xs bg-red-50">
-                            <AlertCircle className="w-3.5 h-3.5 shrink-0" /><span>{error}</span>
-                        </div>
-                    )}
+                                            <DismissibleError message={error} />
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -686,11 +680,7 @@ function UploadTab() {
                                 <AlertCircle className="w-3.5 h-3.5 shrink-0" /><span>{formError}</span>
                             </div>
                         )}
-                        {error && (
-                            <div className="flex items-center space-x-2 text-red-600 text-xs">
-                                <AlertCircle className="w-3.5 h-3.5 shrink-0" /><span>{error}</span>
-                            </div>
-                        )}
+                                                    <DismissibleError message={error} />
                         {uploadResult && (
                             <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-xs text-green-700 space-y-1">
                                 <div className="flex items-center space-x-2 font-semibold"><CheckCircle2 className="w-3.5 h-3.5" /><span>Upload queued</span></div>
@@ -881,11 +871,7 @@ function UnmatchedTab() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 <div className={`${tableColSpan} bg-white border border-[#121212]/10 rounded-xl overflow-hidden`}>
-                    {error && (
-                        <div className="p-3 border-b flex items-center space-x-2 text-red-600 text-xs bg-red-50">
-                            <AlertCircle className="w-3.5 h-3.5 shrink-0" /><span>{error}</span>
-                        </div>
-                    )}
+                                            <DismissibleError message={error} />
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -965,11 +951,7 @@ function UnmatchedTab() {
                             <div className="space-y-3 pt-3 border-t border-[#121212]/5">
                                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8A817C]">Match to Member</p>
                                 <MemberSearchInput onSelect={(m) => setSelectedMemberId(m.id)} />
-                                {actionError && (
-                                    <div className="flex items-center space-x-2 text-red-600 text-xs">
-                                        <AlertCircle className="w-3.5 h-3.5 shrink-0" /><span>{actionError}</span>
-                                    </div>
-                                )}
+                                                                    <DismissibleError message={actionError} />
                                 <div className="flex space-x-2">
                                     <button
                                         type="button"
@@ -1094,11 +1076,7 @@ function DisputesTab() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 <div className={`${tableColSpan} bg-white border border-[#121212]/10 rounded-xl overflow-hidden`}>
-                    {error && (
-                        <div className="p-3 border-b flex items-center space-x-2 text-red-600 text-xs bg-red-50">
-                            <AlertCircle className="w-3.5 h-3.5 shrink-0" /><span>{error}</span>
-                        </div>
-                    )}
+                                            <DismissibleError message={error} />
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -1183,11 +1161,7 @@ function DisputesTab() {
 
                         {selected.status === "PENDING" && (
                             <div className="pt-3 border-t border-[#121212]/5 space-y-3">
-                                {actionError && (
-                                    <div className="flex items-center space-x-2 text-red-600 text-xs">
-                                        <AlertCircle className="w-3.5 h-3.5 shrink-0" /><span>{actionError}</span>
-                                    </div>
-                                )}
+                                                                    <DismissibleError message={actionError} />
                                 <div className="flex space-x-2">
                                     <button
                                         type="button"
@@ -1290,11 +1264,7 @@ function ProofsTab() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 <div className={`${tableColSpan} bg-white border border-[#121212]/10 rounded-xl overflow-hidden`}>
-                    {error && (
-                        <div className="p-3 border-b flex items-center space-x-2 text-red-600 text-xs bg-red-50">
-                            <AlertCircle className="w-3.5 h-3.5 shrink-0" /><span>{error}</span>
-                        </div>
-                    )}
+                                            <DismissibleError message={error} />
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -1396,11 +1366,7 @@ function ProofsTab() {
 
                         {selected.status === "PENDING" && (
                             <div className="pt-3 border-t border-[#121212]/5 space-y-3">
-                                {actionError && (
-                                    <div className="flex items-center space-x-2 text-red-600 text-xs">
-                                        <AlertCircle className="w-3.5 h-3.5 shrink-0" /><span>{actionError}</span>
-                                    </div>
-                                )}
+                                                                    <DismissibleError message={actionError} />
                                 {!showDeclineForm ? (
                                     <div className="flex space-x-2">
                                         <button

@@ -9,8 +9,8 @@ import {
 } from "lucide-react";
 import { api } from "@/utils/auth/axios-client";
 import { useAssets, Asset, AssetStatus, CreateAssetDto, AssetCheckout } from "@/hooks/use-assets";
-import Error from "@/components/layout/error";
 import { PaginationBar } from "@/components/ui/pagination-bar";
+import { DismissibleError } from "@/components/ui/dismissible-error";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -399,7 +399,7 @@ export default withAuth(function InventoryPage() {
                 </div>
             </div>
 
-            {error && <Error error={error} onDismiss={clearError} />}
+            <DismissibleError message={error} />
 
             {/* Tabs */}
             <div className="flex gap-1">

@@ -12,10 +12,10 @@ const mockPost = api.post as jest.MockedFunction<typeof api.post>;
 const mockPatch = api.patch as jest.MockedFunction<typeof api.patch>;
 
 const payee = {
-    id: "py1", name: "NEPA Utility", category: "Utility",
+    id: "py1", name: "NEPA Utility", type: "UTILITY" as const,
     accountNumber: "0123456789", bankName: "GTBank",
     contactEmail: null, contactPhone: null, notes: null,
-    createdAt: "", updatedAt: "",
+    isActive: true, createdAt: "", updatedAt: "",
 };
 
 beforeEach(() => jest.clearAllMocks());
@@ -46,10 +46,10 @@ describe("useExternalPayees", () => {
         await waitFor(() => expect(result.current.isLoading).toBe(false));
 
         await act(async () => {
-            await result.current.createPayee({ name: "Vendor XYZ" });
+            await result.current.createPayee({ name: "Vendor XYZ", type: "VENDOR" });
         });
 
-        expect(mockPost).toHaveBeenCalledWith("/admin/finance/external-payees", { name: "Vendor XYZ" });
+        expect(mockPost).toHaveBeenCalledWith("/admin/finance/external-payees", { name: "Vendor XYZ", type: "VENDOR" });
         expect(result.current.payees[0].id).toBe("py2");
     });
 

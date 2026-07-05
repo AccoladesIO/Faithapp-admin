@@ -45,7 +45,7 @@ describe("useAccounts", () => {
         await waitFor(() => expect(result.current.isLoading).toBe(false));
 
         await act(async () => {
-            await result.current.createAccount({ name: "Savings", code: "1002", type: "ASSET", normalBalance: "DEBIT" });
+            await result.current.createAccount({ name: "Savings", code: "1002", type: "ASSET", subtype: "BANK", normalBalance: "DEBIT" });
         });
 
         expect(mockPost).toHaveBeenCalledWith("/admin/finance/accounts", expect.objectContaining({ code: "1002" }));
