@@ -23,6 +23,8 @@ import {
     FinanceRequestStatus,
 } from "@/hooks/use-finance-request";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
@@ -96,8 +98,9 @@ function DetailPanel({ request, isSubmitting, onClose, onApprove, onReject }: De
             await onApprove(request.id);
             success(`Request from ${fullName(request.requestedBy)} approved.`);
             onClose();
-        } catch (err: any) {
-            const msg = err?.message || "Failed to approve.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.message || "Failed to approve.";
             setLocalError(msg);
             toastError(msg);
         }
@@ -110,8 +113,9 @@ function DetailPanel({ request, isSubmitting, onClose, onApprove, onReject }: De
             await onReject(request.id, rejectionReason.trim());
             toastError(`Request from ${fullName(request.requestedBy)} rejected.`);
             onClose();
-        } catch (err: any) {
-            const msg = err?.message || "Failed to reject.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.message || "Failed to reject.";
             setLocalError(msg);
             toastError(msg);
         }
@@ -292,8 +296,9 @@ function AddCategoryModal({ isSubmitting, onClose, onSave }: AddCategoryModalPro
             await onSave({ name: name.trim(), description: description.trim() || undefined });
             success(`Category "${name.trim()}" created.`);
             onClose();
-        } catch (err: any) {
-            setLocalError(err?.message || "Failed to create category.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setLocalError(e?.message || "Failed to create category.");
         }
     };
 
@@ -355,7 +360,6 @@ function FinanceRequestsPage() {
     const {
         requests, pagination, categories,
         isLoading, isSubmitting, error,
-        clearError,
         fetchRequests, approveRequest, rejectRequest,
         fetchCategories, createCategory, goToPage,
     } = useFinanceRequests(15);

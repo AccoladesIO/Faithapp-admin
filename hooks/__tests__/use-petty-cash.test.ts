@@ -8,7 +8,6 @@ jest.mock("@/utils/auth/axios-client", () => ({
 }));
 
 const mockGet = api.get as jest.MockedFunction<typeof api.get>;
-const mockPost = api.post as jest.MockedFunction<typeof api.post>;
 const mockPatch = api.patch as jest.MockedFunction<typeof api.patch>;
 
 const replenishment = {

@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type AdminPermission =
     | "members:read" | "members:write"
     | "events:read" | "events:write"
@@ -15,7 +17,7 @@ export type AdminPermission =
     | "sunday_school:read" | "sunday_school:write"
     | "children_church:read" | "children_church:write"
     | "admin:read" | "admin:write"
-    | "audit:read"
+    | "audit:read" | "email_logs:read"
     | "finance:read" | "finance:write" | "finance:approve" | "finance:reconcile" | "finance:report"
     | "tithe:read" | "tithe:write"
     | "follow_up:read" | "follow_up:write"
@@ -122,6 +124,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
         { value: "admin:read", label: "View Admin Users & Roles" },
         { value: "admin:write", label: "Manage Admin Users & Roles" },
         { value: "audit:read", label: "View Audit Logs" },
+        { value: "email_logs:read", label: "View Email Logs" },
     ]},
 ];
 
@@ -184,8 +187,9 @@ export function useAdminRoles() {
         try {
             const res = await api.get("/admin/roles");
             setRoles(res.data?.data ?? []);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to load roles.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to load roles.");
         } finally {
             setIsLoading(false);
         }
@@ -199,8 +203,9 @@ export function useAdminRoles() {
             const created: AdminRole = res.data?.data;
             setRoles((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
             return created;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to create role.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to create role.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -216,8 +221,9 @@ export function useAdminRoles() {
             const updated: AdminRole = res.data?.data;
             setRoles((prev) => prev.map((r) => (r.id === id ? updated : r)));
             return updated;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to update role.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to update role.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -231,8 +237,9 @@ export function useAdminRoles() {
         try {
             await api.delete(`/admin/roles/${id}`);
             setRoles((prev) => prev.filter((r) => r.id !== id));
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to delete role.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to delete role.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -258,8 +265,9 @@ export function useAdminUsers() {
         try {
             const res = await api.get("/admin/users");
             setAdmins(res.data?.data ?? []);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to load admins.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to load admins.");
         } finally {
             setIsLoading(false);
         }
@@ -273,8 +281,9 @@ export function useAdminUsers() {
             const created: AdminUser = res.data?.data;
             fetchAdmins();
             return created;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to grant admin access.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to grant admin access.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -290,8 +299,9 @@ export function useAdminUsers() {
             const updated: AdminUser = res.data?.data;
             fetchAdmins();
             return updated;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to update admin.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to update admin.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -305,8 +315,9 @@ export function useAdminUsers() {
         try {
             await api.post(`/admin/users/${id}/revoke`);
             fetchAdmins();
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to revoke admin access.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to revoke admin access.";
             setError(msg);
             throw new Error(msg);
         } finally {

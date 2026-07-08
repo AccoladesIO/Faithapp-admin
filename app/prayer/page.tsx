@@ -213,7 +213,7 @@ function ProgramsTab({
     selectedProgramId: string | null;
     onSelect: (id: string) => void;
 }) {
-    const { programs, isLoading, isSubmitting, error, clearError, fetchPrograms, createProgram, updateProgram, cloneProgram, deactivateProgram } = hook;
+    const { programs, isLoading, isSubmitting, error, fetchPrograms, createProgram, updateProgram, cloneProgram } = hook;
 
     type PanelMode = "create" | "edit" | "clone" | null;
     const [panelMode, setPanelMode] = useState<PanelMode>(null);
@@ -471,7 +471,7 @@ function ProgramsTab({
 // ─── Day Configs Tab ──────────────────────────────────────────────────────────
 
 function DayConfigsTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>; programId: string }) {
-    const { dayConfigs, isLoading, isSubmitting, error, clearError, fetchDayConfigs, createDayConfig, updateDayConfig } = hook;
+    const { dayConfigs, isLoading, isSubmitting, error, fetchDayConfigs, createDayConfig, updateDayConfig } = hook;
     const [panelMode, setPanelMode] = useState<"create" | "edit" | null>(null);
     const [selected, setSelected] = useState<PrayerDayConfig | null>(null);
     const [formDow, setFormDow] = useState(0);
@@ -611,7 +611,7 @@ function DayConfigsTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>
 type RuleType = "ROLE_FREQUENCY" | "MIN_LEADERS_PER_MEETING" | "MAX_PER_MEETING";
 
 function RulesTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>; programId: string }) {
-    const { rules, isLoading, isSubmitting, error, clearError, fetchRules, createRule, updateRule } = hook;
+    const { rules, isLoading, isSubmitting, error, fetchRules, createRule, updateRule } = hook;
     const [panelMode, setPanelMode] = useState<"create" | "edit" | null>(null);
     const [selectedRule, setSelectedRule] = useState<PrayerScheduleRule | null>(null);
     const [formType, setFormType] = useState<RuleType>("MAX_PER_MEETING");
@@ -718,7 +718,7 @@ function RulesTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>; pro
                                         <option value="HOD">Head of Department (HOD)</option>
                                         <option value="D_HOD">Assistant Lead (D-HOD)</option>
                                     </select>
-                                    <p className="mt-1.5 text-[10px] text-[#8A817C] font-light">Leave as "All Workers" to set the default frequency for everyone, or pick a lead type to override it for that role.</p>
+                                    <p className="mt-1.5 text-[10px] text-[#8A817C] font-light">Leave as &quot;All Workers&quot; to set the default frequency for everyone, or pick a lead type to override it for that role.</p>
                                 </div>
                             )}
                             <div>
@@ -755,7 +755,7 @@ function RulesTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>; pro
 // ─── Fixed Assignments Tab ────────────────────────────────────────────────────
 
 function FixedAssignmentsTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>; programId: string }) {
-    const { fixedAssignments, dayConfigs, isLoading, isSubmitting, error, clearError, fetchFixedAssignments, fetchDayConfigs, createFixedAssignment, deleteFixedAssignment } = hook;
+    const { fixedAssignments, dayConfigs, isLoading, isSubmitting, error, fetchFixedAssignments, fetchDayConfigs, createFixedAssignment, deleteFixedAssignment } = hook;
     const [showPanel, setShowPanel] = useState(false);
     const [workerProfileId, setWorkerProfileId] = useState("");
     const [workerDisplayName, setWorkerDisplayName] = useState("");
@@ -879,7 +879,7 @@ function RosterTab({
     programId: string;
     program: PrayerProgram;
 }) {
-    const { roster, isLoading, isSubmitting, error, clearError, fetchRoster, generateMeetings, openSelection, closeSelection, autoAssign, manualAssign, removeEntry, validateRoster, rescheduleEntry } = hook;
+    const { roster, isLoading, isSubmitting, error, fetchRoster, generateMeetings, openSelection, closeSelection, autoAssign, manualAssign, removeEntry, validateRoster, rescheduleEntry } = hook;
 
     const now = new Date();
     const [month, setMonth] = useState(now.getMonth() + 1);
@@ -1172,7 +1172,7 @@ function RosterTab({
                 <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-12 bg-[#F4F1EA] rounded-xl animate-pulse" />)}</div>
             ) : roster.length === 0 ? (
                 <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl p-12 text-center text-xs text-[#8A817C] font-light">
-                    No meetings for {MONTHS[month - 1]} {year}. Click "Generate" to create them.
+                    No meetings for {MONTHS[month - 1]} {year}. Click &quot;Generate&quot; to create them.
                 </div>
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">

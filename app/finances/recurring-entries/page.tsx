@@ -89,8 +89,8 @@ export default withAuth(function RecurringEntriesPage() {
         try {
             await createEntry(form);
             closePanel();
-        } catch (e: any) {
-            setActionError(e.message);
+        } catch (e: unknown) {
+            setActionError((e as Error).message);
         }
     }
 
@@ -100,16 +100,16 @@ export default withAuth(function RecurringEntriesPage() {
         try {
             await updateEntry(editing.id, editForm);
             closePanel();
-        } catch (e: any) {
-            setActionError(e.message);
+        } catch (e: unknown) {
+            setActionError((e as Error).message);
         }
     }
 
     async function toggleActive(entry: RecurringEntry) {
         try {
             await updateEntry(entry.id, { isActive: !entry.isActive });
-        } catch (e: any) {
-            setActionError(e.message);
+        } catch (e: unknown) {
+            setActionError((e as Error).message);
         }
     }
 

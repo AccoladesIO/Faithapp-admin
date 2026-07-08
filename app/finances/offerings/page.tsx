@@ -26,6 +26,8 @@ import {
 import { useFunds } from "@/hooks/use-funds";
 import { currencySymbol, formatCurrency, formatCurrencyInput, parseCurrencyInput } from "@/utils/currency";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 const OFFERING_TYPE_LABELS: Record<OfferingType, string> = {
     GENERAL: "General",
     TITHE_SUNDAY: "Tithe",
@@ -87,8 +89,9 @@ function CreateForm({
         try {
             await onSubmit(payload);
             setCreateFundId(""); setCreateCash(0); setCreateTransfer(0); setCreateNotes("");
-        } catch (err: any) {
-            setError(err?.message ?? "Failed to record giving.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.message ?? "Failed to record giving.");
         }
     };
 
@@ -218,8 +221,9 @@ function DetailPanel({
         try {
             await onReconcile(reconcileNotes);
             setReconcileNotes("");
-        } catch (err: any) {
-            setReconcileError(err?.message ?? "Reconciliation failed.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setReconcileError(e?.message ?? "Reconciliation failed.");
         }
     };
 

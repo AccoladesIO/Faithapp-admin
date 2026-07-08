@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export interface Venue {
     id: string;
     name: string;
@@ -128,10 +130,11 @@ export function useDashboard(daysAgo: number = 30) {
         try {
             const res = await api.get(`/dashboard/admin?daysAgo=${daysAgo}`);
             setData(res.data?.data ?? null);
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to fetch dashboard data."
             );
         } finally {

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export interface EventConfig {
     id: string;
     name: string;
@@ -39,10 +41,11 @@ export function useEventConfigs() {
         try {
             const res = await api.get("/event-config");
             setEventConfigs(res.data?.data.data ?? []);
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to fetch event configs."
             );
         } finally {
@@ -58,10 +61,11 @@ export function useEventConfigs() {
             const created: EventConfig = res.data?.data.data;
             setEventConfigs((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to create event config.";
             setError(message);
             throw new Error(message);
@@ -80,10 +84,11 @@ export function useEventConfigs() {
                 prev.map((c) => (c.id === configId ? updated : c))
             );
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to update event config.";
             setError(message);
             throw new Error(message);
@@ -98,10 +103,11 @@ export function useEventConfigs() {
         try {
             await api.delete(`/event-config/${configId}`);
             setEventConfigs((prev) => prev.filter((c) => c.id !== configId));
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to delete event config.";
             setError(message);
             throw new Error(message);

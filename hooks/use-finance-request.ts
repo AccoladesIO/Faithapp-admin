@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type FinanceRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface FinanceCategory {
@@ -79,10 +81,11 @@ export function useFinanceRequests(defaultLimit = 10) {
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to fetch finance requests."
             );
         } finally {
@@ -102,10 +105,11 @@ export function useFinanceRequests(defaultLimit = 10) {
             const updated: FinanceRequest = res.data?.data;
             setRequests((prev) => prev.map((r) => (r.id === id ? updated : r)));
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to approve request.";
             setError(message);
             throw new Error(message);
@@ -122,10 +126,11 @@ export function useFinanceRequests(defaultLimit = 10) {
             const updated: FinanceRequest = res.data?.data;
             setRequests((prev) => prev.map((r) => (r.id === id ? updated : r)));
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to reject request.";
             setError(message);
             throw new Error(message);
@@ -141,10 +146,11 @@ export function useFinanceRequests(defaultLimit = 10) {
                 ? res.data.data
                 : [];
             setCategories(list);
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to fetch categories."
             );
         }
@@ -158,10 +164,11 @@ export function useFinanceRequests(defaultLimit = 10) {
             const created: FinanceCategory = res.data?.data;
             setCategories((prev) => [...prev, created]);
             return created;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to create category.";
             setError(message);
             throw new Error(message);

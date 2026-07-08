@@ -10,6 +10,7 @@ import {
     useAttendanceHistory,
     useAttendanceLeaderboard,
     AttendanceRecord,
+    AttendanceHistoryFilters,
 } from "@/hooks/use-attendance";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { DismissibleError } from "@/components/ui/dismissible-error";
@@ -193,7 +194,7 @@ export default withAuth(function AttendancePage() {
     const handleApplyFilters = (e: React.FormEvent) => {
         e.preventDefault();
         applyFilters({
-            status: statusFilter as any,
+            status: statusFilter as AttendanceHistoryFilters["status"],
             dateFrom,
             dateTo,
             search: searchQuery.trim() || undefined,

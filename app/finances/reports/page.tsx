@@ -620,7 +620,7 @@ export default withAuth(function ReportsPage() {
                                     <span>{reportError}</span>
                                 </div>
                             )}
-                            {activeReport === selectedReportType && reportResult && (
+                            {activeReport === selectedReportType && !!reportResult && (
                                 <ReportResultTable data={reportResult} />
                             )}
                         </div>

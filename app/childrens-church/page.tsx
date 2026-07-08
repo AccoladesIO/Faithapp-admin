@@ -15,6 +15,8 @@ import {
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { DismissibleError } from "@/components/ui/dismissible-error";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 type Tab = "age-groups" | "class-groups" | "check-ins";
 
 function SkeletonRow({ cols }: { cols: number }) {
@@ -63,7 +65,7 @@ const ChildrensChurchPage = () => {
     const hook = useChildrenChurch(20);
     const {
         ageGroups, classGroups, activeCheckIns, checkInHistory, checkInHistoryPagination,
-        isLoading, isSubmitting, error, clearError,
+        isLoading, isSubmitting, error,
         fetchAgeGroups, createAgeGroup, updateAgeGroup, deleteAgeGroup,
         fetchClassGroups, createClassGroup, updateClassGroup, deleteClassGroup,
         fetchActiveCheckInsAdmin, fetchCheckInHistory, flagCheckIn,
@@ -107,8 +109,9 @@ const ChildrensChurchPage = () => {
                 ...(ageGroupForm.displayOrder ? { displayOrder: Number(ageGroupForm.displayOrder) } : {}),
             });
             setAgeGroupForm({ name: "", minAgeMonths: "", maxAgeMonths: "", displayOrder: "" });
-        } catch (err: any) {
-            setAgeGroupFormError(err?.message ?? "Failed to create age group.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setAgeGroupFormError(e?.message ?? "Failed to create age group.");
         }
     };
 
@@ -155,8 +158,9 @@ const ChildrensChurchPage = () => {
                 ...(classGroupForm.teacherNote ? { teacherNote: classGroupForm.teacherNote } : {}),
             });
             setClassGroupForm({ ageGroupId: "", name: "", capacity: "", teacherNote: "" });
-        } catch (err: any) {
-            setClassGroupFormError(err?.message ?? "Failed to create class group.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setClassGroupFormError(e?.message ?? "Failed to create class group.");
         }
     };
 
@@ -201,8 +205,9 @@ const ChildrensChurchPage = () => {
             await flagCheckIn(flaggingCheckIn.id, flagReason);
             setFlaggingCheckIn(null);
             setFlagReason("");
-        } catch (err: any) {
-            setFlagError(err?.message ?? "Failed to flag check-in.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setFlagError(e?.message ?? "Failed to flag check-in.");
         }
     };
 

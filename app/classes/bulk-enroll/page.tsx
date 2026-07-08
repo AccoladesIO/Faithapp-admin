@@ -10,7 +10,8 @@ import {
 import { useClasses, ChurchClass, ClassType } from "@/hooks/use-classes";
 import { useMembers, Member } from "@/hooks/use-member";
 import { api } from "@/utils/auth/axios-client";
-import { DismissibleError } from "@/components/ui/dismissible-error";
+
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -254,8 +255,9 @@ const BulkEnrollPage = () => {
             setSelected(new Set());
             // Refresh enrolled IDs
             loadEnrolled(selectedClassId);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to enrol members.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to enrol members.");
         } finally {
             setIsSubmitting(false);
         }

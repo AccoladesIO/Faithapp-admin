@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type GuardianRelationshipEnum =
     | "FATHER"
     | "MOTHER"
@@ -90,7 +92,7 @@ export interface CreateAgeGroupDto {
     displayOrder?: number;
 }
 
-export interface UpdateAgeGroupDto extends Partial<CreateAgeGroupDto> {}
+export type UpdateAgeGroupDto = Partial<CreateAgeGroupDto>;
 
 export interface CreateClassGroupDto {
     ageGroupId: string;
@@ -99,7 +101,7 @@ export interface CreateClassGroupDto {
     teacherNote?: string;
 }
 
-export interface UpdateClassGroupDto extends Partial<CreateClassGroupDto> {}
+export type UpdateClassGroupDto = Partial<CreateClassGroupDto>;
 
 export interface CreateChildDto {
     firstname: string;
@@ -109,7 +111,7 @@ export interface CreateChildDto {
     registeredByMemberId?: string;
 }
 
-export interface UpdateChildDto extends Partial<CreateChildDto> {}
+export type UpdateChildDto = Partial<CreateChildDto>;
 
 export interface CreateGuardianDto {
     fullName: string;
@@ -141,8 +143,10 @@ export function useChildrenChurch(defaultLimit = 10) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const extractError = (err: any, fallback: string): string =>
-        err?.response?.data?.message || err?.message || fallback;
+    const extractError = (err: unknown, fallback: string): string => {
+        const e = err as ApiError;
+        return e?.response?.data?.message || e?.message || fallback;
+    };
 
     const recomputeAgeGroups = useCallback(async (): Promise<{ updated: number }> => {
         setIsSubmitting(true);
@@ -150,8 +154,9 @@ export function useChildrenChurch(defaultLimit = 10) {
         try {
             const res = await api.post("/children-church/age-groups/recompute");
             return res.data?.data as { updated: number };
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to recompute age groups.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to recompute age groups.";
             setError(message);
             throw new Error(message);
         } finally {
@@ -165,7 +170,7 @@ export function useChildrenChurch(defaultLimit = 10) {
         try {
             const res = await api.get("/children-church/age-groups");
             setAgeGroups(Array.isArray(res.data?.data) ? res.data.data : []);
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(extractError(err, "Failed to fetch age groups."));
         } finally {
             setIsLoading(false);
@@ -180,7 +185,7 @@ export function useChildrenChurch(defaultLimit = 10) {
             const created: ChildAgeGroup = res.data?.data;
             setAgeGroups((prev) => [...prev, created]);
             return created;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to create age group.");
             setError(msg);
             throw new Error(msg);
@@ -197,7 +202,7 @@ export function useChildrenChurch(defaultLimit = 10) {
             const updated: ChildAgeGroup = res.data?.data;
             setAgeGroups((prev) => prev.map((a) => (a.id === id ? updated : a)));
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to update age group.");
             setError(msg);
             throw new Error(msg);
@@ -212,7 +217,7 @@ export function useChildrenChurch(defaultLimit = 10) {
         try {
             await api.delete(`/children-church/age-groups/${id}`);
             setAgeGroups((prev) => prev.filter((a) => a.id !== id));
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to delete age group.");
             setError(msg);
             throw new Error(msg);
@@ -228,7 +233,7 @@ export function useChildrenChurch(defaultLimit = 10) {
             const qs = ageGroupId ? `?ageGroupId=${ageGroupId}` : "";
             const res = await api.get(`/children-church/class-groups${qs}`);
             setClassGroups(Array.isArray(res.data?.data) ? res.data.data : []);
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(extractError(err, "Failed to fetch class groups."));
         } finally {
             setIsLoading(false);
@@ -243,7 +248,7 @@ export function useChildrenChurch(defaultLimit = 10) {
             const created: ChildClassGroup = res.data?.data;
             setClassGroups((prev) => [...prev, created]);
             return created;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to create class group.");
             setError(msg);
             throw new Error(msg);
@@ -260,7 +265,7 @@ export function useChildrenChurch(defaultLimit = 10) {
             const updated: ChildClassGroup = res.data?.data;
             setClassGroups((prev) => prev.map((g) => (g.id === id ? updated : g)));
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to update class group.");
             setError(msg);
             throw new Error(msg);
@@ -275,7 +280,7 @@ export function useChildrenChurch(defaultLimit = 10) {
         try {
             await api.delete(`/children-church/class-groups/${id}`);
             setClassGroups((prev) => prev.filter((g) => g.id !== id));
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to delete class group.");
             setError(msg);
             throw new Error(msg);
@@ -309,7 +314,7 @@ export function useChildrenChurch(defaultLimit = 10) {
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(extractError(err, "Failed to fetch children."));
         } finally {
             setIsLoading(false);
@@ -324,7 +329,7 @@ export function useChildrenChurch(defaultLimit = 10) {
             const created: ChildProfile = res.data?.data;
             setChildren((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to create child profile.");
             setError(msg);
             throw new Error(msg);
@@ -341,7 +346,7 @@ export function useChildrenChurch(defaultLimit = 10) {
             const updated: ChildProfile = res.data?.data;
             setChildren((prev) => prev.map((c) => (c.id === id ? updated : c)));
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to update child profile.");
             setError(msg);
             throw new Error(msg);
@@ -365,7 +370,7 @@ export function useChildrenChurch(defaultLimit = 10) {
         try {
             const res = await api.post(`/children-church/children/${childId}/guardians`, dto);
             return res.data?.data;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to add guardian.");
             setError(msg);
             throw new Error(msg);
@@ -379,7 +384,7 @@ export function useChildrenChurch(defaultLimit = 10) {
         setError(null);
         try {
             await api.delete(`/children-church/guardians/${id}`);
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to delete guardian.");
             setError(msg);
             throw new Error(msg);
@@ -395,7 +400,7 @@ export function useChildrenChurch(defaultLimit = 10) {
             const qs = classGroupId ? `?classGroupId=${classGroupId}` : "";
             const res = await api.get(`/children-church/checkin/active${qs}`);
             setActiveCheckIns(Array.isArray(res.data?.data) ? res.data.data : []);
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(extractError(err, "Failed to fetch active check-ins."));
         } finally {
             setIsLoading(false);
@@ -409,7 +414,7 @@ export function useChildrenChurch(defaultLimit = 10) {
             const qs = classGroupId ? `?classGroupId=${classGroupId}` : "";
             const res = await api.get(`/children-church/admin/checkin/active${qs}`);
             setActiveCheckIns(Array.isArray(res.data?.data) ? res.data.data : []);
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(extractError(err, "Failed to fetch active check-ins."));
         } finally {
             setIsLoading(false);
@@ -442,7 +447,7 @@ export function useChildrenChurch(defaultLimit = 10) {
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(extractError(err, "Failed to fetch check-in history."));
         } finally {
             setIsLoading(false);
@@ -457,7 +462,7 @@ export function useChildrenChurch(defaultLimit = 10) {
             const created: ChildCheckIn = res.data?.data;
             setActiveCheckIns((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to check in child.");
             setError(msg);
             throw new Error(msg);
@@ -474,7 +479,7 @@ export function useChildrenChurch(defaultLimit = 10) {
             const updated: ChildCheckIn = res.data?.data;
             setActiveCheckIns((prev) => prev.filter((c) => c.pickupCode !== dto.pickupCode));
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to check out child.");
             setError(msg);
             throw new Error(msg);
@@ -496,7 +501,7 @@ export function useChildrenChurch(defaultLimit = 10) {
             const updated: ChildCheckIn = res.data?.data;
             setActiveCheckIns((prev) => prev.map((c) => (c.id === id ? updated : c)));
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to flag check-in.");
             setError(msg);
             throw new Error(msg);

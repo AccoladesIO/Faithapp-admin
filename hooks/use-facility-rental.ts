@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface RentalFacility {
@@ -158,8 +160,9 @@ export function useFacilityRental() {
             const res = await api.get("/facility-rental/admin/facilities");
             const list: RentalFacility[] = Array.isArray(res.data?.data) ? res.data.data : [];
             setFacilities(list);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch facilities.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch facilities.");
         } finally {
             setIsLoading(false);
         }
@@ -173,8 +176,9 @@ export function useFacilityRental() {
             const created: RentalFacility = res.data?.data;
             setFacilities((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to create facility.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to create facility.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -190,8 +194,9 @@ export function useFacilityRental() {
             const updated: RentalFacility = res.data?.data;
             setFacilities((prev) => prev.map((f) => (f.id === id ? updated : f)));
             return updated;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to update facility.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to update facility.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -208,8 +213,9 @@ export function useFacilityRental() {
             const res = await api.get("/facility-rental/admin/pricing-tiers");
             const list: RentalPricingTier[] = Array.isArray(res.data?.data) ? res.data.data : [];
             setPricingTiers(list);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch pricing tiers.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch pricing tiers.");
         } finally {
             setIsLoading(false);
         }
@@ -226,8 +232,9 @@ export function useFacilityRental() {
                 return idx >= 0 ? prev.map((t, i) => (i === idx ? upserted : t)) : [upserted, ...prev];
             });
             return upserted;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to save pricing tier.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to save pricing tier.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -241,8 +248,9 @@ export function useFacilityRental() {
         try {
             await api.delete(`/facility-rental/admin/pricing-tiers/${id}`);
             setPricingTiers((prev) => prev.filter((t) => t.id !== id));
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to delete pricing tier.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to delete pricing tier.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -259,8 +267,9 @@ export function useFacilityRental() {
             const res = await api.get("/facility-rental/admin/addons");
             const list: RentalAddon[] = Array.isArray(res.data?.data) ? res.data.data : [];
             setAddons(list);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch add-ons.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch add-ons.");
         } finally {
             setIsLoading(false);
         }
@@ -274,8 +283,9 @@ export function useFacilityRental() {
             const created: RentalAddon = res.data?.data;
             setAddons((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to create add-on.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to create add-on.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -291,8 +301,9 @@ export function useFacilityRental() {
             const updated: RentalAddon = res.data?.data;
             setAddons((prev) => prev.map((a) => (a.id === id ? updated : a)));
             return updated;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to update add-on.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to update add-on.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -309,8 +320,9 @@ export function useFacilityRental() {
             const res = await api.get(`/facility-rental/admin/calendar-blocks?facilityId=${facilityId}`);
             const list: RentalCalendarBlock[] = Array.isArray(res.data?.data) ? res.data.data : [];
             setCalendarBlocks(list);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch calendar blocks.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch calendar blocks.");
         } finally {
             setIsLoading(false);
         }
@@ -324,8 +336,9 @@ export function useFacilityRental() {
             const created: RentalCalendarBlock = res.data?.data;
             setCalendarBlocks((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to create calendar block.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to create calendar block.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -339,8 +352,9 @@ export function useFacilityRental() {
         try {
             await api.delete(`/facility-rental/admin/calendar-blocks/${id}`);
             setCalendarBlocks((prev) => prev.filter((b) => b.id !== id));
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to delete calendar block.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to delete calendar block.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -358,8 +372,9 @@ export function useFacilityRental() {
             const res = await api.get(`/facility-rental/admin/bookings${q}`);
             const list: RentalBooking[] = Array.isArray(res.data?.data) ? res.data.data : [];
             setBookings(list);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch bookings.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch bookings.");
         } finally {
             setIsLoading(false);
         }
@@ -373,8 +388,9 @@ export function useFacilityRental() {
             const booking: RentalBooking = res.data?.data;
             setSelectedBooking(booking);
             return booking;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to fetch booking.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to fetch booking.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -391,8 +407,9 @@ export function useFacilityRental() {
             setBookings((prev) => prev.map((b) => (b.id === id ? updated : b)));
             setSelectedBooking(updated);
             return updated;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to confirm booking.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to confirm booking.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -409,8 +426,9 @@ export function useFacilityRental() {
             setBookings((prev) => prev.map((b) => (b.id === id ? updated : b)));
             setSelectedBooking(updated);
             return updated;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to reject booking.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to reject booking.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -427,8 +445,9 @@ export function useFacilityRental() {
             setBookings((prev) => prev.map((b) => (b.id === id ? updated : b)));
             setSelectedBooking(updated);
             return updated;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to apply discount.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to apply discount.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -445,8 +464,9 @@ export function useFacilityRental() {
             setBookings((prev) => prev.map((b) => (b.id === id ? updated : b)));
             setSelectedBooking(updated);
             return updated;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to remove discount.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to remove discount.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -463,8 +483,9 @@ export function useFacilityRental() {
             setBookings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
             setSelectedBooking(updated);
             return updated;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to mark payment as paid.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to mark payment as paid.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -481,8 +502,9 @@ export function useFacilityRental() {
             setBookings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
             setSelectedBooking(updated);
             return updated;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to process refund.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to process refund.";
             setError(msg);
             throw new Error(msg);
         } finally {

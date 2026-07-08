@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type AssetStatus = "ACTIVE" | "INACTIVE" | "UNDER_MAINTENANCE" | "DECOMMISSIONED";
 export type AssetCondition = "GOOD" | "FAIR" | "POOR";
 export type MaintenanceFrequencyUnit = "DAYS" | "WEEKS" | "MONTHS";
@@ -133,8 +135,9 @@ export function useAssets(defaultLimit = 20) {
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch assets.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch assets.");
         } finally {
             setIsLoading(false);
         }
@@ -149,8 +152,9 @@ export function useAssets(defaultLimit = 20) {
             const created: Asset = res.data?.data;
             setAssets((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to create asset.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to create asset.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -166,8 +170,9 @@ export function useAssets(defaultLimit = 20) {
             const updated: Asset = res.data?.data;
             setAssets((prev) => prev.map((a) => (a.id === id ? updated : a)));
             return updated;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to update asset.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to update asset.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -183,8 +188,9 @@ export function useAssets(defaultLimit = 20) {
             const updated: Asset = res.data?.data;
             setAssets((prev) => prev.map((a) => (a.id === id ? updated : a)));
             return updated;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to update inventory.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to update inventory.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -198,8 +204,9 @@ export function useAssets(defaultLimit = 20) {
         try {
             const res = await api.post(`/admin/assets/${id}/checkouts`, dto);
             return res.data?.data;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to checkout asset.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to checkout asset.";
             setError(msg);
             throw new Error(msg);
         } finally {
@@ -213,8 +220,9 @@ export function useAssets(defaultLimit = 20) {
         try {
             const res = await api.patch(`/admin/assets/${assetId}/checkouts/${checkoutId}/return`, { notes });
             return res.data?.data;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Failed to return asset.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const msg = e?.response?.data?.message || e?.message || "Failed to return asset.";
             setError(msg);
             throw new Error(msg);
         } finally {

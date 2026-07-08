@@ -62,7 +62,7 @@ export default withAuth(function AccountsPage() {
             await createAccount({ ...form, fundId: form.fundId || undefined });
             setShowCreate(false);
             setForm({ name: "", code: "", type: "ASSET", normalBalance: "DEBIT", subtype: "BANK", fundId: "" });
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     async function handleUpdate() {
@@ -71,7 +71,7 @@ export default withAuth(function AccountsPage() {
         try {
             await updateAccount(editing.id, editForm);
             setEditing(null);
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     function openEdit(a: FinanceAccount) {
@@ -164,7 +164,7 @@ export default withAuth(function AccountsPage() {
                         ].map(({ label, key, placeholder }) => (
                             <div key={key}>
                                 <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">{label}</label>
-                                <input value={(form as any)[key] ?? ""} placeholder={placeholder}
+                                <input value={(form[key as keyof CreateAccountPayload] as string) ?? ""} placeholder={placeholder}
                                     onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                                     className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
                             </div>

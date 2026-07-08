@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { withAuth } from "@/utils/auth/with-auth";
 import { useEvents, ServiceSlot, CreateEventPayload } from "@/hooks/use-events";
+
+type RawServiceSlot = { name?: string; startTime?: string; endTime?: string; configId?: string; venueOverrideId?: string; config?: { id?: string }; venueOverride?: { id?: string } };
 import { useEventConfigs, CreateEventConfigPayload } from "@/hooks/use-event-configs";
 import { useVenues } from "@/hooks/use-venues";
 import { toInputDateTime, toPayloadDateTime, toLocalDate } from "@/utils/parse-local-time";
@@ -167,9 +169,9 @@ export default withAuth(function AdminEventsPage() {
     const [activeTab, setActiveTab] = useState<"events" | "configs">("events");
     const today = toLocalDate();
 
-    const { events, pagination: eventPagination, isLoading: eventsLoading, isSubmitting: eventSubmitting, error: eventError, clearError: clearEventError, fetchEvents, createEvent, updateEvent, deleteEvent } = useEvents();
+    const { events, pagination: eventPagination, isLoading: eventsLoading, isSubmitting: eventSubmitting, error: eventError, fetchEvents, createEvent, updateEvent, deleteEvent } = useEvents();
     const [upcomingOnly, setUpcomingOnly] = useState(false);
-    const { eventConfigs, isLoading: configsLoading, isSubmitting: configSubmitting, error: configError, clearError: clearConfigError, createEventConfig, updateEventConfig, deleteEventConfig } = useEventConfigs();
+    const { eventConfigs, isLoading: configsLoading, isSubmitting: configSubmitting, error: configError, createEventConfig, updateEventConfig, deleteEventConfig } = useEventConfigs();
     const { venues } = useVenues();
 
     const [eventForm, setEventForm] = useState(defaultEventForm);
@@ -246,7 +248,7 @@ export default withAuth(function AdminEventsPage() {
                 recurrenceInterval: 1,
                 recurrenceEndDate: "",
             },
-            serviceSlots: (event?.serviceSlots ?? []).map((s: any) => ({
+            serviceSlots: (event?.serviceSlots ?? []).map((s: RawServiceSlot) => ({
                 name: s.name ?? "",
                 startTime: s.startTime ?? "",
                 endTime: s.endTime ?? "",
@@ -273,7 +275,7 @@ export default withAuth(function AdminEventsPage() {
                 recurrenceInterval: 1,
                 recurrenceEndDate: "",
             },
-            serviceSlots: (event?.serviceSlots ?? []).map((s: any) => ({
+            serviceSlots: (event?.serviceSlots ?? []).map((s: RawServiceSlot) => ({
                 name: s.name ?? "",
                 startTime: "",
                 endTime: "",
@@ -793,7 +795,7 @@ export default withAuth(function AdminEventsPage() {
                                         <div>
                                             <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-2">Service Slots</div>
                                             <div className="space-y-2">
-                                                {(selectedEvent.serviceSlots as any[])?.map((s: any, i: number) => (
+                                                {selectedEvent.serviceSlots?.map((s: ServiceSlot, i: number) => (
                                                     <div key={i} className="p-3 bg-[#F4F1EA]/20 border border-[#121212]/5 rounded-lg">
                                                         <div className="text-xs font-medium text-[#121212]">{s.name}</div>
                                                         <div className="text-[10px] text-[#8A817C] font-mono mt-0.5 truncate">{s.startTime} → {s.endTime}</div>

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type AnnouncementAudience = "ALL" | "WORKERS_ONLY" | "MEMBERS_ONLY" | "DEPARTMENT" | "INDIVIDUAL";
 
 export interface AnnouncementAuthor {
@@ -90,10 +92,11 @@ export function useAnnouncements(defaultLimit = 10) {
                     totalCount: outer?.totalCount ?? list.length,
                     totalPages: outer?.totalPages ?? 1,
                 });
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 setError(
-                    err?.response?.data?.message ||
-                    err?.message ||
+                    e?.response?.data?.message ||
+                    e?.message ||
                     "Failed to fetch announcements."
                 );
             } finally {
@@ -128,10 +131,11 @@ export function useAnnouncements(defaultLimit = 10) {
             const created: Announcement = res.data?.data;
             setAnnouncements((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to create announcement.";
             setError(message);
             throw new Error(message);
@@ -153,10 +157,11 @@ export function useAnnouncements(defaultLimit = 10) {
                 prev.map((a) => (a.id === announcementId ? updated : a))
             );
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to update announcement.";
             setError(message);
             throw new Error(message);
@@ -173,10 +178,11 @@ export function useAnnouncements(defaultLimit = 10) {
         try {
             await api.delete(`/announcements/${announcementId}`);
             setAnnouncements((prev) => prev.filter((a) => a.id !== announcementId));
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to delete announcement.";
             setError(message);
             throw new Error(message);

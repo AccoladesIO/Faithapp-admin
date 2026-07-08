@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type PledgeFrequency = "ONE_OFF" | "MONTHLY" | "QUARTERLY";
 export type PledgeStatus = "ACTIVE" | "COMPLETED" | "CANCELLED";
 
@@ -76,8 +78,9 @@ export function usePledges() {
         try {
             const res = await api.get("/admin/finance/pledges/campaigns");
             setCampaigns(res.data?.data ?? []);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch campaigns.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch campaigns.");
         } finally {
             setIsLoading(false);
         }
@@ -102,8 +105,9 @@ export function usePledges() {
                     totalCount: outer?.totalCount ?? list.length,
                     totalPages: outer?.totalPages ?? 1,
                 });
-            } catch (err: any) {
-                setError(err?.response?.data?.message || err?.message || "Failed to fetch pledges.");
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                setError(e?.response?.data?.message || e?.message || "Failed to fetch pledges.");
             } finally {
                 setIsPledgesLoading(false);
             }
@@ -136,9 +140,10 @@ export function usePledges() {
                 const created: PledgeCampaign = res.data?.data;
                 setCampaigns((prev) => [created, ...prev]);
                 return created;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to create campaign.";
+                    e?.response?.data?.message || e?.message || "Failed to create campaign.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -161,9 +166,10 @@ export function usePledges() {
                     fetchPledges(campaignId, pledgePage);
                 }
                 return res.data?.data;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to create pledge.";
+                    e?.response?.data?.message || e?.message || "Failed to create pledge.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -184,9 +190,10 @@ export function usePledges() {
                 const updated: Pledge = res.data?.data;
                 setPledges((prev) => prev.map((p) => (p.id === pledgeId ? updated : p)));
                 return updated;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to update pledge status.";
+                    e?.response?.data?.message || e?.message || "Failed to update pledge status.";
                 setError(message);
                 throw new Error(message);
             } finally {

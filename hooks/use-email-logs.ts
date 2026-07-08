@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type EmailLogStatus = "sent" | "failed";
 
 export interface EmailLog {
@@ -55,8 +57,9 @@ export function useEmailLogs(defaultLimit = 20) {
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch email logs.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch email logs.");
         } finally {
             setIsLoading(false);
         }

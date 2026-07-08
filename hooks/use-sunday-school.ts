@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "EXCUSED";
 
 export interface SSPagination {
@@ -52,7 +54,7 @@ export interface SSAttendance {
     status: AttendanceStatus;
 }
 
-function extractPagination(outer: any, targetPage: number, defaultLimit: number): SSPagination {
+function extractPagination(outer: { page?: number; limit?: number; totalCount?: number; totalPages?: number } | null | undefined, targetPage: number, defaultLimit: number): SSPagination {
     return {
         page: outer?.page ?? targetPage,
         limit: outer?.limit ?? defaultLimit,
@@ -61,8 +63,9 @@ function extractPagination(outer: any, targetPage: number, defaultLimit: number)
     };
 }
 
-function extractError(err: any, fallback: string): string {
-    return err?.response?.data?.message || err?.message || fallback;
+function extractError(err: unknown, fallback: string): string {
+    const e = err as ApiError;
+    return e?.response?.data?.message || e?.message || fallback;
 }
 
 export function useSundaySchool(defaultLimit = 10) {
@@ -91,7 +94,7 @@ export function useSundaySchool(defaultLimit = 10) {
             setClasses(list);
             setClassPage(page);
             setClassPagination(extractPagination(outer, page, defaultLimit));
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(extractError(err, "Failed to fetch classes."));
         } finally {
             setIsLoading(false);
@@ -110,7 +113,7 @@ export function useSundaySchool(defaultLimit = 10) {
             const created: SSClass = res.data?.data;
             setClasses((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const message = extractError(err, "Failed to create class.");
             setError(message);
             throw new Error(message);
@@ -130,7 +133,7 @@ export function useSundaySchool(defaultLimit = 10) {
             const updated: SSClass = res.data?.data;
             setClasses((prev) => prev.map((c) => (c.id === id ? updated : c)));
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const message = extractError(err, "Failed to update class.");
             setError(message);
             throw new Error(message);
@@ -145,7 +148,7 @@ export function useSundaySchool(defaultLimit = 10) {
         try {
             await api.delete(`/admin/sunday-school/classes/${id}`);
             setClasses((prev) => prev.filter((c) => c.id !== id));
-        } catch (err: any) {
+        } catch (err: unknown) {
             const message = extractError(err, "Failed to delete class.");
             setError(message);
             throw new Error(message);
@@ -187,7 +190,7 @@ export function useSundaySchool(defaultLimit = 10) {
         setError(null);
         try {
             await api.post(`/admin/sunday-school/classes/${classId}/members`, { memberId });
-        } catch (err: any) {
+        } catch (err: unknown) {
             const message = extractError(err, "Failed to add member.");
             setError(message);
             throw new Error(message);
@@ -204,7 +207,7 @@ export function useSundaySchool(defaultLimit = 10) {
         setError(null);
         try {
             await api.delete(`/admin/sunday-school/classes/${classId}/members/${memberId}`);
-        } catch (err: any) {
+        } catch (err: unknown) {
             const message = extractError(err, "Failed to remove member.");
             setError(message);
             throw new Error(message);
@@ -228,7 +231,7 @@ export function useSundaySchool(defaultLimit = 10) {
             setSessions(list);
             setSessionPage(page);
             setSessionPagination(extractPagination(outer, page, defaultLimit));
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(extractError(err, "Failed to fetch sessions."));
         } finally {
             setIsLoading(false);
@@ -247,7 +250,7 @@ export function useSundaySchool(defaultLimit = 10) {
             const created: SSSession = res.data?.data;
             setSessions((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const message = extractError(err, "Failed to create session.");
             setError(message);
             throw new Error(message);
@@ -262,7 +265,7 @@ export function useSundaySchool(defaultLimit = 10) {
         try {
             await api.delete(`/admin/sunday-school/sessions/${id}`);
             setSessions((prev) => prev.filter((s) => s.id !== id));
-        } catch (err: any) {
+        } catch (err: unknown) {
             const message = extractError(err, "Failed to delete session.");
             setError(message);
             throw new Error(message);
@@ -282,7 +285,7 @@ export function useSundaySchool(defaultLimit = 10) {
             setSessions((prev) =>
                 prev.map((s) => (s.id === id ? { ...s, status: "OPEN" as const } : s))
             );
-        } catch (err: any) {
+        } catch (err: unknown) {
             const message = extractError(err, "Failed to open session.");
             setError(message);
             throw new Error(message);
@@ -299,7 +302,7 @@ export function useSundaySchool(defaultLimit = 10) {
             setSessions((prev) =>
                 prev.map((s) => (s.id === id ? { ...s, status: "CLOSED" as const } : s))
             );
-        } catch (err: any) {
+        } catch (err: unknown) {
             const message = extractError(err, "Failed to close session.");
             setError(message);
             throw new Error(message);
@@ -327,7 +330,7 @@ export function useSundaySchool(defaultLimit = 10) {
         try {
             const res = await api.post(`/admin/sunday-school/sessions/${sessionId}/bulk-mark`, { attendances });
             return res.data?.data ?? { marked: 0 };
-        } catch (err: any) {
+        } catch (err: unknown) {
             const message = extractError(err, "Failed to mark attendance.");
             setError(message);
             throw new Error(message);

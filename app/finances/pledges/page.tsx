@@ -15,7 +15,6 @@ import { PaginationBar } from "@/components/ui/pagination-bar";
 import { currencySymbol, formatCurrency, formatCurrencyInput, parseCurrencyInput } from "@/utils/currency";
 import {
     usePledges,
-    PledgeCampaign,
     Pledge,
     PledgeStatus,
     PledgeFrequency,
@@ -86,7 +85,7 @@ export default withAuth(function PledgesPage() {
             await createCampaign(campaignForm);
             setShowCampaignForm(false);
             setCampaignForm({ name: "", fundId: "", targetAmount: 0, startDate: "", endDate: "" });
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     function resetPledgeForm() {
@@ -105,13 +104,13 @@ export default withAuth(function PledgesPage() {
             await createPledge(selectedCampaignId, pledgeForm);
             setShowPledgeForm(false);
             resetPledgeForm();
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     async function handleStatusChange(pledge: Pledge, status: PledgeStatus) {
         setActionError(null);
         try { await updatePledgeStatus(pledge.id, status); }
-        catch (e: any) { setActionError(e.message); }
+        catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     return (

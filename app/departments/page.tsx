@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
 import {
-    Network, Search, Plus, UserPlus, X, Briefcase,
+    Network, Search, Plus, UserPlus, X,
     ShieldCheck, ArrowUpDown, ChevronLeft, ChevronRight,
     Eye, RefreshCw, Pencil, Trash2, Check, Users,
     ShieldAlert, CheckCircle2,
@@ -13,10 +13,13 @@ import {
     Department,
     DepartmentLead,
     DepartmentWorker,
+    DepartmentPagination,
 } from "@/hooks/use-departments";
 import { useMembers } from "@/hooks/use-member";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
 import { DismissibleError } from "@/components/ui/dismissible-error";
+
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -44,7 +47,7 @@ function SkeletonRow({ cols }: { cols: number }) {
 
 const defaultCreateForm = { name: "", description: "", key: "" };
 
-function isWorkerInDept(m: { role: string; workerProfile: any }, deptId: string): boolean {
+function isWorkerInDept(m: { role: string; workerProfile: { department?: { id?: string } | null; secondaryDepartment?: { id?: string } | null } | null }, deptId: string): boolean {
     if (m.role !== "WORKER") return false;
     const primary = m.workerProfile?.department?.id;
     const secondary = m.workerProfile?.secondaryDepartment?.id;
@@ -64,7 +67,6 @@ export default withAuth(function DepartmentsPage() {
         isLoading,
         isSubmitting,
         error,
-        clearError,
 fetchDepartments,
         createDepartment,
         updateDepartment,
@@ -102,7 +104,7 @@ fetchDepartments,
     const [leadsLoading, setLeadsLoading] = useState(false);
     const [workers, setWorkers] = useState<DepartmentWorker[]>([]);
     const [workersLoading, setWorkersLoading] = useState(false);
-    const [workersPagination, setWorkersPagination] = useState<any>(null);
+    const [workersPagination, setWorkersPagination] = useState<DepartmentPagination | null>(null);
     const [workersPage, setWorkersPage] = useState(1);
 
     // ── Assign/remove lead ────────────────────────────────────────────────────
@@ -192,8 +194,9 @@ fetchDepartments,
             setCreateSuccess("Department created successfully.");
             selectDept(created);
             setTimeout(() => setCreateSuccess(null), 3000);
-        } catch (err: any) {
-            setCreateError(err?.message ?? "Failed to create department.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setCreateError(e?.message ?? "Failed to create department.");
         }
     };
 
@@ -240,8 +243,9 @@ fetchDepartments,
             setLeadSuccess(`${assignType === "head" ? "Head" : "Assistant"} assigned successfully.`);
             loadLeads(selectedDept.id);
             setTimeout(() => setLeadSuccess(null), 3000);
-        } catch (err: any) {
-            setLeadError(err?.message ?? "Failed to assign lead.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setLeadError(e?.message ?? "Failed to assign lead.");
         }
     };
 
@@ -255,8 +259,9 @@ fetchDepartments,
             setLeadSuccess(`${type === "head" ? "Head" : "Assistant"} removed successfully.`);
             loadLeads(selectedDept.id);
             setTimeout(() => setLeadSuccess(null), 3000);
-        } catch (err: any) {
-            setLeadError(err?.message ?? "Failed to remove lead.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setLeadError(e?.message ?? "Failed to remove lead.");
         }
     };
 

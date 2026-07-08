@@ -16,6 +16,8 @@ import {
     HeadcountTrends,
 } from "@/hooks/use-service-headcount";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const formatDate = (iso: string | null | undefined) => {
@@ -187,7 +189,7 @@ function HeadcountPanel({ slots, initial, isSubmitting, onClose, onSubmit }: Mod
                         </button>
                     </div>
                     {extraGroups.length === 0 ? (
-                        <p className="text-[11px] text-[#8A817C]/60 font-light italic">No additional groups. Click "Add Group" to include more counts.</p>
+                        <p className="text-[11px] text-[#8A817C]/60 font-light italic">No additional groups. Click &quot;Add Group&quot; to include more counts.</p>
                     ) : (
                         <div className="space-y-2">
                             {extraGroups.map((g, i) => (
@@ -355,7 +357,7 @@ function ServiceHeadcountPage() {
 
     useEffect(() => {
         fetchRecords({ page: 1, limit: 10 });
-    }, []);
+    }, [fetchRecords]);
 
     const loadSlots = async () => {
         if (slotsLoaded) return;
@@ -398,8 +400,9 @@ function ServiceHeadcountPage() {
         try {
             const data = await fetchTrends(period, trendsFrom || undefined, trendsTo || undefined);
             setTrends(data);
-        } catch (err: any) {
-            setTrendsError(err?.message ?? "Failed to load trends.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setTrendsError(e?.message ?? "Failed to load trends.");
         } finally {
             setTrendsLoading(false);
         }

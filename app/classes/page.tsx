@@ -22,6 +22,8 @@ import { useWorkers } from "@/hooks/use-workers";
 import { toLocalDate } from "@/utils/parse-local-time";
 import { DismissibleError } from "@/components/ui/dismissible-error";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fullName = (p: { firstname: string; lastname: string }) =>
@@ -61,18 +63,6 @@ function ClassTypeBadge({ type }: { type: ClassType }) {
     );
 }
 
-function EnrollmentStatusBadge({ status }: { status: EnrollmentStatus }) {
-    const map: Record<EnrollmentStatus, string> = {
-        IN_PROGRESS: "bg-blue-50 border-blue-100 text-blue-700",
-        COMPLETED: "bg-green-50 border-green-100 text-green-700",
-        CANCELLED: "bg-red-50 border-red-100 text-red-600",
-    };
-    return (
-        <span className={`inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border ${map[status]}`}>
-            {status.replace("_", " ")}
-        </span>
-    );
-}
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -309,8 +299,9 @@ const ClassesPage = () => {
                 setCreateSuccess(null);
                 setShowCreateForm(false);
             }, 2000);
-        } catch (err: any) {
-            setCreateError(err?.message ?? "Failed to create class.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setCreateError(e?.message ?? "Failed to create class.");
         }
     };
 
@@ -378,8 +369,9 @@ const ClassesPage = () => {
             }
             setCloseSuccess(`Class closed. ${result.closedEnrollments} enrollment(s) marked complete.`);
             setTimeout(() => setCloseSuccess(null), 4000);
-        } catch (err: any) {
-            setCloseError(err?.message ?? "Failed to close class.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setCloseError(e?.message ?? "Failed to close class.");
         }
     };
 
@@ -407,8 +399,9 @@ const ClassesPage = () => {
             setEnrollSuccess("Member enrolled successfully.");
             loadEnrollments(selectedClass.id, 1);
             setTimeout(() => setEnrollSuccess(null), 3000);
-        } catch (err: any) {
-            setEnrollError(err?.message ?? "Failed to enroll member.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setEnrollError(e?.message ?? "Failed to enroll member.");
         }
     };
 

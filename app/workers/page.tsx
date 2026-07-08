@@ -5,15 +5,17 @@ import { withAuth } from "@/utils/auth/with-auth";
 import { useRouter } from "next/navigation";
 import {
     Search, SlidersHorizontal,
-    ArrowUpDown, Eye, X, RefreshCw, ShieldAlert, CheckCircle2,
-    Briefcase, GraduationCap, UserMinus, Pencil, Phone, Mail,
+    ArrowUpDown, Eye, X, RefreshCw, CheckCircle2,
+    UserMinus, Pencil, Phone, Mail,
     Calendar, Check, Building2,
 } from "lucide-react";
-import { useWorkers, Worker, UpdateWorkerProfilePayload } from "@/hooks/use-workers";
+import { useWorkers, Worker, WorkerDepartment, UpdateWorkerProfilePayload } from "@/hooks/use-workers";
 import { useDepartments } from "@/hooks/use-departments";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
 import { DismissibleError } from "@/components/ui/dismissible-error";
+
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -153,7 +155,7 @@ function ProfileEditForm({
     isSubmitting: boolean;
 }) {
     const [form, setForm] = useState<UpdateWorkerProfilePayload>({
-        departmentId: (worker.workerProfile?.department as any)?.id ?? "",
+        departmentId: (worker.workerProfile?.department as WorkerDepartment)?.id ?? "",
         status: worker.workerProfile?.status ?? "ACTIVE",
         profession: worker.workerProfile?.profession ?? "",
         yearJoinedWorkforce: worker.workerProfile?.yearJoinedWorkforce
@@ -161,7 +163,7 @@ function ProfileEditForm({
             : "",
         completedSOD: worker.workerProfile?.completedSOD ?? false,
         completedBibleCollege: worker.workerProfile?.completedBibleCollege ?? false,
-        secondaryDepartmentId: (worker.workerProfile?.secondaryDepartment as any)?.id ?? null,
+        secondaryDepartmentId: worker.workerProfile?.secondaryDepartment?.id ?? null,
     });
 
     return (
@@ -178,7 +180,7 @@ function ProfileEditForm({
                     </label>
                     <select
                         value={form.status}
-                        onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as any }))}
+                        onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as UpdateWorkerProfilePayload["status"] }))}
                         className="w-full h-9 px-2 bg-white border border-[#121212]/10 text-xs text-[#121212] focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
                     >
                         {WORKER_STATUSES.map((s) => (
@@ -320,7 +322,6 @@ export default withAuth(function WorkersPage() {
     const {
         workers,
         pagination,
-        page,
         statusFilter,
         isLoading,
         isSubmitting,
@@ -392,8 +393,9 @@ export default withAuth(function WorkersPage() {
             setIsEditing(false);
             setActionSuccess("Worker profile updated successfully.");
             setTimeout(() => setActionSuccess(null), 3000);
-        } catch (err: any) {
-            setActionError(err?.message ?? "Failed to update profile.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setActionError(e?.message ?? "Failed to update profile.");
         }
     };
 
@@ -405,14 +407,15 @@ export default withAuth(function WorkersPage() {
             await revokeWorker(selectedWorker.id);
             setSelectedWorker(null);
             setConfirmRevoke(false);
-        } catch (err: any) {
-            setActionError(err?.message ?? "Failed to revoke worker role.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setActionError(e?.message ?? "Failed to revoke worker role.");
             setConfirmRevoke(false);
         }
     };
 
     const deptName = (w: Worker) => {
-        const dept = w.workerProfile?.department as any;
+        const dept = w.workerProfile?.department as WorkerDepartment | undefined;
         return dept?.name ?? "—";
     };
 
@@ -665,7 +668,7 @@ export default withAuth(function WorkersPage() {
                                     <DetailRow
                                         label="Secondary Department"
                                         value={
-                                            (selectedWorker.workerProfile?.secondaryDepartment as any)?.name ?? "—"
+                                            selectedWorker.workerProfile?.secondaryDepartment?.name ?? "—"
                                         }
                                     />
                                     <DetailRow

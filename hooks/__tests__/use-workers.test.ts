@@ -90,7 +90,7 @@ describe("useWorkers", () => {
 
         let caught: Error | undefined;
         await act(async () => {
-            try { await result.current.purgeDevice("m1"); } catch (e: any) { caught = e; }
+            try { await result.current.purgeDevice("m1"); } catch (e: unknown) { caught = e as Error; }
         });
 
         expect(caught?.message).toBe("Device not found");

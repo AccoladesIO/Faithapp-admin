@@ -8,6 +8,8 @@ import { useToast } from "@/context/toast-context";
 import { Settings2, RefreshCw, Lock } from "lucide-react";
 import { DismissibleError } from "@/components/ui/dismissible-error";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 function ModuleRow({
     setting,
     canWrite,
@@ -104,8 +106,9 @@ const SystemSettingsPage = withAuth(
             try {
                 await updateSetting(key, enabled);
                 success(`Module ${enabled ? "enabled" : "disabled"} successfully.`);
-            } catch (err: any) {
-                toastError(err?.message || "Failed to update module.");
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                toastError(e?.message || "Failed to update module.");
             }
         };
 

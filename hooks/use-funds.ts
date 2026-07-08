@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type FundType = "RESTRICTED" | "UNRESTRICTED";
 
 export interface Fund {
@@ -37,8 +39,9 @@ export function useFunds() {
         try {
             const res = await api.get("/admin/finance/funds");
             setFunds(res.data?.data ?? []);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch funds.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch funds.");
         } finally {
             setIsLoading(false);
         }
@@ -53,9 +56,10 @@ export function useFunds() {
                 const created: Fund = res.data?.data;
                 setFunds((prev) => [created, ...prev]);
                 return created;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to create fund.";
+                    e?.response?.data?.message || e?.message || "Failed to create fund.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -74,9 +78,10 @@ export function useFunds() {
                 const updated: Fund = res.data?.data;
                 setFunds((prev) => prev.map((f) => (f.id === id ? updated : f)));
                 return updated;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to update fund.";
+                    e?.response?.data?.message || e?.message || "Failed to update fund.";
                 setError(message);
                 throw new Error(message);
             } finally {

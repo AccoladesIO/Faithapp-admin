@@ -56,7 +56,6 @@ export default withAuth(function VenuesPage() {
         isLoading,
         isSubmitting,
         error,
-        clearError,
         createVenue,
         updateVenue,
         deleteVenue,

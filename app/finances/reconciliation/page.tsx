@@ -13,7 +13,7 @@ import {
     Send,
 } from "lucide-react";
 import { DismissibleError } from "@/components/ui/dismissible-error";
-import { useReconciliation, ReconciliationJob, ReconciliationJobStatus } from "@/hooks/use-reconciliation";
+import { useReconciliation, ReconciliationJobStatus } from "@/hooks/use-reconciliation";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useAccountingPeriods } from "@/hooks/use-accounting-periods";
 import { formatCurrency } from "@/utils/currency";
@@ -57,7 +57,7 @@ export default withAuth(function ReconciliationPage() {
             await uploadStatement(selectedFile);
             setShowUpload(false);
             setSelectedFile(null);
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     async function handleConfirmRow(jobId: string, rowId: string) {
@@ -67,13 +67,13 @@ export default withAuth(function ReconciliationPage() {
             await confirmRow(jobId, rowId, rowAccountId);
             setConfirmingRowId(null);
             setRowAccountId("");
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     async function handleSkipRow(jobId: string, rowId: string) {
         setActionError(null);
         try { await skipRow(jobId, rowId); }
-        catch (e: any) { setActionError(e.message); }
+        catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     async function handlePostConfirmed(jobId: string) {
@@ -82,7 +82,7 @@ export default withAuth(function ReconciliationPage() {
         try {
             await postConfirmed(jobId, postForm);
             setPostForm({ bankAccountId: "", accountingPeriodId: "" });
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     const openPeriods = periods.filter((p) => p.status === "OPEN");

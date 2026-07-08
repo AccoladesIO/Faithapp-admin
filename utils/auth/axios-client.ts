@@ -10,7 +10,7 @@ export type AuthPayload = {
     token_type: string;
     expires_in: number;
     access_token: string;
-    refresh_token: string;
+    refresh_token?: string; // present only for mobile (MEMBER surface)
     requires_password_change?: boolean;
 };
 
@@ -30,11 +30,7 @@ api.interceptors.request.use((config) => {
 
 export const commitAuthPayload = (payload: AuthPayload) => {
     const expiresAt = Date.now() + payload.expires_in * 1000;
-    tokenStore.set({
-        accessToken: payload.access_token,
-        refreshToken: payload.refresh_token,
-        expiresAt,
-    });
+    tokenStore.set({ accessToken: payload.access_token, expiresAt });
     const expiresAtTime = new Date(expiresAt).toLocaleTimeString("en-GB", {
         hour: "2-digit",
         minute: "2-digit",
@@ -49,23 +45,16 @@ export const commitAuthPayload = (payload: AuthPayload) => {
 let refreshPromise: Promise<string> | null = null;
 
 const doRefresh = async (): Promise<string> => {
-    const current = tokenStore.get();
-    if (!current?.refreshToken) throw new Error("No refresh token available");
-
     console.log(
         `[Auth ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}]`,
         "📡 Sending refresh request to /auth/refresh..."
     );
 
+    // The httpOnly cookie is sent automatically via withCredentials — no manual token needed
     const res = await axios.post(
         `${api.defaults.baseURL}/auth/refresh`,
         {},
-        {
-            withCredentials: true,
-            headers: {
-                Authorization: `Bearer ${current.refreshToken}`,
-            },
-        }
+        { withCredentials: true }
     );
 
     const payload: AuthPayload = res.data?.data;
@@ -75,15 +64,15 @@ const doRefresh = async (): Promise<string> => {
 };
 
 export const refreshAccessToken = (): Promise<string> => {
-    if (!refreshPromise) {
-        refreshPromise = doRefresh().finally(() => {
-            refreshPromise = null;
-        });
-    } else {
+    if (refreshPromise) {
         console.log(
             `[Auth ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}]`,
             "⏳ Refresh already in progress — reusing existing promise"
         );
+    } else {
+        refreshPromise = doRefresh().finally(() => {
+            refreshPromise = null;
+        });
     }
     return refreshPromise;
 };
@@ -93,7 +82,7 @@ api.interceptors.response.use(
     async (error: AxiosError) => {
         const config = error.config as RetriableConfig | undefined;
         if (!config || config._retry || config._skipAuth) {
-            return Promise.reject(error);
+            throw error;
         }
         if (error.response?.status === 401) {
             console.log(
@@ -103,8 +92,7 @@ api.interceptors.response.use(
             config._retry = true;
             try {
                 const newToken = await refreshAccessToken();
-                config.headers = config.headers ?? {};
-                (config.headers as any).Authorization = `Bearer ${newToken}`;
+                config.headers.set('Authorization', `Bearer ${newToken}`);
                 console.log(
                     `[Auth ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}]`,
                     `🔁 Retrying ${config.url} with new token`
@@ -116,9 +104,9 @@ api.interceptors.response.use(
                     "❌ Refresh failed on 401 retry — clearing session"
                 );
                 tokenStore.clear();
-                return Promise.reject(refreshErr);
+                throw refreshErr;
             }
         }
-        return Promise.reject(error);
+        throw error;
     }
 );

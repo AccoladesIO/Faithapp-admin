@@ -12,7 +12,17 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Jest config must use require()
+    "jest.config.js",
   ]),
+  {
+    rules: {
+      // Standard async-fetch-in-effect pattern is safe; this rule produces
+      // false positives when the function called is async (state is set in a
+      // promise callback, not synchronously in the effect body).
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

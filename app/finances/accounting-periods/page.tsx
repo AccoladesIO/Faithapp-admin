@@ -39,19 +39,19 @@ export default withAuth(function AccountingPeriodsPage() {
         try {
             await createPeriod(form.year, form.month);
             setShowCreate(false);
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     async function handleClose(id: string) {
         setActionError(null);
         try { const u = await closePeriod(id); setSelected(u); }
-        catch (e: any) { setActionError(e.message); }
+        catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     async function handleReopen(id: string) {
         setActionError(null);
         try { const u = await reopenPeriod(id); setSelected(u); }
-        catch (e: any) { setActionError(e.message); }
+        catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     const openCount = periods.filter((p) => p.status === "OPEN").length;

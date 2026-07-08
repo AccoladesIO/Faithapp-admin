@@ -59,7 +59,7 @@ export default withAuth(function ExternalPayeesPage() {
             });
             setShowCreate(false);
             setForm({ ...EMPTY_FORM });
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     async function handleUpdate() {
@@ -77,7 +77,7 @@ export default withAuth(function ExternalPayeesPage() {
             if (editForm.isActive !== undefined) payload.isActive = editForm.isActive;
             await updatePayee(editing.id, payload);
             setEditing(null);
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     function openEdit(p: ExternalPayee) {

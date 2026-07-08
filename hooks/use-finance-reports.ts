@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export interface BudgetUtilization {
     budgetId: string;
     name: string;
@@ -48,7 +50,7 @@ export function useFinanceReports() {
     const [error, setError] = useState<string | null>(null);
 
     const [activeReport, setActiveReport] = useState<ReportType | null>(null);
-    const [reportResult, setReportResult] = useState<any>(null);
+    const [reportResult, setReportResult] = useState<unknown>(null);
     const [isReportLoading, setIsReportLoading] = useState(false);
     const [reportError, setReportError] = useState<string | null>(null);
 
@@ -62,10 +64,11 @@ export function useFinanceReports() {
             ]);
             setDashboard(dashRes.data?.data ?? null);
             setFundBalance(fundRes.data?.data ?? null);
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                    err?.message ||
+                e?.response?.data?.message ||
+                    e?.message ||
                     "Failed to fetch finance reports."
             );
         } finally {
@@ -83,8 +86,9 @@ export function useFinanceReports() {
             const url = qs ? `/admin/finance/reports/${type}?${qs}` : `/admin/finance/reports/${type}`;
             const res = await api.get(url);
             setReportResult(res.data?.data ?? null);
-        } catch (err: any) {
-            setReportError(err?.response?.data?.message || err?.message || "Failed to run report.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setReportError(e?.response?.data?.message || e?.message || "Failed to run report.");
         } finally {
             setIsReportLoading(false);
         }

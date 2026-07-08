@@ -2,6 +2,8 @@ import { useState, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 import { toLocalDate } from "@/utils/parse-local-time";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type ServiceSlotType =
     | "SPEAKER"
     | "WORSHIP"
@@ -101,10 +103,11 @@ export function useServiceProgramme(defaultLimit = 10) {
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to fetch programmes."
             );
         } finally {
@@ -125,10 +128,11 @@ export function useServiceProgramme(defaultLimit = 10) {
             const created: ServiceProgramme = res.data?.data;
             setProgrammes((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to create programme.";
             setError(message);
             throw new Error(message);
@@ -143,10 +147,11 @@ export function useServiceProgramme(defaultLimit = 10) {
         try {
             await api.delete(`/service-programme/${id}`);
             setProgrammes((prev) => prev.filter((p) => p.id !== id));
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to delete programme.";
             setError(message);
             throw new Error(message);
@@ -164,10 +169,11 @@ export function useServiceProgramme(defaultLimit = 10) {
         try {
             const res = await api.post(`/service-programme/${programmeId}/slots`, dto);
             return res.data?.data ?? [];
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to add slot.";
             setError(message);
             throw new Error(message);
@@ -186,10 +192,11 @@ export function useServiceProgramme(defaultLimit = 10) {
         try {
             const res = await api.patch(`/service-programme/${programmeId}/slots/${slotId}`, dto);
             return res.data?.data;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to update slot.";
             setError(message);
             throw new Error(message);
@@ -203,10 +210,11 @@ export function useServiceProgramme(defaultLimit = 10) {
         setError(null);
         try {
             await api.delete(`/service-programme/${programmeId}/slots/${slotId}`);
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to delete slot.";
             setError(message);
             throw new Error(message);
@@ -225,10 +233,11 @@ export function useServiceProgramme(defaultLimit = 10) {
             await api.put(`/service-programme/${programmeId}/slots/reorder`, {
                 slots: slotIds.map((id) => ({ id })),
             });
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to reorder slots.";
             setError(message);
             throw new Error(message);
@@ -245,10 +254,11 @@ export function useServiceProgramme(defaultLimit = 10) {
                 ? res.data.data
                 : [];
             setTemplates(list);
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to fetch templates."
             );
         }
@@ -260,10 +270,11 @@ export function useServiceProgramme(defaultLimit = 10) {
         try {
             await api.delete(`/service-programme/templates/${templateId}`);
             setTemplates((prev) => prev.filter((t) => t.id !== templateId));
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to delete template.";
             setError(message);
             throw new Error(message);
@@ -283,10 +294,11 @@ export function useServiceProgramme(defaultLimit = 10) {
                 `/service-programme/${programmeId}/apply-template/${templateId}`
             );
             return res.data?.data;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to apply template.";
             setError(message);
             throw new Error(message);
@@ -298,13 +310,13 @@ export function useServiceProgramme(defaultLimit = 10) {
     const fetchServiceSlots = useCallback(async (): Promise<ServiceSlotOption[]> => {
         try {
             const res = await api.get("/events?page=1&limit=100");
-            const events: any[] = res.data?.data?.data ?? res.data?.data ?? [];
+            const events: { id: string; name: string; endDate?: string; eventDate?: string; serviceSlots?: { id: string; name: string }[] }[] = res.data?.data?.data ?? res.data?.data ?? [];
             const today = toLocalDate();
             const options: ServiceSlotOption[] = [];
             for (const event of events) {
                 const eventEnd: string = event.endDate ?? event.eventDate ?? "";
                 if (eventEnd && eventEnd < today) continue;
-                const slots: any[] = Array.isArray(event.serviceSlots) ? event.serviceSlots : [];
+                const slots: { id: string; name: string }[] = Array.isArray(event.serviceSlots) ? event.serviceSlots : [];
                 for (const slot of slots) {
                     options.push({
                         id: slot.id,

@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "prepare": "husky"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
@@ -16,11 +17,16 @@
     "@tiptap/extension-underline": "^3.26.1",
     "@tiptap/react": "^3.26.1",
     "@tiptap/starter-kit": "^3.26.1",
+    "@types/dompurify": "^3.0.5",
     "axios": "^1.18.0",
+    "isomorphic-dompurify": "^3.3.0",
     "lucide-react": "^1.17.0",
     "next": "16.2.9",
     "react": "19.2.4",
     "react-dom": "19.2.4"
+  },
+  "lint-staged": {
+    "**/*.{ts,tsx}": "eslint --fix"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -32,8 +38,10 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "husky": "^9.1.7",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
+    "lint-staged": "^17.0.8",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

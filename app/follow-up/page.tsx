@@ -25,6 +25,8 @@ import { useEvents, ChurchEvent } from "@/hooks/use-events";
 import { toLocalDate } from "@/utils/parse-local-time";
 import { DismissibleError } from "@/components/ui/dismissible-error";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fullName = (p: { firstname: string; lastname: string } | null | undefined) => {
@@ -175,8 +177,9 @@ function LogVisitPanel({ firstTimer, isSubmitting, onClose, onSubmit }: LogVisit
                 setSuccess(false);
                 onClose();
             }, 1500);
-        } catch (err: any) {
-            setLocalError(err?.message ?? "Failed to log visit.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setLocalError(e?.message ?? "Failed to log visit.");
         }
     };
 
@@ -295,8 +298,9 @@ function AddFirstTimerPanel({ isSubmitting, onClose, onSubmit, events }: AddFirs
                 onClose();
                 setForm(defaultFirstTimerForm);
             }, 1500);
-        } catch (err: any) {
-            setLocalError(err?.message ?? "Failed to add first timer.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setLocalError(e?.message ?? "Failed to add first timer.");
         }
     };
 
@@ -531,7 +535,6 @@ const FollowUpPage = () => {
         bulkUpdateTasks,
         fetchReport,
         getFirstTimerPipeline,
-        goToFirstTimerPage,
         goToTaskPage,
     } = useFollowUp(10);
 
@@ -637,7 +640,7 @@ const FollowUpPage = () => {
     const toggleTaskSelection = (id: string) => {
         setSelectedTaskIds((prev) => {
             const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
+            if (next.has(id)) next.delete(id); else next.add(id);
             return next;
         });
     };
@@ -664,14 +667,14 @@ const FollowUpPage = () => {
         setReport(null);
         if (!reportFrom || !reportTo) { setReportError("Please select both a start and end date."); return; }
         try { setReport(await fetchReport(reportFrom, reportTo)); }
-        catch (err: any) { setReportError(err?.message ?? "Failed to generate report."); }
+        catch (err: unknown) { setReportError((err as Error).message ?? "Failed to generate report."); }
     };
 
     const handleLoadPipeline = async () => {
         setPipelineError(null);
         setPipeline(null);
         try { setPipeline(await getFirstTimerPipeline(pipelineFrom || undefined, pipelineTo || undefined)); }
-        catch (err: any) { setPipelineError(err?.message ?? "Failed to load pipeline."); }
+        catch (err: unknown) { setPipelineError((err as Error).message ?? "Failed to load pipeline."); }
     };
 
     const handleInvite = async (ft: FirstTimer) => {
@@ -1261,7 +1264,7 @@ const FollowUpPage = () => {
                     {!pipeline && !isLoading && (
                         <div className="flex flex-col items-center justify-center py-16 text-center">
                             <TrendingUp className="w-10 h-10 text-[#8A817C]/30 mb-4" />
-                            <p className="text-sm font-light text-[#8A817C]">Click "Load Pipeline" to see the first-timer funnel.</p>
+                            <p className="text-sm font-light text-[#8A817C]">Click &quot;Load Pipeline&quot; to see the first-timer funnel.</p>
                         </div>
                     )}
 
