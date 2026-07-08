@@ -17,7 +17,6 @@
     "@tiptap/extension-underline": "^3.26.1",
     "@tiptap/react": "^3.26.1",
     "@tiptap/starter-kit": "^3.26.1",
-    "@types/dompurify": "^3.0.5",
     "axios": "^1.18.0",
     "isomorphic-dompurify": "^3.3.0",
     "lucide-react": "^1.17.0",
