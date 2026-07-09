@@ -97,7 +97,7 @@ function CreateEntryPanel({ isSubmitting, openPeriods, accounts, onClose, onSubm
                 lines: form.lines.map((l) => ({ accountId: l.accountId, entryType: l.entryType, amount: Number(l.amount) })),
             });
             onClose();
-        } catch (e: any) { setError(e.message); }
+        } catch (e: unknown) { setError((e as Error).message); }
     }
 
     return (
@@ -319,7 +319,7 @@ function EntryDetailPanel({ entry, isDetailLoading, isSubmitting, actionError, o
 
 export default withAuth(function JournalEntriesPage() {
     const {
-        entries, pagination, isLoading, isSubmitting, error, filters,
+        entries, pagination, isLoading, isSubmitting, error,
         goToPage, applyFilters, createEntry, fetchEntryById,
         approveEntry, rejectEntry, resubmitEntry, deleteEntry, voidEntry, refetch,
     } = useJournalEntries();
@@ -349,7 +349,7 @@ export default withAuth(function JournalEntriesPage() {
         try {
             await action();
             if (afterId) await openDetail(afterId);
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     return (
@@ -464,7 +464,7 @@ export default withAuth(function JournalEntriesPage() {
                         onVoid={async () => {
                             setActionError(null);
                             try { const u = await voidEntry(selected.id); await openDetail(u.id); }
-                            catch (e: any) { setActionError(e.message); }
+                            catch (e: unknown) { setActionError((e as Error).message); }
                         }}
                     />
                 )}

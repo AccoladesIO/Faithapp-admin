@@ -845,7 +845,7 @@ export function WelcomeTour({ onClose }: Readonly<{ onClose: () => void }>) {
                         Admin Portal Guide
                     </h2>
                     <p className="text-xs text-[#8A817C] font-light mt-1">
-                        Here's a quick look at what you can do from here.
+                        Here&apos;s a quick look at what you can do from here.
                     </p>
                 </div>
 
@@ -913,7 +913,7 @@ export function HelpDrawer({
             />
 
             {/* Drawer */}
-            <div className="fixed right-0 top-0 bottom-0 w-80 bg-[#FFFFFF] border-l border-[#121212]/10 z-50 flex flex-col shadow-2xl">
+            <div className="fixed right-0 top-0 bottom-0 w-full max-w-80 bg-[#FFFFFF] border-l border-[#121212]/10 z-50 flex flex-col shadow-2xl">
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-[#121212]/5 shrink-0">
                     <div>

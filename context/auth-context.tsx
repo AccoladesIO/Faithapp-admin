@@ -25,9 +25,11 @@ type AuthState = {
     permissions: string[];
     adminName: string | null;
     adminRoleName: string | null;
+    profileError: boolean;
     hasPermission: (perm: string) => boolean;
     login: (email: string, password: string) => Promise<LoginResult & { permissions: string[] }>;
     logout: () => Promise<void>;
+    retryProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -46,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [permissions, setPermissions] = useState<string[]>([]);
     const [adminName, setAdminName] = useState<string | null>(null);
     const [adminRoleName, setAdminRoleName] = useState<string | null>(null);
+    const [profileError, setProfileError] = useState(false);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const router = useRouter();
 
@@ -68,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return perms;
         } catch {
             log("⚠️  Could not load admin profile — permissions unavailable");
+            setProfileError(true);
             return [];
         }
     }, []);
@@ -102,7 +106,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (t) {
                 const expiresAt = new Date(t.expiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
                 log("🔑 Token stored", `expires at ${expiresAt}`);
-                setIsAuthenticated(true);
                 scheduleRefresh();
             } else {
                 log("🚪 Token cleared — user is unauthenticated");
@@ -128,10 +131,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
     }, [fetchAdminProfile]);
 
+    const retryProfile = useCallback(async () => {
+        setProfileError(false);
+        await fetchAdminProfile();
+    }, [fetchAdminProfile]);
+
     const login = useCallback(async (email: string, password: string) => {
         log("🔐 Login attempt...");
         const result = await authService.login(email, password);
         const perms = await fetchAdminProfile();
+        setIsAuthenticated(true);
         return { ...result, permissions: perms };
     }, [fetchAdminProfile]);
 
@@ -148,7 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const hasPermission = useCallback((perm: string) => permissions.includes(perm), [permissions]);
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, isLoading, permissions, adminName, adminRoleName, hasPermission, login, logout }}>
+        <AuthContext.Provider value={{ isAuthenticated, isLoading, permissions, adminName, adminRoleName, profileError, hasPermission, login, logout, retryProfile }}>
             {children}
         </AuthContext.Provider>
     );

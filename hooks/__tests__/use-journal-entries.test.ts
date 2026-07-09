@@ -153,7 +153,7 @@ describe("useJournalEntries", () => {
 
         let caught: Error | undefined;
         await act(async () => {
-            try { await result.current.fetchEntryById("bad-id"); } catch (e: any) { caught = e; }
+            try { await result.current.fetchEntryById("bad-id"); } catch (e: unknown) { caught = e as Error; }
         });
 
         expect(caught?.message).toBe("Entry not found");

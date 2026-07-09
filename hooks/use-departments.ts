@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export interface DepartmentLead {
     id: string;
     firstname: string;
@@ -92,10 +94,11 @@ export function useDepartments() {
                     totalPages: outer.totalPages,
                 });
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to fetch departments."
             );
         } finally {
@@ -123,10 +126,11 @@ export function useDepartments() {
             const created: Department = res.data?.data;
             setDepartments((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to create department.";
             setError(message);
             throw new Error(message);
@@ -148,10 +152,11 @@ export function useDepartments() {
                 prev.map((d) => (d.id === departmentId ? updated : d))
             );
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to update department.";
             setError(message);
             throw new Error(message);
@@ -168,10 +173,11 @@ export function useDepartments() {
         try {
             await api.delete(`/departments/${departmentId}`);
             setDepartments((prev) => prev.filter((d) => d.id !== departmentId));
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to delete department.";
             setError(message);
             throw new Error(message);
@@ -188,10 +194,11 @@ export function useDepartments() {
         try {
             await api.post("/departments/assign-lead", payload);
             await fetchDepartments();
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to assign lead.";
             setError(message);
             throw new Error(message);
@@ -208,10 +215,11 @@ export function useDepartments() {
         try {
             await api.post("/departments/remove-lead", payload);
             await fetchDepartments();
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to remove lead.";
             setError(message);
             throw new Error(message);
@@ -241,10 +249,11 @@ export function useDepartments() {
         try {
             const res = await api.post(`/departments/${departmentId}/bulk-assign`, payload);
             return res.data?.data as BulkAssignDepartmentResult;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to bulk assign department.";
             setError(message);
             throw new Error(message);

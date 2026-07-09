@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type AuditAction =
     | "ADMIN_CREATED" | "MEMBER_SIGNED_UP" | "MEMBER_LOGIN" | "MEMBER_LOGOUT" | "ADMIN_LOGIN"
     | "PASSWORD_CHANGED" | "PASSWORD_RESET_REQUESTED" | "PASSWORD_RESET_COMPLETED" | "ADMIN_PASSWORD_RESET"
@@ -78,8 +80,9 @@ export function useAuditLogs(defaultLimit = 20) {
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch audit logs.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch audit logs.");
         } finally {
             setIsLoading(false);
         }

@@ -2,7 +2,8 @@
 
 import { DismissibleError } from "@/components/ui/dismissible-error";
 
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef } from "react";
+import Image from "next/image";
 import { withAuth } from "@/utils/auth/with-auth";
 import {
     X,
@@ -41,6 +42,8 @@ import {
     TitheRecordFilters,
     TitheMemberRef,
 } from "@/hooks/use-tithes";
+
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
 
 type Tab = "accounts" | "records" | "upload" | "unmatched" | "disputes" | "proofs";
 
@@ -270,8 +273,9 @@ function AccountsTab() {
                 setSuccess("Account created.");
                 resetForm();
             }
-        } catch (err: any) {
-            setFormError(err?.message ?? "Failed.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setFormError(e?.message ?? "Failed.");
         }
     };
 
@@ -617,8 +621,9 @@ function UploadTab() {
             const result = await uploadBatch(fd);
             setUploadResult(result);
             setFile(null);
-        } catch (err: any) {
-            setFormError(err?.message ?? "Upload failed.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setFormError(e?.message ?? "Upload failed.");
         }
     };
 
@@ -824,7 +829,8 @@ function UnmatchedTab() {
         try {
             await matchUnmatched(selected.id, selectedMemberId);
             setSelected(null);
-        } catch (err: any) { setActionError(err?.message ?? "Match failed."); }
+        } catch (err: unknown) { const e = err as ApiError;
+ setActionError(e?.message ?? "Match failed."); }
     };
 
     const handleDismiss = async () => {
@@ -834,7 +840,8 @@ function UnmatchedTab() {
             await dismissUnmatched(selected.id);
             setSelected(null);
             setConfirmDismiss(false);
-        } catch (err: any) { setActionError(err?.message ?? "Dismiss failed."); }
+        } catch (err: unknown) { const e = err as ApiError;
+ setActionError(e?.message ?? "Dismiss failed."); }
     };
 
     const tableColSpan = selected ? "lg:col-span-7" : "lg:col-span-12";
@@ -1029,7 +1036,8 @@ function DisputesTab() {
         try {
             await approveDispute(selected.id);
             setSelected(null);
-        } catch (err: any) { setActionError(err?.message ?? "Approve failed."); }
+        } catch (err: unknown) { const e = err as ApiError;
+ setActionError(e?.message ?? "Approve failed."); }
     };
 
     const handleReject = async () => {
@@ -1038,7 +1046,8 @@ function DisputesTab() {
         try {
             await rejectDispute(selected.id);
             setSelected(null);
-        } catch (err: any) { setActionError(err?.message ?? "Reject failed."); }
+        } catch (err: unknown) { const e = err as ApiError;
+ setActionError(e?.message ?? "Reject failed."); }
     };
 
     const tableColSpan = selected ? "lg:col-span-7" : "lg:col-span-12";
@@ -1213,7 +1222,8 @@ function ProofsTab() {
         try {
             await confirmProof(selected.id);
             setSelected(null);
-        } catch (err: any) { setActionError(err?.message ?? "Confirm failed."); }
+        } catch (err: unknown) { const e = err as ApiError;
+ setActionError(e?.message ?? "Confirm failed."); }
     };
 
     const handleDecline = async () => {
@@ -1224,7 +1234,8 @@ function ProofsTab() {
             setSelected(null);
             setFinanceNote("");
             setShowDeclineForm(false);
-        } catch (err: any) { setActionError(err?.message ?? "Decline failed."); }
+        } catch (err: unknown) { const e = err as ApiError;
+ setActionError(e?.message ?? "Decline failed."); }
     };
 
     const tableColSpan = selected ? "lg:col-span-7" : "lg:col-span-12";
@@ -1314,10 +1325,12 @@ function ProofsTab() {
 
                         {selected.proofUrl && (
                             <div className="rounded-xl overflow-hidden border border-[#121212]/10">
-                                <img
+                                <Image
                                     src={selected.proofUrl}
                                     alt="Payment proof"
                                     className="w-full object-contain max-h-56"
+                                    width={400}
+                                    height={224}
                                 />
                             </div>
                         )}

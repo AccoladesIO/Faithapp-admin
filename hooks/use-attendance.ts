@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 // ─── History types ────────────────────────────────────────────────────────────
 
 export interface AttendanceLocation {
@@ -164,10 +166,11 @@ export function useAttendanceHistory(initialLimit = 10) {
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to fetch attendance history."
             );
         } finally {
@@ -226,16 +229,16 @@ export function useAttendanceLeaderboard(initialDaysAgo = 30, initialLimit = 10)
             setLeaderboard(list);
             setDaysAgo(targetDaysAgo);
             setLimit(targetLimit);
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to fetch leaderboard."
             );
         } finally {
             setIsLoading(false);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [daysAgo, limit]);
 
     const changeDaysAgo = useCallback((value: number) => {
@@ -293,8 +296,9 @@ export function useAttendanceAdmin() {
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch at-risk members.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch at-risk members.");
         } finally {
             setIsLoading(false);
         }
@@ -306,8 +310,9 @@ export function useAttendanceAdmin() {
         try {
             const res = await api.get(`/attendances/summary/slot/${slotId}`);
             return res.data?.data as SlotSummary;
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to fetch slot summary.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to fetch slot summary.";
             setError(message);
             throw new Error(message);
         } finally {
@@ -320,8 +325,9 @@ export function useAttendanceAdmin() {
         setError(null);
         try {
             await api.patch(`/attendances/${id}/correct`, { status });
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to correct attendance.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to correct attendance.";
             setError(message);
             throw new Error(message);
         } finally {

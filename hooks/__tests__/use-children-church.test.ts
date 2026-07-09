@@ -11,7 +11,6 @@ const mockGet = api.get as jest.MockedFunction<typeof api.get>;
 const mockPost = api.post as jest.MockedFunction<typeof api.post>;
 
 const ageGroup = { id: "ag1", name: "Nursery", minAge: 0, maxAge: 2, createdAt: "", updatedAt: "" };
-const classGroup = { id: "cg1", name: "Nursery A", ageGroup, teacherCount: 1, createdAt: "", updatedAt: "" };
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -39,7 +38,7 @@ describe("useChildrenChurch — recomputeAgeGroups", () => {
 
         let caught: Error | undefined;
         await act(async () => {
-            try { await result.current.recomputeAgeGroups(); } catch (e: any) { caught = e; }
+            try { await result.current.recomputeAgeGroups(); } catch (e: unknown) { caught = e as Error; }
         });
 
         expect(caught?.message).toBe("Config not set");

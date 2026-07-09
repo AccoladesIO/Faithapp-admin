@@ -1,6 +1,15 @@
 import { api, commitAuthPayload, refreshAccessToken, AuthPayload } from "./axios-client";
 import { tokenStore } from "./token-store";
 
+declare module 'axios' {
+    interface InternalAxiosRequestConfig {
+        _skipAuth?: boolean;
+    }
+    interface AxiosRequestConfig {
+        _skipAuth?: boolean;
+    }
+}
+
 export type LoginResult = {
     requiresPasswordChange: boolean;
 };
@@ -15,13 +24,7 @@ export class VerifyUser {
             return;
         }
 
-        // No session at all
-        if (!current?.refreshToken) {
-            callback(false);
-            return;
-        }
-
-        // Reload case — refresh token in sessionStorage, access token gone
+        // No in-memory session — attempt refresh; httpOnly cookie is sent automatically
         refreshAccessToken()
             .then(() => callback(true))
             .catch(() => callback(false));
@@ -35,7 +38,7 @@ export class VerifyUser {
         const res = await api.post(
             "/auth/admin-login",
             { email, password },
-            { _skipAuth: true } as any
+            { _skipAuth: true }
         );
         const payload: AuthPayload = res.data?.data;
         if (!payload?.access_token) {
@@ -46,11 +49,11 @@ export class VerifyUser {
     }
 
     async forgotPassword(email: string): Promise<void> {
-        await api.post("/auth/forgot-password", { email }, { _skipAuth: true } as any);
+        await api.post("/auth/forgot-password", { email }, { _skipAuth: true });
     }
 
     async resetPassword(email: string, otp: string, newPassword: string): Promise<void> {
-        await api.post("/auth/reset-password", { email, otp, newPassword }, { _skipAuth: true } as any);
+        await api.post("/auth/reset-password", { email, otp, newPassword }, { _skipAuth: true });
     }
 
     async changePassword(oldPassword: string, newPassword: string, confirmPassword: string): Promise<void> {
@@ -73,7 +76,7 @@ export class VerifyUser {
                     headers: {
                         Authorization: `Bearer ${current.accessToken}`,
                     },
-                } as any
+                }
             );
         } catch {
         } finally {

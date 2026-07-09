@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type CurrencyCode = "NGN" | "USD" | "GBP" | "EUR";
 export type TitheBatchStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 export type TitheUnmatchedStatus = "PENDING" | "MATCHED" | "DISMISSED";
@@ -157,8 +159,9 @@ export function useTitheAccounts() {
             const res = await api.get("/admin/tithes/accounts");
             const list: TitheAccount[] = Array.isArray(res.data?.data) ? res.data.data : [];
             setAccounts(list);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch tithe accounts.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch tithe accounts.");
         } finally {
             setIsLoading(false);
         }
@@ -173,8 +176,9 @@ export function useTitheAccounts() {
                 const created: TitheAccount = res.data?.data;
                 fetchAccounts();
                 return created;
-            } catch (err: any) {
-                const message = err?.response?.data?.message || err?.message || "Failed to create tithe account.";
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                const message = e?.response?.data?.message || e?.message || "Failed to create tithe account.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -193,8 +197,9 @@ export function useTitheAccounts() {
                 const updated: TitheAccount = res.data?.data;
                 setAccounts((prev) => prev.map((a) => (a.id === id ? { ...a, ...updated } : a)));
                 return updated;
-            } catch (err: any) {
-                const message = err?.response?.data?.message || err?.message || "Failed to update tithe account.";
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                const message = e?.response?.data?.message || e?.message || "Failed to update tithe account.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -269,8 +274,9 @@ export function useTitheBatches(defaultLimit = 20) {
                     totalCount: outer?.totalCount ?? list.length,
                     totalPages: outer?.totalPages ?? 1,
                 });
-            } catch (err: any) {
-                setError(err?.response?.data?.message || err?.message || "Failed to fetch batches.");
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                setError(e?.response?.data?.message || e?.message || "Failed to fetch batches.");
             } finally {
                 setIsLoading(false);
             }
@@ -308,8 +314,9 @@ export function useTitheBatches(defaultLimit = 20) {
                 });
                 fetchBatches(1, statusFilter);
                 return res.data?.data;
-            } catch (err: any) {
-                const message = err?.response?.data?.message || err?.message || "Failed to upload batch.";
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                const message = e?.response?.data?.message || e?.message || "Failed to upload batch.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -326,8 +333,9 @@ export function useTitheBatches(defaultLimit = 20) {
             try {
                 await api.post(`/admin/tithes/batches/${id}/requeue`);
                 fetchBatches(page, statusFilter);
-            } catch (err: any) {
-                const message = err?.response?.data?.message || err?.message || "Failed to requeue batch.";
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                const message = e?.response?.data?.message || e?.message || "Failed to requeue batch.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -388,8 +396,9 @@ export function useTitheUnmatched(defaultLimit = 20) {
                     totalCount: outer?.totalCount ?? list.length,
                     totalPages: outer?.totalPages ?? 1,
                 });
-            } catch (err: any) {
-                setError(err?.response?.data?.message || err?.message || "Failed to fetch unmatched records.");
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                setError(e?.response?.data?.message || e?.message || "Failed to fetch unmatched records.");
             } finally {
                 setIsLoading(false);
             }
@@ -427,8 +436,9 @@ export function useTitheUnmatched(defaultLimit = 20) {
             try {
                 await api.post(`/admin/tithes/unmatched/${id}/match`, { memberId });
                 fetchUnmatched(page, statusFilter, search);
-            } catch (err: any) {
-                const message = err?.response?.data?.message || err?.message || "Failed to match record.";
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                const message = e?.response?.data?.message || e?.message || "Failed to match record.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -445,8 +455,9 @@ export function useTitheUnmatched(defaultLimit = 20) {
             try {
                 await api.post(`/admin/tithes/unmatched/${id}/dismiss`);
                 fetchUnmatched(page, statusFilter, search);
-            } catch (err: any) {
-                const message = err?.response?.data?.message || err?.message || "Failed to dismiss record.";
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                const message = e?.response?.data?.message || e?.message || "Failed to dismiss record.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -508,8 +519,9 @@ export function useTitheDisputes(defaultLimit = 20) {
                     totalCount: outer?.totalCount ?? list.length,
                     totalPages: outer?.totalPages ?? 1,
                 });
-            } catch (err: any) {
-                setError(err?.response?.data?.message || err?.message || "Failed to fetch disputes.");
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                setError(e?.response?.data?.message || e?.message || "Failed to fetch disputes.");
             } finally {
                 setIsLoading(false);
             }
@@ -547,8 +559,9 @@ export function useTitheDisputes(defaultLimit = 20) {
             try {
                 await api.post(`/admin/tithes/disputes/${id}/approve`);
                 fetchDisputes(page, statusFilter, search);
-            } catch (err: any) {
-                const message = err?.response?.data?.message || err?.message || "Failed to approve dispute.";
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                const message = e?.response?.data?.message || e?.message || "Failed to approve dispute.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -565,8 +578,9 @@ export function useTitheDisputes(defaultLimit = 20) {
             try {
                 await api.post(`/admin/tithes/disputes/${id}/reject`);
                 fetchDisputes(page, statusFilter, search);
-            } catch (err: any) {
-                const message = err?.response?.data?.message || err?.message || "Failed to reject dispute.";
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                const message = e?.response?.data?.message || e?.message || "Failed to reject dispute.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -628,8 +642,9 @@ export function useTitheProofs(defaultLimit = 20) {
                     totalCount: outer?.totalCount ?? list.length,
                     totalPages: outer?.totalPages ?? 1,
                 });
-            } catch (err: any) {
-                setError(err?.response?.data?.message || err?.message || "Failed to fetch proofs.");
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                setError(e?.response?.data?.message || e?.message || "Failed to fetch proofs.");
             } finally {
                 setIsLoading(false);
             }
@@ -667,8 +682,9 @@ export function useTitheProofs(defaultLimit = 20) {
             try {
                 await api.post(`/admin/tithes/proofs/${id}/confirm`);
                 fetchProofs(page, statusFilter, search);
-            } catch (err: any) {
-                const message = err?.response?.data?.message || err?.message || "Failed to confirm proof.";
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                const message = e?.response?.data?.message || e?.message || "Failed to confirm proof.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -685,8 +701,9 @@ export function useTitheProofs(defaultLimit = 20) {
             try {
                 await api.post(`/admin/tithes/proofs/${id}/decline`, { financeNote });
                 fetchProofs(page, statusFilter, search);
-            } catch (err: any) {
-                const message = err?.response?.data?.message || err?.message || "Failed to decline proof.";
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                const message = e?.response?.data?.message || e?.message || "Failed to decline proof.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -750,8 +767,9 @@ export function useTitheRecords(defaultLimit = 20) {
                     totalCount: outer?.totalCount ?? list.length,
                     totalPages: outer?.totalPages ?? 1,
                 });
-            } catch (err: any) {
-                setError(err?.response?.data?.message || err?.message || "Failed to fetch tithe records.");
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                setError(e?.response?.data?.message || e?.message || "Failed to fetch tithe records.");
             } finally {
                 setIsLoading(false);
             }

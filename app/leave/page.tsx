@@ -8,6 +8,8 @@ import {
 import { useLeave, LeaveRequest, LeaveStatus } from "@/hooks/use-leave";
 import { DismissibleError } from "@/components/ui/dismissible-error";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fullName = (m: Readonly<{ firstname: string; lastname: string }>) =>
@@ -115,8 +117,9 @@ function LeavePage() {
         try {
             await actionLeave(selected.id, status);
             closePanel();
-        } catch (e: any) {
-            setActionError(e?.message || "Action failed.");
+        } catch (e: unknown) {
+            const apiErr = e as ApiError;
+            setActionError(apiErr?.message || "Action failed.");
         }
     };
 

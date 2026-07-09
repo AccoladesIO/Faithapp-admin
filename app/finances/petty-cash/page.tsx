@@ -62,19 +62,19 @@ export default withAuth(function PettyCashPage() {
             await createReplenishment({ ...form, notes: form.notes || undefined });
             setShowCreate(false);
             setForm({ fromAccountId: "", toCashAccountId: "", amount: 0, notes: "" });
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     async function handleApprove(id: string) {
         setActionError(null);
         try { const u = await approveReplenishment(id); setSelected(u); }
-        catch (e: any) { setActionError(e.message); }
+        catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     async function handleReject(id: string) {
         setActionError(null);
         try { const u = await rejectReplenishment(id); setSelected(u); }
-        catch (e: any) { setActionError(e.message); }
+        catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     const pendingCount = replenishments.filter((r) => r.status === "PENDING").length;

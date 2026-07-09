@@ -10,7 +10,7 @@ import { withAuth } from "@/utils/auth/with-auth";
 import { useServiceProgramme, ServiceProgramme, ServiceProgrammeSlot } from "@/hooks/use-service-programme";
 import { DismissibleError } from "@/components/ui/dismissible-error";
 import {
-    useServiceSession, SessionAnchor, PauseReason,
+    useServiceSession, PauseReason,
     PAUSE_REASON_LABELS, calcElapsedSeconds, formatMMSS,
 } from "@/hooks/use-service-session";
 
@@ -33,7 +33,7 @@ interface SessionRunnerProps {
 
 function SessionRunner({ programme, onEnded }: SessionRunnerProps) {
     const {
-        anchor, session, isSubmitting, error, clearError,
+        anchor, session, isSubmitting, error,
         fetchLatestSession, fetchState, advance, rewind,
         pauseSession, resumeSession, endSession,
     } = useServiceSession();
@@ -57,7 +57,7 @@ function SessionRunner({ programme, onEnded }: SessionRunnerProps) {
         if (!anchor || anchor.isPaused) return;
         const id = setInterval(() => setNowMs(Date.now()), 1000);
         return () => clearInterval(id);
-    }, [anchor?.isPaused]);
+    }, [anchor]);
 
     const slots: ServiceProgrammeSlot[] = programme.slots ?? [];
     const currentSlot = anchor ? slots.find((s) => s.position === anchor.currentSlotPosition) : null;
@@ -282,7 +282,7 @@ function SessionRunner({ programme, onEnded }: SessionRunnerProps) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 const LiveSessionPage = () => {
-    const { programmes, isLoading, error, clearError, fetchProgrammes } = useServiceProgramme();
+    const { programmes, isLoading, error, fetchProgrammes } = useServiceProgramme();
     const [tick, setTick] = useState(0);
 
     useEffect(() => { fetchProgrammes(1); }, [fetchProgrammes]);

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export interface ChurchSetting {
     key: string;
     moduleName: string;
@@ -21,10 +23,11 @@ export function useChurchSettings() {
             const res = await api.get("/admin/settings");
             const data: ChurchSetting[] = res.data?.data ?? res.data ?? [];
             setSettings(Array.isArray(data) ? data : []);
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to load module settings."
             );
         } finally {
@@ -42,10 +45,11 @@ export function useChurchSettings() {
                 prev.map((s) => (s.key === key ? { ...s, ...updated } : s))
             );
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to update module setting.";
             setError(message);
             throw new Error(message);

@@ -12,6 +12,8 @@ import { useAssets, Asset, AssetStatus, CreateAssetDto, AssetCheckout } from "@/
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { DismissibleError } from "@/components/ui/dismissible-error";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_LABELS: Record<AssetStatus, string> = {
@@ -117,8 +119,9 @@ function AssetFormModal({ initial, onClose, onSave, isSubmitting }: AssetFormMod
         try {
             await onSave(formToDto(form));
             onClose();
-        } catch (ex: any) {
-            setErr(ex?.message || "Something went wrong.");
+        } catch (ex: unknown) {
+            const apiErr = ex as ApiError;
+            setErr(apiErr?.message || "Something went wrong.");
         }
     };
 
@@ -332,7 +335,7 @@ function ActiveCheckoutsPanel() {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default withAuth(function InventoryPage() {
-    const { assets, pagination, isLoading, isSubmitting, error, clearError, fetchAssets, createAsset, updateAsset, goToPage } = useAssets(20);
+    const { assets, pagination, isLoading, isSubmitting, error, fetchAssets, createAsset, updateAsset, goToPage } = useAssets(20);
 
     const [tab, setTab] = useState<Tab>("assets");
     const [search, setSearch] = useState("");

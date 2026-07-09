@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export interface ServiceHeadcount {
     id: string;
     serviceSlotId: string;
@@ -89,10 +91,11 @@ export function useServiceHeadcount(defaultLimit = 10) {
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to fetch headcount records."
             );
         } finally {
@@ -112,10 +115,11 @@ export function useServiceHeadcount(defaultLimit = 10) {
             const created: ServiceHeadcount = res.data?.data;
             setRecords((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to create headcount record.";
             setError(message);
             throw new Error(message);
@@ -137,10 +141,11 @@ export function useServiceHeadcount(defaultLimit = 10) {
             const updated: ServiceHeadcount = res.data?.data;
             setRecords((prev) => prev.map((r) => (r.id === id ? updated : r)));
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to update headcount record.";
             setError(message);
             throw new Error(message);
@@ -164,7 +169,7 @@ export function useServiceHeadcount(defaultLimit = 10) {
     const fetchSlots = useCallback(async (): Promise<ServiceSlotOption[]> => {
         try {
             const res = await api.get("/events?page=1&limit=100");
-            const events: any[] = res.data?.data?.data ?? [];
+            const events: { name?: string; eventDate?: string; serviceSlots?: { id: string; name: string }[] }[] = res.data?.data?.data ?? [];
             const slots: ServiceSlotOption[] = [];
             for (const event of events) {
                 const slotList = Array.isArray(event.serviceSlots) ? event.serviceSlots : [];

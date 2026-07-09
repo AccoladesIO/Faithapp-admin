@@ -4,9 +4,12 @@ import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/context/auth-context";
 import { ToastProvider } from "@/context/toast-context";
 
+const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? "Administrative Portal";
+const churchName = process.env.NEXT_PUBLIC_CHURCH_NAME ?? "Your Church";
+
 export const metadata: Metadata = {
-  title: "Faith App by RCCGDC",
-  description: "Faith app by RCCGDC for church members, events, and community engagement.",
+  title: `${productName} — ${churchName}`,
+  description: `Administrative portal for ${churchName} — manage members, events, and community engagement.`,
   // manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type ReconciliationJobStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 export type RowStatus = "PENDING" | "CONFIRMED" | "SKIPPED" | "POSTED";
 
@@ -53,8 +55,9 @@ export function useReconciliation() {
             const res = await api.get("/admin/finance/reconciliation/jobs");
             const outer = res.data?.data;
             setJobs(Array.isArray(outer) ? outer : (outer?.data ?? []));
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch reconciliation jobs.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch reconciliation jobs.");
         } finally {
             setIsLoading(false);
         }
@@ -66,8 +69,9 @@ export function useReconciliation() {
         try {
             const res = await api.get(`/admin/finance/reconciliation/jobs/${jobId}/rows`);
             setRows(res.data?.data ?? []);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch rows.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch rows.");
         } finally {
             setIsRowsLoading(false);
         }
@@ -98,9 +102,10 @@ export function useReconciliation() {
                 const created: ReconciliationJob = res.data?.data;
                 setJobs((prev) => [created, ...prev]);
                 return created;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to upload bank statement.";
+                    e?.response?.data?.message || e?.message || "Failed to upload bank statement.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -122,9 +127,10 @@ export function useReconciliation() {
                 const updated: ReconciliationRow = res.data?.data;
                 setRows((prev) => prev.map((r) => (r.id === rowId ? updated : r)));
                 return updated;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to confirm row.";
+                    e?.response?.data?.message || e?.message || "Failed to confirm row.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -145,9 +151,10 @@ export function useReconciliation() {
                 const updated: ReconciliationRow = res.data?.data;
                 setRows((prev) => prev.map((r) => (r.id === rowId ? updated : r)));
                 return updated;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to skip row.";
+                    e?.response?.data?.message || e?.message || "Failed to skip row.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -164,8 +171,9 @@ export function useReconciliation() {
             try {
                 await api.post(`/admin/finance/reconciliation/jobs/${jobId}/bulk-confirm`, { rowIds, accountId });
                 if (selectedJobId === jobId) fetchRows(jobId);
-            } catch (err: any) {
-                const message = err?.response?.data?.message || err?.message || "Failed to bulk confirm rows.";
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                const message = e?.response?.data?.message || e?.message || "Failed to bulk confirm rows.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -186,9 +194,10 @@ export function useReconciliation() {
                 );
                 fetchJobs();
                 if (selectedJobId === jobId) fetchRows(jobId);
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to post confirmed rows.";
+                    e?.response?.data?.message || e?.message || "Failed to post confirmed rows.";
                 setError(message);
                 throw new Error(message);
             } finally {

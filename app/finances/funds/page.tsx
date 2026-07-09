@@ -35,7 +35,7 @@ export default withAuth(function FundsPage() {
             await createFund({ ...form, description: form.description || undefined });
             setShowCreate(false);
             setForm({ name: "", type: "UNRESTRICTED", description: "" });
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     async function handleUpdate() {
@@ -44,7 +44,7 @@ export default withAuth(function FundsPage() {
         try {
             await updateFund(editing.id, editForm);
             setEditing(null);
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     function openEdit(f: Fund) {

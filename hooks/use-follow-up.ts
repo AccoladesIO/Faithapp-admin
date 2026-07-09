@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type FirstTimerSourceEnum = "WALK_IN" | "ONLINE" | "REFERRAL";
 export type FollowUpTaskStatusEnum = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "UNREACHABLE";
 export type FollowUpTaskTypeEnum = "FIRST_TIMER" | "ONLINE_NO_RESPONSE" | "MANUAL";
@@ -171,8 +173,9 @@ export function useFollowUp(defaultLimit = 10) {
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch first timers.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch first timers.");
         } finally {
             setIsLoading(false);
         }
@@ -186,8 +189,9 @@ export function useFollowUp(defaultLimit = 10) {
             const created: FirstTimer = res.data?.data;
             setFirstTimers((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to create first timer.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to create first timer.";
             setError(message);
             throw new Error(message);
         } finally {
@@ -221,8 +225,9 @@ export function useFollowUp(defaultLimit = 10) {
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch tasks.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch tasks.");
         } finally {
             setIsLoading(false);
         }
@@ -254,8 +259,9 @@ export function useFollowUp(defaultLimit = 10) {
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch stale tasks.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch stale tasks.");
         } finally {
             setIsLoading(false);
         }
@@ -276,8 +282,9 @@ export function useFollowUp(defaultLimit = 10) {
                 })
             );
             return result;
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to bulk update tasks.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to bulk update tasks.";
             setError(message);
             throw new Error(message);
         } finally {
@@ -290,8 +297,9 @@ export function useFollowUp(defaultLimit = 10) {
         setError(null);
         try {
             await api.patch(`/admin/follow-up/tasks/${taskId}/reassign`, { workerProfileId });
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to reassign task.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to reassign task.";
             setError(message);
             throw new Error(message);
         } finally {
@@ -307,8 +315,9 @@ export function useFollowUp(defaultLimit = 10) {
             const updated: FollowUpTask = res.data?.data;
             setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, ...updated } : t));
             return updated;
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to update task.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to update task.";
             setError(message);
             throw new Error(message);
         } finally {
@@ -322,8 +331,9 @@ export function useFollowUp(defaultLimit = 10) {
         try {
             const res = await api.get(`/admin/follow-up/report?from=${from}&to=${to}`);
             return res.data?.data as FollowUpReport;
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to fetch report.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to fetch report.";
             setError(message);
             throw new Error(message);
         } finally {
@@ -342,8 +352,9 @@ export function useFollowUp(defaultLimit = 10) {
             const pipelineUrl = query ? `/admin/follow-up/first-timers/pipeline?${query}` : "/admin/follow-up/first-timers/pipeline";
             const res = await api.get(pipelineUrl);
             return res.data?.data as PipelineReport;
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to fetch pipeline.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to fetch pipeline.";
             setError(message);
             throw new Error(message);
         } finally {
@@ -357,8 +368,9 @@ export function useFollowUp(defaultLimit = 10) {
         try {
             const res = await api.post(`/admin/follow-up/first-timers/${firstTimerId}/visits`, dto);
             return res.data?.data as FirstTimerVisit;
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to log return visit.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to log return visit.";
             setError(message);
             throw new Error(message);
         } finally {
@@ -374,8 +386,9 @@ export function useFollowUp(defaultLimit = 10) {
             setFirstTimers((prev) =>
                 prev.map((ft) => ft.id === id ? { ...ft, convertedAt: new Date().toISOString() } : ft)
             );
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to mark as converted.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to mark as converted.";
             setError(message);
             throw new Error(message);
         } finally {
@@ -391,8 +404,9 @@ export function useFollowUp(defaultLimit = 10) {
             setFirstTimers((prev) =>
                 prev.map((ft) => ft.id === id ? { ...ft, inviteSentAt: new Date().toISOString() } : ft)
             );
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to send invitation.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to send invitation.";
             setError(message);
             throw new Error(message);
         } finally {

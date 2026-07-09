@@ -15,6 +15,8 @@ import {
     DiscountType,
 } from "@/hooks/use-facility-rental";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 type Tab = "facilities" | "pricing-tiers" | "addons" | "calendar-blocks" | "bookings";
@@ -186,8 +188,9 @@ function FacilityPanel({ editing, isSubmitting, onClose, onSave }: FacilityPanel
                 isActive: form.isActive,
             });
             onClose();
-        } catch (ex: any) {
-            setErr(ex?.message || "Something went wrong.");
+        } catch (ex: unknown) {
+            const apiErr = ex as ApiError;
+            setErr(apiErr?.message || "Something went wrong.");
         }
     };
 
@@ -380,8 +383,9 @@ function TierPanel({ editing, existingCategories, isSubmitting, onClose, onSave 
         try {
             await onSave({ memberCategory: form.memberCategory, discountType: form.discountType, discountValue: Number(form.discountValue) });
             onClose();
-        } catch (ex: any) {
-            setErr(ex?.message || "Something went wrong.");
+        } catch (ex: unknown) {
+            const apiErr = ex as ApiError;
+            setErr(apiErr?.message || "Something went wrong.");
         }
     };
 
@@ -597,8 +601,9 @@ function AddonPanel({ editing, isSubmitting, onClose, onSave }: AddonPanelProps)
                 isActive: form.isActive,
             });
             onClose();
-        } catch (ex: any) {
-            setErr(ex?.message || "Something went wrong.");
+        } catch (ex: unknown) {
+            const apiErr = ex as ApiError;
+            setErr(apiErr?.message || "Something went wrong.");
         }
     };
 
@@ -777,8 +782,9 @@ function BlockPanel({ facilityId, isSubmitting, onClose, onSave }: BlockPanelPro
                 reason: form.reason.trim() || undefined,
             });
             onClose();
-        } catch (ex: any) {
-            setErr(ex?.message || "Something went wrong.");
+        } catch (ex: unknown) {
+            const apiErr = ex as ApiError;
+            setErr(apiErr?.message || "Something went wrong.");
         }
     };
 
@@ -956,8 +962,9 @@ function BookingDetailPanel({ booking, isSubmitting, onClose, onConfirm, onRejec
         try {
             await onConfirm(booking.id, confirmNotes.trim() || undefined);
             setShowConfirmNotes(false);
-        } catch (ex: any) {
-            setErr(ex?.message || "Failed to confirm.");
+        } catch (ex: unknown) {
+            const apiErr = ex as ApiError;
+            setErr(apiErr?.message || "Failed to confirm.");
         }
     };
 
@@ -967,8 +974,9 @@ function BookingDetailPanel({ booking, isSubmitting, onClose, onConfirm, onRejec
         try {
             await onReject(booking.id, rejectReason.trim());
             setShowRejectForm(false);
-        } catch (ex: any) {
-            setErr(ex?.message || "Failed to reject.");
+        } catch (ex: unknown) {
+            const apiErr = ex as ApiError;
+            setErr(apiErr?.message || "Failed to reject.");
         }
     };
 
@@ -984,8 +992,9 @@ function BookingDetailPanel({ booking, isSubmitting, onClose, onConfirm, onRejec
             setShowDiscountForm(false);
             setDiscountValue("");
             setDiscountNote("");
-        } catch (ex: any) {
-            setErr(ex?.message || "Failed to apply discount.");
+        } catch (ex: unknown) {
+            const apiErr = ex as ApiError;
+            setErr(apiErr?.message || "Failed to apply discount.");
         }
     };
 
@@ -993,8 +1002,9 @@ function BookingDetailPanel({ booking, isSubmitting, onClose, onConfirm, onRejec
         setErr(null);
         try {
             await onRemoveDiscount(booking.id);
-        } catch (ex: any) {
-            setErr(ex?.message || "Failed to remove discount.");
+        } catch (ex: unknown) {
+            const apiErr = ex as ApiError;
+            setErr(apiErr?.message || "Failed to remove discount.");
         }
     };
 

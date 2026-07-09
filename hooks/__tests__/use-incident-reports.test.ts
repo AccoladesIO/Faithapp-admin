@@ -224,7 +224,7 @@ describe("useIncidentReports", () => {
             const { result } = renderHook(() => useIncidentReports());
             await act(async () => { await result.current.fetchReports(1, {}); });
 
-            let resolveRef!: (v: any) => void;
+            let resolveRef!: (v: unknown) => void;
             mockPatch.mockReturnValue(new Promise((res) => { resolveRef = res; }));
 
             act(() => { result.current.updateStatus("rep-1", { status: "IN_PROGRESS" }); });

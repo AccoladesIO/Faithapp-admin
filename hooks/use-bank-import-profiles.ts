@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type AmountConvention = "SIGNED" | "SEPARATE_COLUMNS" | "AMOUNT_WITH_TYPE";
 
 export interface BankImportProfile {
@@ -66,8 +68,9 @@ export function useBankImportProfiles() {
         try {
             const res = await api.get("/admin/finance/bank-import-profiles");
             setProfiles(res.data?.data ?? []);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch import profiles.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch import profiles.");
         } finally {
             setIsLoading(false);
         }
@@ -81,8 +84,9 @@ export function useBankImportProfiles() {
             const created: BankImportProfile = res.data?.data;
             setProfiles((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to create profile.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to create profile.";
             setError(message);
             throw new Error(message);
         } finally {
@@ -98,8 +102,9 @@ export function useBankImportProfiles() {
             const updated: BankImportProfile = res.data?.data;
             setProfiles((prev) => prev.map((p) => (p.id === id ? updated : p)));
             return updated;
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to update profile.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to update profile.";
             setError(message);
             throw new Error(message);
         } finally {
@@ -118,8 +123,9 @@ export function useBankImportProfiles() {
             a.download = `${filename.replace(/\s+/g, "-").toLowerCase()}-template.csv`;
             a.click();
             URL.revokeObjectURL(url);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to download template.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to download template.");
         }
     }, []);
 

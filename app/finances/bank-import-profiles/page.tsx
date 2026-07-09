@@ -101,8 +101,8 @@ export default withAuth(function BankImportProfilesPage() {
                 await createProfile(form);
             }
             closePanel();
-        } catch (e: any) {
-            setActionError(e.message);
+        } catch (e: unknown) {
+            setActionError((e as Error).message);
         }
     }
 

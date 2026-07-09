@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export interface BudgetFund {
     id: string;
     name: string;
@@ -66,8 +68,9 @@ export function useBudgets() {
             const res = await api.get(`/admin/finance/budgets${params.size ? `?${params}` : ""}`);
             const outer = res.data?.data;
             setBudgets(Array.isArray(outer) ? outer : (outer?.data ?? []));
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch budgets.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch budgets.");
         } finally {
             setIsLoading(false);
         }
@@ -87,9 +90,10 @@ export function useBudgets() {
                 const created: Budget = res.data?.data;
                 setBudgets((prev) => [created, ...prev]);
                 return created;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to create budget.";
+                    e?.response?.data?.message || e?.message || "Failed to create budget.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -108,9 +112,10 @@ export function useBudgets() {
                 const updated: Budget = res.data?.data;
                 setBudgets((prev) => prev.map((b) => (b.id === id ? updated : b)));
                 return updated;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to update budget.";
+                    e?.response?.data?.message || e?.message || "Failed to update budget.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -128,8 +133,9 @@ export function useBudgets() {
             const updated: Budget = res.data?.data;
             setBudgets((prev) => prev.map((b) => (b.id === id ? updated : b)));
             return updated;
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to deactivate budget.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to deactivate budget.";
             setError(message);
             throw new Error(message);
         } finally {
@@ -145,8 +151,9 @@ export function useBudgets() {
             const updated: Budget = res.data?.data;
             setBudgets((prev) => prev.map((b) => (b.id === id ? updated : b)));
             return updated;
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to reactivate budget.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to reactivate budget.";
             setError(message);
             throw new Error(message);
         } finally {

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export interface WorkerDepartment {
     id: string;
     name: string;
@@ -92,10 +94,11 @@ export function useWorkers(defaultLimit = 10) {
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to fetch workers."
             );
         } finally {
@@ -127,10 +130,11 @@ export function useWorkers(defaultLimit = 10) {
                 prev.map((w) => (w.id === memberId ? { ...w, ...updated } : w))
             );
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to update worker profile.";
             setError(message);
             throw new Error(message);
@@ -145,10 +149,11 @@ export function useWorkers(defaultLimit = 10) {
         try {
             await api.post(`/members/${memberId}/revoke-worker`);
             setWorkers((prev) => prev.filter((w) => w.id !== memberId));
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to revoke worker role.";
             setError(message);
             throw new Error(message);
@@ -162,10 +167,11 @@ export function useWorkers(defaultLimit = 10) {
         setError(null);
         try {
             await api.delete(`/members/${memberId}/device`);
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to purge device token.";
             setError(message);
             throw new Error(message);

@@ -16,8 +16,11 @@ import {
     SSSession,
     SSAttendance,
     SSMember,
+    SSPagination,
     AttendanceStatus,
 } from "@/hooks/use-sunday-school";
+
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -99,9 +102,9 @@ function SundaySchoolPage() {
 
     // ── Class panel ───────────────────────────────────────────────────────────
     const [selectedClass, setSelectedClass] = useState<SSClass | null>(null);
-    const [classPanel, setClassPanel] = useState<"members" | null>(null);
+    const [, setClassPanel] = useState<"members" | null>(null);
     const [classMembers, setClassMembers] = useState<SSMember[]>([]);
-    const [membersPagination, setMembersPagination] = useState<any>(null);
+    const [membersPagination, setMembersPagination] = useState<SSPagination | null>(null);
     const [membersPage, setMembersPage] = useState(1);
     const [membersLoading, setMembersLoading] = useState(false);
     const [addMemberId, setAddMemberId] = useState("");
@@ -191,8 +194,9 @@ function SundaySchoolPage() {
             setShowCreateClass(false);
             setClassFormMsg({ type: "ok", text: "Class created." });
             setTimeout(() => setClassFormMsg(null), 3000);
-        } catch (err: any) {
-            setClassFormMsg({ type: "err", text: err?.message ?? "Failed to create class." });
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setClassFormMsg({ type: "err", text: e?.message ?? "Failed to create class." });
         }
     };
 
@@ -232,8 +236,9 @@ function SundaySchoolPage() {
             setMemberActionMsg({ type: "ok", text: "Member added." });
             loadClassMembers(selectedClass.id, membersPage);
             setTimeout(() => setMemberActionMsg(null), 3000);
-        } catch (err: any) {
-            setMemberActionMsg({ type: "err", text: err?.message ?? "Failed to add member." });
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setMemberActionMsg({ type: "err", text: e?.message ?? "Failed to add member." });
         }
     };
 
@@ -245,8 +250,9 @@ function SundaySchoolPage() {
             setMemberActionMsg({ type: "ok", text: "Member removed." });
             loadClassMembers(selectedClass.id, membersPage);
             setTimeout(() => setMemberActionMsg(null), 3000);
-        } catch (err: any) {
-            setMemberActionMsg({ type: "err", text: err?.message ?? "Failed to remove member." });
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setMemberActionMsg({ type: "err", text: e?.message ?? "Failed to remove member." });
         }
     };
 
@@ -264,8 +270,9 @@ function SundaySchoolPage() {
             setShowCreateSession(false);
             setSessionFormMsg({ type: "ok", text: "Session created." });
             setTimeout(() => setSessionFormMsg(null), 3000);
-        } catch (err: any) {
-            setSessionFormMsg({ type: "err", text: err?.message ?? "Failed to create session." });
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setSessionFormMsg({ type: "err", text: e?.message ?? "Failed to create session." });
         }
     };
 
@@ -334,8 +341,9 @@ function SundaySchoolPage() {
             const result = await ss.bulkMarkAttendance(markSessionId, attendances);
             setMarkMsg({ type: "ok", text: `Marked ${result.marked} attendance record(s).` });
             setTimeout(() => { setMarkSessionId(null); setMarkMsg(null); }, 2000);
-        } catch (err: any) {
-            setMarkMsg({ type: "err", text: err?.message ?? "Failed to mark attendance." });
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setMarkMsg({ type: "err", text: e?.message ?? "Failed to mark attendance." });
         }
     };
 

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type ExternalPayeeType =
     | "REMITTANCE" | "VENDOR" | "UTILITY" | "CONTRACTOR"
     | "GOVERNMENT" | "MISSION" | "BENEVOLENCE" | "OTHER";
@@ -52,8 +54,9 @@ export function useExternalPayees() {
         try {
             const res = await api.get("/admin/finance/external-payees");
             setPayees(res.data?.data ?? []);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch payees.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch payees.");
         } finally {
             setIsLoading(false);
         }
@@ -68,9 +71,10 @@ export function useExternalPayees() {
                 const created: ExternalPayee = res.data?.data;
                 setPayees((prev) => [created, ...prev]);
                 return created;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to create payee.";
+                    e?.response?.data?.message || e?.message || "Failed to create payee.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -89,9 +93,10 @@ export function useExternalPayees() {
                 const updated: ExternalPayee = res.data?.data;
                 setPayees((prev) => prev.map((p) => (p.id === id ? updated : p)));
                 return updated;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to update payee.";
+                    e?.response?.data?.message || e?.message || "Failed to update payee.";
                 setError(message);
                 throw new Error(message);
             } finally {

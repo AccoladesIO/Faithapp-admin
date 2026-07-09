@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type AccountType = "ASSET" | "LIABILITY" | "INCOME" | "EXPENSE";
 export type NormalBalance = "DEBIT" | "CREDIT";
 export type AccountSubtype =
@@ -49,8 +51,9 @@ export function useAccounts() {
         try {
             const res = await api.get("/admin/finance/accounts");
             setAccounts(res.data?.data ?? []);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch accounts.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch accounts.");
         } finally {
             setIsLoading(false);
         }
@@ -65,9 +68,10 @@ export function useAccounts() {
                 const created: FinanceAccount = res.data?.data;
                 setAccounts((prev) => [created, ...prev]);
                 return created;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to create account.";
+                    e?.response?.data?.message || e?.message || "Failed to create account.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -86,9 +90,10 @@ export function useAccounts() {
                 const updated: FinanceAccount = res.data?.data;
                 setAccounts((prev) => prev.map((a) => (a.id === id ? updated : a)));
                 return updated;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to update account.";
+                    e?.response?.data?.message || e?.message || "Failed to update account.";
                 setError(message);
                 throw new Error(message);
             } finally {

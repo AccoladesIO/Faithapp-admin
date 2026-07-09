@@ -84,7 +84,7 @@ describe("useAttendanceAdmin — getSlotSummary", () => {
 
         let caught: Error | undefined;
         await act(async () => {
-            try { await result.current.getSlotSummary("bad-slot"); } catch (e: any) { caught = e; }
+            try { await result.current.getSlotSummary("bad-slot"); } catch (e: unknown) { caught = e as Error; }
         });
 
         expect(caught?.message).toBe("Slot not found");
@@ -110,7 +110,7 @@ describe("useAttendanceAdmin — correctAttendance", () => {
 
         let caught: Error | undefined;
         await act(async () => {
-            try { await result.current.correctAttendance("bad-id", "LATE"); } catch (e: any) { caught = e; }
+            try { await result.current.correctAttendance("bad-id", "LATE"); } catch (e: unknown) { caught = e as Error; }
         });
 
         expect(caught?.message).toBe("Record not found");

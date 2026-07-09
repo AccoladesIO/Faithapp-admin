@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type IncidentStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED";
 
 export interface IncidentReporter {
@@ -70,8 +72,9 @@ export function useIncidentReports(defaultLimit = 20) {
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch incident reports.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch incident reports.");
         } finally {
             setIsLoading(false);
         }
@@ -94,8 +97,9 @@ export function useIncidentReports(defaultLimit = 20) {
             const updated: IncidentReport = res.data?.data ?? res.data;
             setReports((prev) => prev.map((r) => r.id === id ? updated : r));
             return true;
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to update incident status.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to update incident status.");
             return false;
         } finally {
             setIsUpdating(false);

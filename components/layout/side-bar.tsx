@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
@@ -128,7 +128,7 @@ export default function Sidebar() {
     const [isMinimized, setIsMinimized] = useState(false);
     const { logout, hasPermission, adminName, adminRoleName } = useAuth();
 
-    const navigationData: NavItem[] = [
+    const navigationData: NavItem[] = useMemo(() => [
         {
             name: "Dashboard",
             href: "/dashboard",
@@ -215,7 +215,7 @@ export default function Sidebar() {
                 { name: "Recurring Entries",  href: "/finances/recurring-entries",  permission: "finance:read" },
             ],
         },
-    ];
+    ], []);
 
     const isNavItemVisible = (item: NavItem): boolean => {
         if (item.subItems) {
@@ -236,7 +236,7 @@ export default function Sidebar() {
             item.subItems?.some(sub => !sub.comingSoon && pathname.startsWith(sub.href))
         );
         if (activeGroup) setOpenDropdown(activeGroup.name);
-    }, [pathname]);
+    }, [pathname, navigationData]);
 
     const toggleDropdown = (name: string) => {
         if (isMinimized) {

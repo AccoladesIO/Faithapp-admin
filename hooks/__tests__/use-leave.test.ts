@@ -129,7 +129,7 @@ describe("useLeave — actionLeave", () => {
 
         let caught: Error | undefined;
         await act(async () => {
-            try { await result.current.actionLeave("lr1", "APPROVED"); } catch (e: any) { caught = e; }
+            try { await result.current.actionLeave("lr1", "APPROVED"); } catch (e: unknown) { caught = e as Error; }
         });
 
         expect(caught?.message).toBe("Only pending requests can be actioned");

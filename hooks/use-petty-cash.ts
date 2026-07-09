@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type PettyCashStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface PettyCashAccount {
@@ -69,9 +71,10 @@ export function usePettyCash(defaultLimit = 20) {
                     totalCount: outer?.totalCount ?? list.length,
                     totalPages: outer?.totalPages ?? 1,
                 });
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 setError(
-                    err?.response?.data?.message || err?.message || "Failed to fetch petty cash replenishments."
+                    e?.response?.data?.message || e?.message || "Failed to fetch petty cash replenishments."
                 );
             } finally {
                 setIsLoading(false);
@@ -101,9 +104,10 @@ export function usePettyCash(defaultLimit = 20) {
                 const res = await api.post("/admin/finance/petty-cash", payload);
                 fetchReplenishments(1, statusFilter);
                 return res.data?.data;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to create replenishment.";
+                    e?.response?.data?.message || e?.message || "Failed to create replenishment.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -122,9 +126,10 @@ export function usePettyCash(defaultLimit = 20) {
                 const updated: PettyCashReplenishment = res.data?.data;
                 setReplenishments((prev) => prev.map((r) => (r.id === id ? updated : r)));
                 return updated;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to approve replenishment.";
+                    e?.response?.data?.message || e?.message || "Failed to approve replenishment.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -143,9 +148,10 @@ export function usePettyCash(defaultLimit = 20) {
                 const updated: PettyCashReplenishment = res.data?.data;
                 setReplenishments((prev) => prev.map((r) => (r.id === id ? updated : r)));
                 return updated;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to reject replenishment.";
+                    e?.response?.data?.message || e?.message || "Failed to reject replenishment.";
                 setError(message);
                 throw new Error(message);
             } finally {

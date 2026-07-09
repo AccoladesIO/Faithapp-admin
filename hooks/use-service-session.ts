@@ -2,6 +2,8 @@ import { useState, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 import { ServiceProgrammeSlot } from "./use-service-programme";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type ServiceSessionStatus = "LIVE" | "COMPLETED";
 
 export type PauseReason =
@@ -60,8 +62,9 @@ export function formatMMSS(totalSeconds: number): string {
     return `${String(m).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 }
 
-function extractError(err: any, fallback: string): string {
-    return err?.response?.data?.message || err?.message || fallback;
+function extractError(err: unknown, fallback: string): string {
+    const e = err as ApiError;
+    return e?.response?.data?.message || e?.message || fallback;
 }
 
 export function useServiceSession() {
@@ -78,7 +81,7 @@ export function useServiceSession() {
             const liveSession: LiveSession = res.data?.data ?? res.data;
             setSession(liveSession);
             return liveSession;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to start session.");
             setError(msg);
             throw new Error(msg);
@@ -120,7 +123,7 @@ export function useServiceSession() {
             const newAnchor: SessionAnchor = res.data?.data ?? res.data;
             setAnchor(newAnchor);
             return newAnchor;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to advance session.");
             setError(msg);
             throw new Error(msg);
@@ -137,7 +140,7 @@ export function useServiceSession() {
             const newAnchor: SessionAnchor = res.data?.data ?? res.data;
             setAnchor(newAnchor);
             return newAnchor;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to rewind session.");
             setError(msg);
             throw new Error(msg);
@@ -154,7 +157,7 @@ export function useServiceSession() {
             const newAnchor: SessionAnchor = res.data?.data ?? res.data;
             setAnchor(newAnchor);
             return newAnchor;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to pause session.");
             setError(msg);
             throw new Error(msg);
@@ -171,7 +174,7 @@ export function useServiceSession() {
             const newAnchor: SessionAnchor = res.data?.data ?? res.data;
             setAnchor(newAnchor);
             return newAnchor;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to resume session.");
             setError(msg);
             throw new Error(msg);
@@ -188,7 +191,7 @@ export function useServiceSession() {
             const ended: LiveSession = res.data?.data ?? res.data;
             setSession(ended);
             return ended;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const msg = extractError(err, "Failed to end session.");
             setError(msg);
             throw new Error(msg);

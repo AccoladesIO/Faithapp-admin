@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface LeaveWorkerMember {
@@ -59,8 +61,9 @@ export function useLeave(defaultLimit = 20) {
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch leave requests.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch leave requests.");
         } finally {
             setIsLoading(false);
         }
@@ -83,8 +86,9 @@ export function useLeave(defaultLimit = 20) {
             const updated = res.data?.data as LeaveRequest;
             setRequests(prev => prev.map(r => r.id === id ? updated : r));
             return updated;
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to action leave request.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to action leave request.";
             setError(message);
             throw new Error(message);
         } finally {

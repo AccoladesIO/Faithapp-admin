@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type JournalEntryStatus = "DRAFT" | "PENDING_APPROVAL" | "POSTED" | "VOIDED";
 export type JournalEntryType = "STANDARD" | "OPENING_BALANCE" | "REVERSAL" | "RECURRING";
 export type JournalEntrySource = "MANUAL" | "CSV_IMPORT" | "VIRTUAL_ACCOUNT" | "PAYMENT_GATEWAY";
@@ -105,9 +107,10 @@ export function useJournalEntries(defaultLimit = 20) {
                     totalCount: outer?.totalCount ?? list.length,
                     totalPages: outer?.totalPages ?? 1,
                 });
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 setError(
-                    err?.response?.data?.message || err?.message || "Failed to fetch journal entries."
+                    e?.response?.data?.message || e?.message || "Failed to fetch journal entries."
                 );
             } finally {
                 setIsLoading(false);
@@ -137,9 +140,10 @@ export function useJournalEntries(defaultLimit = 20) {
                 const res = await api.post("/admin/finance/journal-entries", payload);
                 fetchEntries(1, filters);
                 return res.data?.data;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to create journal entry.";
+                    e?.response?.data?.message || e?.message || "Failed to create journal entry.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -156,9 +160,10 @@ export function useJournalEntries(defaultLimit = 20) {
             try {
                 const res = await api.get(`/admin/finance/journal-entries/${id}`);
                 return res.data?.data as JournalEntry;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to fetch journal entry.";
+                    e?.response?.data?.message || e?.message || "Failed to fetch journal entry.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -177,9 +182,10 @@ export function useJournalEntries(defaultLimit = 20) {
                 const updated: JournalEntry = res.data?.data;
                 setEntries((prev) => prev.map((e) => (e.id === id ? updated : e)));
                 return updated;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to approve entry.";
+                    e?.response?.data?.message || e?.message || "Failed to approve entry.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -198,9 +204,10 @@ export function useJournalEntries(defaultLimit = 20) {
                 const updated: JournalEntry = res.data?.data;
                 setEntries((prev) => prev.map((e) => (e.id === id ? updated : e)));
                 return updated;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to decline entry.";
+                    e?.response?.data?.message || e?.message || "Failed to decline entry.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -219,9 +226,10 @@ export function useJournalEntries(defaultLimit = 20) {
                 const updated: JournalEntry = res.data?.data;
                 setEntries((prev) => prev.map((e) => (e.id === id ? updated : e)));
                 return updated;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to resubmit entry.";
+                    e?.response?.data?.message || e?.message || "Failed to resubmit entry.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -238,9 +246,10 @@ export function useJournalEntries(defaultLimit = 20) {
             try {
                 await api.delete(`/admin/finance/journal-entries/${id}`);
                 setEntries((prev) => prev.filter((e) => e.id !== id));
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to delete entry.";
+                    e?.response?.data?.message || e?.message || "Failed to delete entry.";
                 setError(message);
                 throw new Error(message);
             } finally {
@@ -259,9 +268,10 @@ export function useJournalEntries(defaultLimit = 20) {
                 const updated: JournalEntry = res.data?.data;
                 setEntries((prev) => prev.map((e) => (e.id === id ? updated : e)));
                 return updated;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message || err?.message || "Failed to void entry.";
+                    e?.response?.data?.message || e?.message || "Failed to void entry.";
                 setError(message);
                 throw new Error(message);
             } finally {

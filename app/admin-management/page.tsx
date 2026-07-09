@@ -21,6 +21,8 @@ import {
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { DismissibleError } from "@/components/ui/dismissible-error";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 // ─── helpers ───────────────────────────────────────────────────────────────
 
 const fullName = (admin: AdminUser) =>
@@ -217,12 +219,12 @@ type PageTab = "admins" | "roles";
 export default withAuth(function AdminManagementPage() {
     const {
         roles, isLoading: rolesLoading, isSubmitting: roleSubmitting,
-        error: roleError, clearError: clearRoleError, fetchRoles, createRole, updateRole, deleteRole,
+        error: roleError, fetchRoles, createRole, updateRole, deleteRole,
     } = useAdminRoles();
 
     const {
         admins, isLoading: adminsLoading, isSubmitting: adminSubmitting,
-        error: adminError, clearError: clearAdminError, fetchAdmins, grantAdmin, updateAdmin, revokeAdmin,
+        error: adminError, fetchAdmins, grantAdmin, updateAdmin, revokeAdmin,
     } = useAdminUsers();
 
     const isSubmitting = roleSubmitting || adminSubmitting;
@@ -328,8 +330,9 @@ export default withAuth(function AdminManagementPage() {
                 setGrantSuccess(null);
                 setShowGrantForm(false);
             }, 2000);
-        } catch (err: any) {
-            setGrantError(err?.message ?? "Failed to grant admin access.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setGrantError(e?.message ?? "Failed to grant admin access.");
         }
     };
 
@@ -343,8 +346,9 @@ export default withAuth(function AdminManagementPage() {
             await updateAdmin(selectedAdmin.id, { adminRoleId: newRoleId });
             setAdminPanelSuccess("Role updated.");
             setTimeout(() => setAdminPanelSuccess(null), 2000);
-        } catch (err: any) {
-            setAdminPanelError(err?.message ?? "Failed to update role.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setAdminPanelError(e?.message ?? "Failed to update role.");
         }
     };
 
@@ -354,8 +358,9 @@ export default withAuth(function AdminManagementPage() {
         try {
             await revokeAdmin(adminId);
             setSelectedAdmin(null);
-        } catch (err: any) {
-            setAdminPanelError(err?.message ?? "Failed to revoke access.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setAdminPanelError(e?.message ?? "Failed to revoke access.");
         }
     };
 
@@ -398,8 +403,9 @@ export default withAuth(function AdminManagementPage() {
                 setRoleFormSuccess("Role updated.");
             }
             setTimeout(() => setRoleFormSuccess(null), 3000);
-        } catch (err: any) {
-            setRoleFormError(err?.message ?? "Failed to save role.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setRoleFormError(e?.message ?? "Failed to save role.");
         }
     };
 
@@ -411,8 +417,9 @@ export default withAuth(function AdminManagementPage() {
             setSelectedRole(null);
             setRoleForm(defaultRoleForm);
             setRoleFormMode("create");
-        } catch (err: any) {
-            setRoleFormError(err?.message ?? "Failed to delete role.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setRoleFormError(e?.message ?? "Failed to delete role.");
         }
     };
 

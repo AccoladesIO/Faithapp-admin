@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type ClassType = "BELIEVERS" | "BAPTISMAL" | "WORKERS_IN_TRAINING" | "BIBLE_COLLEGE" | "SCHOOL_OF_DISCIPLESHIP";
 export type ClassStatus = "ACTIVE" | "CLOSED";
 export type EnrollmentStatus = "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
@@ -90,10 +92,11 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to fetch classes."
             );
         } finally {
@@ -120,10 +123,11 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
             const created: ChurchClass = res.data?.data;
             setClasses((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to create class.";
             setError(message);
             throw new Error(message);
@@ -145,10 +149,11 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
                 prev.map((c) => (c.id === classId ? updated : c))
             );
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to update class.";
             setError(message);
             throw new Error(message);
@@ -163,10 +168,11 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
         try {
             await api.delete(`/classes/${classId}`);
             setClasses((prev) => prev.filter((c) => c.id !== classId));
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to delete class.";
             setError(message);
             throw new Error(message);
@@ -182,10 +188,11 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
         setError(null);
         try {
             await api.post("/classes/enroll", payload);
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to enroll member.";
             setError(message);
             throw new Error(message);
@@ -231,10 +238,11 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
                 { status }
             );
             return res.data?.data;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to update enrollment status.";
             setError(message);
             throw new Error(message);
@@ -252,10 +260,11 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
         try {
             const res = await api.post('/classes/bulk-enroll', { classId, memberIds });
             return res.data?.data;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 'Failed to bulk enrol members.';
             setError(message);
             throw new Error(message);
@@ -275,10 +284,11 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
                 prev.map((c) => c.id === classId ? { ...c, status: "CLOSED" as const } : c)
             );
             return res.data?.data;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to close class.";
             setError(message);
             throw new Error(message);

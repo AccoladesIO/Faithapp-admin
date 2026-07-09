@@ -11,6 +11,8 @@ import { useMembers, BulkPromoteResult } from "@/hooks/use-member";
 import { useDepartments } from "@/hooks/use-departments";
 import { DismissibleError } from "@/components/ui/dismissible-error";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 function BulkPromotePage() {
     const router = useRouter();
     const { members, pagination, isLoading, isSubmitting, goToPage, refetch, bulkPromote, search, onSearchChange } = useMembers(20, "MEMBER");
@@ -45,7 +47,7 @@ function BulkPromotePage() {
     const toggle = (id: string) => {
         setSelectedIds((prev) => {
             const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
+            if (next.has(id)) next.delete(id); else next.add(id);
             return next;
         });
     };
@@ -64,8 +66,9 @@ function BulkPromotePage() {
             setResult(res);
             setSelectedIds(new Set());
             refetch();
-        } catch (err: any) {
-            setError(err?.message || "Something went wrong.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.message || "Something went wrong.");
         }
     };
 

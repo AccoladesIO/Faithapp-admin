@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type RecurringFrequency = "WEEKLY" | "MONTHLY" | "QUARTERLY";
 
 export interface RecurringEntryAccount {
@@ -52,8 +54,9 @@ export function useRecurringEntries() {
         try {
             const res = await api.get("/admin/finance/recurring-entries");
             setEntries(res.data?.data ?? []);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch recurring entries.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(e?.response?.data?.message || e?.message || "Failed to fetch recurring entries.");
         } finally {
             setIsLoading(false);
         }
@@ -67,8 +70,9 @@ export function useRecurringEntries() {
             const created: RecurringEntry = res.data?.data;
             setEntries((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to create recurring entry.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to create recurring entry.";
             setError(message);
             throw new Error(message);
         } finally {
@@ -84,8 +88,9 @@ export function useRecurringEntries() {
             const updated: RecurringEntry = res.data?.data;
             setEntries((prev) => prev.map((e) => (e.id === id ? updated : e)));
             return updated;
-        } catch (err: any) {
-            const message = err?.response?.data?.message || err?.message || "Failed to update recurring entry.";
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to update recurring entry.";
             setError(message);
             throw new Error(message);
         } finally {

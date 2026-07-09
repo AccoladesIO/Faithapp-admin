@@ -1,11 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export interface WorkerProfile {
     id: string;
-    department?: string;
+    department?: { id: string; name: string; key?: string } | null;
+    secondaryDepartment?: { id: string; name: string; key?: string } | null;
     role?: string;
-    [key: string]: any;
+    status?: string;
+    profession?: string | null;
+    yearJoinedWorkforce?: string | null;
+    completedSOD?: boolean;
+    completedBibleCollege?: boolean;
+    [key: string]: unknown;
 }
 
 export interface Member {
@@ -91,10 +99,11 @@ export function useMembers(defaultLimit = 10, roleFilter?: "MEMBER" | "WORKER") 
                 totalCount: outer?.totalCount ?? list.length,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to fetch members."
             );
         } finally {
@@ -127,10 +136,11 @@ export function useMembers(defaultLimit = 10, roleFilter?: "MEMBER" | "WORKER") 
                 prev.map((m) => (m.id === memberId ? { ...m, ...updated } : m))
             );
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to promote member.";
             setError(message);
             throw new Error(message);
@@ -152,10 +162,11 @@ export function useMembers(defaultLimit = 10, roleFilter?: "MEMBER" | "WORKER") 
                 prev.map((m) => (m.id === memberId ? { ...m, ...updated } : m))
             );
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to update member status.";
             setError(message);
             throw new Error(message);
@@ -172,10 +183,11 @@ export function useMembers(defaultLimit = 10, roleFilter?: "MEMBER" | "WORKER") 
         try {
             const res = await api.post("/members/bulk-promote", payload);
             return res.data?.data as BulkPromoteResult;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to bulk promote members.";
             setError(message);
             throw new Error(message);
@@ -189,10 +201,11 @@ export function useMembers(defaultLimit = 10, roleFilter?: "MEMBER" | "WORKER") 
         setError(null);
         try {
             await api.post(`/members/${memberId}/reset-password`);
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to reset member password.";
             setError(message);
             throw new Error(message);

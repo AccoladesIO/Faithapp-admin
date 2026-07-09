@@ -50,7 +50,7 @@ export default withAuth(function BudgetsPage() {
             await createBudget(form);
             setShowCreate(false);
             setForm(emptyForm());
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     async function handleUpdate() {
@@ -60,7 +60,7 @@ export default withAuth(function BudgetsPage() {
             await updateBudget(editing.id, editForm);
             setEditing(null);
             setEditForm({});
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     async function handleDeactivate() {
@@ -69,7 +69,7 @@ export default withAuth(function BudgetsPage() {
         try {
             await deactivateBudget(editing.id);
             setEditing(null);
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     async function handleReactivate() {
@@ -78,7 +78,7 @@ export default withAuth(function BudgetsPage() {
         try {
             await reactivateBudget(editing.id);
             setEditing(null);
-        } catch (e: any) { setActionError(e.message); }
+        } catch (e: unknown) { setActionError((e as Error).message); }
     }
 
     function openEdit(b: Budget) {
@@ -217,7 +217,7 @@ export default withAuth(function BudgetsPage() {
                         ].map(({ label, key, placeholder }) => (
                             <div key={key}>
                                 <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">{label}</label>
-                                <input type="date" value={(form as any)[key] || ""} placeholder={placeholder}
+                                <input type="date" value={(form[key as keyof CreateBudgetPayload] as string) || ""} placeholder={placeholder}
                                     onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                                     className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
                             </div>
@@ -281,7 +281,7 @@ export default withAuth(function BudgetsPage() {
                         ].map(({ label, key }) => (
                             <div key={key}>
                                 <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">{label}</label>
-                                <input type="date" value={(editForm as any)[key] ?? ""}
+                                <input type="date" value={(editForm[key as keyof UpdateBudgetPayload] as string) ?? ""}
                                     onChange={(e) => setEditForm((f) => ({ ...f, [key]: e.target.value }))}
                                     className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
                             </div>

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export type OfferingType = "GENERAL" | "TITHE_SUNDAY" | "PLEDGE" | "SEED";
 
 export interface OfferingFund {
@@ -100,10 +102,11 @@ export function useOfferings(defaultLimit = 20) {
                     totalCount: outer?.totalCount ?? list.length,
                     totalPages: outer?.totalPages ?? 1,
                 });
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 setError(
-                    err?.response?.data?.message ||
-                        err?.message ||
+                    e?.response?.data?.message ||
+                        e?.message ||
                         "Failed to fetch offerings."
                 );
             } finally {
@@ -137,10 +140,11 @@ export function useOfferings(defaultLimit = 20) {
                 const created: Offering = res.data?.data;
                 fetchOfferings(1, filters);
                 return created;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message ||
-                    err?.message ||
+                    e?.response?.data?.message ||
+                    e?.message ||
                     "Failed to create offering.";
                 setError(message);
                 throw new Error(message);
@@ -165,10 +169,11 @@ export function useOfferings(defaultLimit = 20) {
                     prev.map((o) => (o.id === id ? { ...o, ...updated } : o))
                 );
                 return updated;
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const e = err as ApiError;
                 const message =
-                    err?.response?.data?.message ||
-                    err?.message ||
+                    e?.response?.data?.message ||
+                    e?.message ||
                     "Failed to reconcile offering.";
                 setError(message);
                 throw new Error(message);

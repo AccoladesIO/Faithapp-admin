@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { authService } from "@/utils/auth/auth";
@@ -17,6 +18,8 @@ import {
     Building2,
     Lock,
 } from "lucide-react";
+
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
 
 const APP_NAME = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? "Discovery Hub";
 const CHURCH_NAME = process.env.NEXT_PUBLIC_CHURCH_NAME ?? "Your Church";
@@ -38,8 +41,9 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
         try {
             await authService.forgotPassword(email);
             setStep("verify");
-        } catch (err: any) {
-            error(err?.response?.data?.message || "Could not send reset code. Please try again.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            error(e?.response?.data?.message || "Could not send reset code. Please try again.");
         } finally {
             setIsLoading(false);
         }
@@ -52,8 +56,9 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
             await authService.resetPassword(email, otp, newPassword);
             success("Password reset successfully. You can now log in.");
             onClose();
-        } catch (err: any) {
-            error(err?.response?.data?.message || "Invalid code or password. Please try again.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            error(e?.response?.data?.message || "Invalid code or password. Please try again.");
         } finally {
             setIsLoading(false);
         }
@@ -206,15 +211,17 @@ export default function LoginPage() {
         try {
             const { requiresPasswordChange, permissions: perms } = await login(email, password);
             if (requiresPasswordChange) {
+                sessionStorage.setItem('requires_pw_change', '1');
                 router.push("/change-password");
                 return;
             }
             const { getFirstAccessibleRoute } = await import("@/utils/auth/first-route");
             router.push(getFirstAccessibleRoute(perms) ?? "/dashboard");
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Invalid administrative credentials."
             );
         } finally {
@@ -244,10 +251,12 @@ export default function LoginPage() {
 
                 <div className="relative flex flex-col gap-0">
                     {LOGO_URL && (
-                        <img
+                        <Image
                             src={LOGO_URL}
                             alt={CHURCH_NAME}
                             className="h-12 w-auto mb-8 object-contain"
+                            width={200}
+                            height={48}
                         />
                     )}
 
@@ -307,10 +316,34 @@ export default function LoginPage() {
             <div className="flex-1 bg-[#F4F1EA] flex items-center justify-center p-6">
                 <div className="w-full max-w-md bg-white border border-[#121212]/10 p-10 flex flex-col">
 
-                    {/* Mobile-only church name */}
-                    <p className="lg:hidden text-[10px] uppercase tracking-widest font-semibold text-[#8A817C] text-center mb-8">
-                        {CHURCH_NAME} &bull; Hub Portal
-                    </p>
+                    {/* Mobile-only brand header */}
+                    <div
+                        className="lg:hidden -mx-10 -mt-10 mb-8 bg-[#121212] px-8 py-6 relative overflow-hidden"
+                        style={{
+                            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.035) 1px, transparent 1px)",
+                            backgroundSize: "28px 28px",
+                        }}
+                    >
+                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                        {LOGO_URL && (
+                            <Image
+                                src={LOGO_URL}
+                                alt={CHURCH_NAME}
+                                className="h-8 w-auto mb-3 object-contain"
+                                width={160}
+                                height={32}
+                            />
+                        )}
+                        <p className="text-[9px] uppercase tracking-[0.2em] text-white/30 font-semibold mb-1">
+                            Administrative Portal
+                        </p>
+                        <h2 className="text-xl font-bold text-white tracking-tight leading-tight">
+                            {APP_NAME}
+                        </h2>
+                        <p className="text-xs text-white/40 font-light mt-0.5">
+                            {CHURCH_NAME}
+                        </p>
+                    </div>
 
                     <div className="mb-8">
                         <h2 className="text-lg font-light tracking-tight text-[#121212] uppercase">
@@ -397,7 +430,7 @@ export default function LoginPage() {
                     {/* Mobile-only footer notice */}
                     <div className="lg:hidden mt-10 text-center">
                         <p className="text-[10px] text-[#8A817C] uppercase tracking-wider">
-                            Protected Environment &mdash; System Logs Active
+                            Protected &mdash; all actions are recorded
                         </p>
                     </div>
                 </div>

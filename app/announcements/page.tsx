@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
@@ -24,6 +24,9 @@ import { useDepartments } from "@/hooks/use-departments";
 import { api } from "@/utils/auth/axios-client";
 import { toInputDateTime } from "@/utils/parse-local-time";
 import { DismissibleError } from "@/components/ui/dismissible-error";
+import DOMPurify from "isomorphic-dompurify";
+
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -225,7 +228,7 @@ function MemberSearchInput({ value, onChange }: MemberSearchInputProps) {
 
 // ─── Toolbar ──────────────────────────────────────────────────────────────────
 
-function EditorToolbar({ editor }: { editor: any }) {
+function EditorToolbar({ editor }: { editor: Editor | null }) {
     if (!editor) return null;
     return (
         <div className="border-b border-[#121212]/10 bg-[#F4F1EA]/40 p-2 flex flex-wrap gap-1">
@@ -375,8 +378,9 @@ export default withAuth(function AnnouncementsPage() {
             editor.commands.clearContent();
             setCreateSuccess("Announcement published successfully.");
             setTimeout(() => setCreateSuccess(null), 3000);
-        } catch (err: any) {
-            setCreateError(err?.message ?? "Failed to create announcement.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setCreateError(e?.message ?? "Failed to create announcement.");
         }
     };
 
@@ -763,7 +767,7 @@ export default withAuth(function AnnouncementsPage() {
                                             {editingId !== item.id && (
                                                 <div
                                                     className="rich-text-content text-xs text-[#121212]/80 font-light mt-3 leading-relaxed whitespace-normal break-words prose prose-xs"
-                                                    dangerouslySetInnerHTML={{ __html: item.body }}
+                                                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.body) }}
                                                 />
                                             )}
 

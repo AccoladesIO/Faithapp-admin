@@ -30,6 +30,8 @@ import {
     formatMMSS,
 } from "@/hooks/use-service-session";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 // ─── Slot type config ─────────────────────────────────────────────────────────
 
 const SLOT_TYPES: ServiceSlotType[] = [
@@ -128,7 +130,7 @@ function SkeletonRow({ cols }: { cols: number }) {
 
 interface MemberResult { id: string; firstname: string; lastname: string; email: string; }
 
-function MemberSearchCombobox({ value, displayName, onChange }: {
+function MemberSearchCombobox({ displayName, onChange }: {
     value: string; displayName: string;
     onChange: (id: string, name: string) => void;
 }) {
@@ -639,7 +641,10 @@ function ProgrammeDetailPanel({
         try {
             await startSession(programmeId);
             await reload();
-        } catch (err: any) { setPanelError(err?.message ?? "Failed to start session."); }
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setPanelError(e?.message ?? "Failed to start session.");
+        }
     };
 
     const handleAdvance = async () => {
@@ -704,13 +709,16 @@ function ProgrammeDetailPanel({
             await updateSlot(programmeId, editingSlot.id, dto);
             setEditingSlot(null);
             await reload();
-        } catch (err: any) { setPanelError(err?.message ?? "Failed to update slot."); }
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setPanelError(e?.message ?? "Failed to update slot.");
+        }
     };
 
     const handleDeleteSlot = async (slotId: string) => {
         setPanelError(null);
         try { await deleteSlot(programmeId, slotId); await reload(); }
-        catch (err: any) { setPanelError(err?.message ?? "Failed to delete slot."); }
+        catch (err: unknown) { setPanelError((err as Error).message ?? "Failed to delete slot."); }
     };
 
     const handleAddSlot = async () => {
@@ -726,7 +734,10 @@ function ProgrammeDetailPanel({
             setShowAddSlot(false);
             setNewSlot(DEFAULT_SLOT_DRAFT);
             await reload();
-        } catch (err: any) { setPanelError(err?.message ?? "Failed to add slot."); }
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setPanelError(e?.message ?? "Failed to add slot.");
+        }
     };
 
     const handleApplyTemplate = async (templateId: string) => {
@@ -735,7 +746,10 @@ function ProgrammeDetailPanel({
             const updated = await applyTemplate(programmeId, templateId);
             setProgramme(updated);
             setShowApplyTemplate(false);
-        } catch (err: any) { setPanelError(err?.message ?? "Failed to apply template."); }
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setPanelError(e?.message ?? "Failed to apply template.");
+        }
     };
 
     const handleOpenApplyTemplate = async () => { await fetchTemplates(); setShowApplyTemplate(true); };
@@ -743,7 +757,7 @@ function ProgrammeDetailPanel({
     const handleDeleteProgramme = async () => {
         setPanelError(null);
         try { await deleteProgramme(programmeId); onClose(); }
-        catch (err: any) { setPanelError(err?.message ?? "Failed to delete."); }
+        catch (err: unknown) { setPanelError((err as Error).message ?? "Failed to delete."); }
     };
 
     if (loading) {
@@ -1026,7 +1040,6 @@ function CreateProgrammePanel({
 function ProgrammesTab({ hook }: { hook: ReturnType<typeof useServiceProgramme> }) {
     const {
         programmes, pagination, isLoading, isSubmitting, error,
-        clearError,
         fetchProgrammes, createProgramme, goToPage, fetchServiceSlots,
     } = hook;
 
@@ -1117,7 +1130,7 @@ function ProgrammesTab({ hook }: { hook: ReturnType<typeof useServiceProgramme> 
                                             </td>
                                             <td className="p-4"><StatusBadge status={p.status} /></td>
                                             <td className="p-4 text-center text-xs text-[#8A817C] font-light hidden sm:table-cell">
-                                                {(p as any).slotCount ?? "—"}
+                                                {(p as ServiceProgramme & { slotCount?: number }).slotCount ?? "—"}
                                             </td>
                                             <td className="p-4 text-xs text-[#8A817C] font-light hidden md:table-cell">
                                                 {formatDate(p.createdAt)}
@@ -1173,7 +1186,7 @@ function ProgrammesTab({ hook }: { hook: ReturnType<typeof useServiceProgramme> 
 // ─── Templates tab ────────────────────────────────────────────────────────────
 
 function TemplatesTab({ hook }: { hook: ReturnType<typeof useServiceProgramme> }) {
-    const { templates, isLoading, isSubmitting, error, clearError, fetchTemplates, deleteTemplate } = hook;
+    const { templates, isLoading, isSubmitting, error, fetchTemplates, deleteTemplate } = hook;
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
     useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
@@ -1185,7 +1198,7 @@ function TemplatesTab({ hook }: { hook: ReturnType<typeof useServiceProgramme> }
     return (
         <div className="space-y-5">
             <p className="text-xs text-[#8A817C] font-light">
-                Templates are auto-saved when a programme with "Save as Template" enabled completes its session.
+                Templates are auto-saved when a programme with &quot;Save as Template&quot; enabled completes its session.
             </p>
             <DismissibleError message={error} />
             <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden">

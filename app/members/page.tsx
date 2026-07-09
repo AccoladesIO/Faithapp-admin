@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
 import { useRouter } from "next/navigation";
 import {
-    User, Search, SlidersHorizontal,
+    Search, SlidersHorizontal,
     ArrowUpDown, Eye, X, UserPlus, ShieldAlert, CheckCircle2,
     RefreshCw, KeyRound, ToggleLeft, ToggleRight, BadgeCheck,
     Phone, Mail, Calendar, Users,
@@ -15,6 +15,8 @@ import { PromoteToWorkerPayload } from "@/hooks/use-member";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
 import { DismissibleError } from "@/components/ui/dismissible-error";
+
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fullName = (m: Member) =>
@@ -139,7 +141,6 @@ export default withAuth(function MembersPage() {
     const {
         members,
         pagination,
-        page,
         isLoading,
         isSubmitting,
         error,
@@ -237,8 +238,9 @@ export default withAuth(function MembersPage() {
                 setActionSuccess("Password reset email sent successfully.");
             }
             setConfirmAction(null);
-        } catch (err: any) {
-            setActionError(err?.message ?? "Action failed.");
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setActionError(e?.message ?? "Action failed.");
             setConfirmAction(null);
         }
     };

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/utils/auth/axios-client";
 
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+
 export interface ServiceSlot {
     name: string;
     startTime: string; // ISO string
@@ -108,10 +110,11 @@ export function useEvents(defaultLimit = 20) {
                 totalCount: outer?.totalCount ?? 0,
                 totalPages: outer?.totalPages ?? 1,
             });
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             setError(
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to fetch events."
             );
         } finally {
@@ -127,10 +130,11 @@ export function useEvents(defaultLimit = 20) {
             const created: ChurchEvent = res.data?.data.data;
             setEvents((prev) => [created, ...prev]);
             return created;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to create event.";
             setError(message);
             throw new Error(message);
@@ -149,10 +153,11 @@ export function useEvents(defaultLimit = 20) {
                 prev.map((e) => (e.id === eventId ? updated : e))
             );
             return updated;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to update event.";
             setError(message);
             throw new Error(message);
@@ -167,10 +172,11 @@ export function useEvents(defaultLimit = 20) {
         try {
             await api.delete(`/events/${eventId}`);
             setEvents((prev) => prev.filter((e) => e.id !== eventId));
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to delete event.";
             setError(message);
             throw new Error(message);
@@ -185,10 +191,11 @@ export function useEvents(defaultLimit = 20) {
         try {
             await api.delete(`/events/recurring/${recurringEventId}`);
             setEvents((prev) => prev.filter((e) => e.recurrence == null || e.id !== recurringEventId));
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to delete recurring series.";
             setError(message);
             throw new Error(message);
@@ -203,10 +210,11 @@ export function useEvents(defaultLimit = 20) {
         try {
             const res = await api.get(`/events/slots/${slotId}/reminders`);
             return res.data?.data as EventReminder[];
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to fetch reminders.";
             setError(message);
             throw new Error(message);
@@ -221,10 +229,11 @@ export function useEvents(defaultLimit = 20) {
         try {
             const res = await api.post(`/events/slots/${slotId}/reminders`, payload);
             return res.data?.data as EventReminder;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to create reminder.";
             setError(message);
             throw new Error(message);
@@ -239,10 +248,11 @@ export function useEvents(defaultLimit = 20) {
         try {
             const res = await api.patch(`/events/slots/${slotId}/reminders/${reminderId}`, payload);
             return res.data?.data as EventReminder;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to update reminder.";
             setError(message);
             throw new Error(message);
@@ -256,10 +266,11 @@ export function useEvents(defaultLimit = 20) {
         setError(null);
         try {
             await api.delete(`/events/slots/${slotId}/reminders/${reminderId}`);
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const e = err as ApiError;
             const message =
-                err?.response?.data?.message ||
-                err?.message ||
+                e?.response?.data?.message ||
+                e?.message ||
                 "Failed to delete reminder.";
             setError(message);
             throw new Error(message);

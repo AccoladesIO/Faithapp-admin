@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/layout/side-bar";
 import { HelpDrawer, WelcomeTour, useHelpSystem } from "@/components/layout/help-system";
-import { HelpCircle, ChevronRight } from "lucide-react";
+import { HelpCircle, ChevronRight, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 
 interface ShellProps {
@@ -68,7 +68,7 @@ function useBreadcrumb(pathname: string): { group: string; label: string } {
 
 export default function Shell({ children }: ShellProps) {
     const { drawerOpen, tourOpen, openDrawer, closeDrawer, openTour, closeTour } = useHelpSystem();
-    const { adminName, adminRoleName } = useAuth();
+    const { adminName, adminRoleName, profileError, retryProfile } = useAuth();
     const pathname = usePathname();
     const { group, label } = useBreadcrumb(pathname);
 
@@ -94,7 +94,7 @@ export default function Shell({ children }: ShellProps) {
                         <button
                             onClick={openDrawer}
                             title="Help"
-                            className="flex items-center gap-1.5 h-8 px-3 border border-[#121212]/10 text-[#8A817C] hover:text-[#121212] hover:border-[#121212]/20 rounded-lg text-[11px] font-semibold uppercase tracking-wider transition-colors"
+                            className="flex items-center gap-1.5 h-11 px-3 border border-[#121212]/10 text-[#8A817C] hover:text-[#121212] hover:border-[#121212]/20 rounded-lg text-[11px] font-semibold uppercase tracking-wider transition-colors"
                         >
                             <HelpCircle className="w-3.5 h-3.5" />
                             Help
@@ -109,6 +109,21 @@ export default function Shell({ children }: ShellProps) {
                         </Link>
                     </div>
                 </header>
+
+                {profileError && (
+                    <div className="shrink-0 bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2 text-amber-700">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                            <p className="text-xs font-medium">Could not load your permissions — some pages may appear inaccessible.</p>
+                        </div>
+                        <button
+                            onClick={retryProfile}
+                            className="text-[11px] font-semibold uppercase tracking-wider text-amber-700 underline underline-offset-2 shrink-0"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                )}
 
                 <div className="flex-1 p-4 md:p-6 max-w-[1600px] w-full mx-auto">
                     {children}
