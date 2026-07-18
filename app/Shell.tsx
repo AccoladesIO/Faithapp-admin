@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/layout/side-bar";
 import { HelpDrawer, WelcomeTour, useHelpSystem } from "@/components/layout/help-system";
+import { LiveSessionPill } from "@/components/layout/live-session-pill";
 import { HelpCircle, ChevronRight, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 
@@ -25,16 +26,18 @@ const ROUTE_MAP: Record<string, [string, string]> = {
     "/attendance":                        ["People",    "Attendance"],
     "/birthday":                          ["People",    "Birthdays"],
     "/admin-management":                  ["People",    "Admin Users"],
-    "/leave":                             ["People",    "Worker Leave"],
+    "/leave":                             ["People",    "Leave Requests"],
     "/profile":                           ["",          "My Profile"],
     "/departments":                       ["Ministry",  "Departments"],
     "/classes":                           ["Ministry",  "Classes"],
     "/childrens-church":                  ["Ministry",  "Children's Church"],
     "/sunday-school":                     ["Ministry",  "Sunday School"],
     "/follow-up":                         ["Ministry",  "Follow Up"],
-    "/announcements":                     ["",          "Announcements"],
+    "/announcements":                     ["Announcements", "Broadcasts"],
+    "/groups":                            ["Announcements", "Groups"],
     "/audit-logs":                        ["System",    "Audit Trail"],
     "/email-logs":                        ["System",    "Email Logs"],
+    "/sms-logs":                          ["System",    "SMS Logs"],
     "/incident-reports":                  ["System",    "Incident Reports"],
     "/system-settings":                   ["System",    "Module Settings"],
     "/inventories":                       ["Facility",  "Inventories"],
@@ -91,6 +94,7 @@ export default function Shell({ children }: ShellProps) {
                     </nav>
 
                     <div className="flex items-center gap-4">
+                        <LiveSessionPill />
                         <button
                             onClick={openDrawer}
                             title="Help"

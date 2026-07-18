@@ -24,11 +24,10 @@ const formatSlotTime = (isoString: string) =>
         hour: "2-digit",
         minute: "2-digit",
         hour12: true,
-        timeZone: "UTC",
     });
 
 const fmtWeek = (w: string) => {
-    const d = new Date(w);
+    const d = new Date(w.length === 10 ? `${w}T00:00:00` : w);
     return isNaN(d.getTime()) ? w : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 

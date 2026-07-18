@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
+import { api } from "@/utils/auth/axios-client";
 import {
     BookOpen, Plus, X,
     Trash2, Pencil, Eye, RefreshCw, Users, Calendar,
@@ -28,7 +29,7 @@ const fullName = (o: { firstname: string; lastname: string }) =>
     [o.firstname, o.lastname].filter(Boolean).join(" ");
 
 const fmtDate = (iso: string) =>
-    new Date(iso).toLocaleDateString(undefined, {
+    new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString(undefined, {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -92,6 +93,208 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 const inputCls = "w-full h-11 px-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg";
 const submitCls = "w-full h-12 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 rounded-xl";
 
+// ── Worker search (teacher picker) ──────────────────────────────────────────────
+
+interface WorkerResult {
+    id: string;
+    firstname: string;
+    lastname: string;
+    email: string;
+}
+
+function WorkerSearchInput({
+    value,
+    onChange,
+    initialLabel,
+    dense = false,
+}: Readonly<{ value: string; onChange: (id: string) => void; initialLabel?: string; dense?: boolean }>) {
+    const [query, setQuery] = useState("");
+    const [results, setResults] = useState<WorkerResult[]>([]);
+    const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [selectedName, setSelectedName] = useState(initialLabel ?? "");
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!value) setSelectedName("");
+    }, [value]);
+
+    useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
+        };
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
+
+    const doSearch = async (q: string) => {
+        if (!q.trim()) { setResults([]); setOpen(false); return; }
+        setLoading(true);
+        try {
+            const res = await api.get(`/members?role=WORKER&page=1&limit=8&search=${encodeURIComponent(q)}`);
+            const list: WorkerResult[] = res.data?.data?.data ?? [];
+            setResults(list);
+            setOpen(list.length > 0);
+        } catch {
+            setResults([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const q = e.target.value;
+        setQuery(q);
+        if (!q) { onChange(""); setSelectedName(""); }
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => doSearch(q), 300);
+    };
+
+    const handleSelect = (w: WorkerResult) => {
+        onChange(w.id);
+        setSelectedName(`${w.firstname} ${w.lastname}`);
+        setQuery("");
+        setResults([]);
+        setOpen(false);
+    };
+
+    const handleClear = () => {
+        onChange("");
+        setSelectedName("");
+        setQuery("");
+        setResults([]);
+        setOpen(false);
+    };
+
+    const boxCls = dense
+        ? "h-8 px-2 text-xs"
+        : "h-11 px-4 text-sm";
+
+    return (
+        <div ref={wrapperRef} className="relative" onClick={(e) => e.stopPropagation()}>
+            {selectedName ? (
+                <div className={`flex items-center gap-2 bg-[#F4F1EA]/40 border border-[#121212]/10 rounded-lg ${boxCls}`}>
+                    <span className="text-[#121212] font-light flex-1 truncate">{selectedName}</span>
+                    <button type="button" onClick={handleClear} className="p-0.5 text-[#8A817C] hover:text-[#121212] transition-colors">
+                        <X className="w-3 h-3" />
+                    </button>
+                </div>
+            ) : (
+                <div className="relative">
+                    <input
+                        type="text"
+                        value={query}
+                        onChange={handleInput}
+                        onFocus={() => results.length > 0 && setOpen(true)}
+                        placeholder="Search worker by name…"
+                        className={`w-full bg-[#F4F1EA]/40 border border-[#121212]/10 text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg ${boxCls}`}
+                    />
+                    {loading && (
+                        <RefreshCw className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#8A817C] animate-spin pointer-events-none" />
+                    )}
+                </div>
+            )}
+            {open && results.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#121212]/10 rounded-lg shadow-lg z-20 overflow-hidden max-h-48 overflow-y-auto">
+                    {results.map((w) => (
+                        <button
+                            key={w.id}
+                            type="button"
+                            onMouseDown={(e) => { e.preventDefault(); handleSelect(w); }}
+                            className="w-full text-left px-3 py-2 hover:bg-[#F4F1EA]/60 transition-colors border-b border-[#121212]/5 last:border-0"
+                        >
+                            <div className="text-xs text-[#121212] font-light">{w.firstname} {w.lastname}</div>
+                            <div className="text-[10px] text-[#8A817C] font-mono">{w.email}</div>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ── Member search (class roster picker) ─────────────────────────────────────────
+
+function MemberSearchInput({
+    onSelect,
+}: Readonly<{ onSelect: (m: WorkerResult) => void }>) {
+    const [query, setQuery] = useState("");
+    const [results, setResults] = useState<WorkerResult[]>([]);
+    const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
+        };
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
+
+    const doSearch = async (q: string) => {
+        if (!q.trim()) { setResults([]); setOpen(false); return; }
+        setLoading(true);
+        try {
+            const res = await api.get(`/members?page=1&limit=8&search=${encodeURIComponent(q)}`);
+            const list: WorkerResult[] = res.data?.data?.data ?? [];
+            setResults(list);
+            setOpen(list.length > 0);
+        } catch {
+            setResults([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const q = e.target.value;
+        setQuery(q);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => doSearch(q), 300);
+    };
+
+    const handleSelect = (m: WorkerResult) => {
+        onSelect(m);
+        setQuery("");
+        setResults([]);
+        setOpen(false);
+    };
+
+    return (
+        <div ref={wrapperRef} className="relative flex-1">
+            <input
+                type="text"
+                value={query}
+                onChange={handleInput}
+                onFocus={() => results.length > 0 && setOpen(true)}
+                placeholder="Search member by name…"
+                className="w-full h-9 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+            />
+            {loading && (
+                <RefreshCw className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#8A817C] animate-spin pointer-events-none" />
+            )}
+            {open && results.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#121212]/10 rounded-lg shadow-lg z-20 overflow-hidden max-h-48 overflow-y-auto">
+                    {results.map((m) => (
+                        <button
+                            key={m.id}
+                            type="button"
+                            onMouseDown={(e) => { e.preventDefault(); handleSelect(m); }}
+                            className="w-full text-left px-3 py-2 hover:bg-[#F4F1EA]/60 transition-colors border-b border-[#121212]/5 last:border-0"
+                        >
+                            <div className="text-xs text-[#121212] font-light">{m.firstname} {m.lastname}</div>
+                            <div className="text-[10px] text-[#8A817C] font-mono">{m.email}</div>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 type Tab = "classes" | "sessions";
@@ -107,7 +310,6 @@ function SundaySchoolPage() {
     const [membersPagination, setMembersPagination] = useState<SSPagination | null>(null);
     const [membersPage, setMembersPage] = useState(1);
     const [membersLoading, setMembersLoading] = useState(false);
-    const [addMemberId, setAddMemberId] = useState("");
     const [memberActionMsg, setMemberActionMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
     // ── Create class modal ────────────────────────────────────────────────────
@@ -115,9 +317,10 @@ function SundaySchoolPage() {
     const [classForm, setClassForm] = useState({ name: "", description: "", teacherId: "" });
     const [classFormMsg, setClassFormMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
-    // ── Edit class ────────────────────────────────────────────────────────────
-    const [editingClassId, setEditingClassId] = useState<string | null>(null);
+    // ── Edit class (within the side panel) ────────────────────────────────────
+    const [classEditing, setClassEditing] = useState(false);
     const [editClassForm, setEditClassForm] = useState({ name: "", description: "", teacherId: "" });
+    const [editTeacherLabel, setEditTeacherLabel] = useState("");
 
     // ── Delete class confirm ──────────────────────────────────────────────────
     const [deletingClassId, setDeletingClassId] = useState<string | null>(null);
@@ -171,9 +374,20 @@ function SundaySchoolPage() {
         setSelectedClass(cls);
         setClassPanel("members");
         setMemberActionMsg(null);
-        setAddMemberId("");
+        setClassEditing(false);
+        setEditClassForm({
+            name: cls.name,
+            description: cls.description ?? "",
+            teacherId: cls.teacher?.id ?? "",
+        });
+        setEditTeacherLabel(cls.teacher ? fullName(cls.teacher) : "");
         loadClassMembers(cls.id, 1);
     }, [loadClassMembers]);
+
+    const openClassPanelForEdit = useCallback((cls: SSClass) => {
+        openClassPanel(cls);
+        setClassEditing(true);
+    }, [openClassPanel]);
 
     const closeClassPanel = () => {
         setSelectedClass(null);
@@ -203,12 +417,13 @@ function SundaySchoolPage() {
     // ── Update class ──────────────────────────────────────────────────────────
     const handleUpdateClass = async (id: string) => {
         try {
-            await ss.updateClass(id, {
+            const updated = await ss.updateClass(id, {
                 name: editClassForm.name,
                 ...(editClassForm.description ? { description: editClassForm.description } : {}),
                 ...(editClassForm.teacherId ? { teacherId: editClassForm.teacherId } : {}),
             });
-            setEditingClassId(null);
+            setSelectedClass(updated);
+            setClassEditing(false);
         } catch {
             // surfaced via hook error
         }
@@ -226,13 +441,11 @@ function SundaySchoolPage() {
     };
 
     // ── Add/remove member ─────────────────────────────────────────────────────
-    const handleAddMember = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedClass || !addMemberId.trim()) return;
+    const handleAddMember = async (memberId: string) => {
+        if (!selectedClass) return;
         setMemberActionMsg(null);
         try {
-            await ss.addMemberToClass(selectedClass.id, addMemberId.trim());
-            setAddMemberId("");
+            await ss.addMemberToClass(selectedClass.id, memberId);
             setMemberActionMsg({ type: "ok", text: "Member added." });
             loadClassMembers(selectedClass.id, membersPage);
             setTimeout(() => setMemberActionMsg(null), 3000);
@@ -464,43 +677,13 @@ function SundaySchoolPage() {
                                                     }`}
                                                 >
                                                     <td className="p-4">
-                                                        {editingClassId === cls.id ? (
-                                                            <input
-                                                                value={editClassForm.name}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                onChange={(e) => setEditClassForm((p) => ({ ...p, name: e.target.value }))}
-                                                                className="w-full h-8 px-2 bg-[#F4F1EA]/60 border border-[#121212]/20 text-sm text-[#121212] focus:outline-none rounded"
-                                                            />
-                                                        ) : (
-                                                            <span className="text-sm font-medium text-[#121212]">{cls.name}</span>
-                                                        )}
+                                                        <span className="text-sm font-medium text-[#121212]">{cls.name}</span>
                                                     </td>
                                                     <td className="p-4 text-xs text-[#8A817C] font-light max-w-[180px] truncate">
-                                                        {editingClassId === cls.id ? (
-                                                            <input
-                                                                value={editClassForm.description}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                onChange={(e) => setEditClassForm((p) => ({ ...p, description: e.target.value }))}
-                                                                className="w-full h-8 px-2 bg-[#F4F1EA]/60 border border-[#121212]/20 text-xs text-[#121212] focus:outline-none rounded"
-                                                            />
-                                                        ) : (
-                                                            cls.description ?? <span className="italic opacity-40">—</span>
-                                                        )}
+                                                        {cls.description ?? <span className="italic opacity-40">—</span>}
                                                     </td>
                                                     <td className="p-4 text-xs text-[#8A817C] font-mono">
-                                                        {editingClassId === cls.id ? (
-                                                            <input
-                                                                value={editClassForm.teacherId}
-                                                                placeholder="Teacher ID"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                onChange={(e) => setEditClassForm((p) => ({ ...p, teacherId: e.target.value }))}
-                                                                className="w-full h-8 px-2 bg-[#F4F1EA]/60 border border-[#121212]/20 text-xs text-[#121212] focus:outline-none rounded"
-                                                            />
-                                                        ) : cls.teacher ? (
-                                                            fullName(cls.teacher)
-                                                        ) : (
-                                                            <span className="italic opacity-40">—</span>
-                                                        )}
+                                                        {cls.teacher ? fullName(cls.teacher) : <span className="italic opacity-40">—</span>}
                                                     </td>
                                                     <td className="p-4 text-center">
                                                         <span className="inline-flex items-center gap-1 text-xs font-mono text-[#8A817C]">
@@ -509,23 +692,7 @@ function SundaySchoolPage() {
                                                         </span>
                                                     </td>
                                                     <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
-                                                        {editingClassId === cls.id ? (
-                                                            <div className="flex items-center justify-end space-x-1">
-                                                                <button
-                                                                    onClick={() => handleUpdateClass(cls.id)}
-                                                                    disabled={ss.isSubmitting}
-                                                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg border border-transparent hover:border-green-100 transition-colors"
-                                                                >
-                                                                    <Check className="w-3.5 h-3.5" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setEditingClassId(null)}
-                                                                    className="p-2 text-[#8A817C] hover:bg-[#F4F1EA] rounded-lg transition-colors"
-                                                                >
-                                                                    <X className="w-3.5 h-3.5" />
-                                                                </button>
-                                                            </div>
-                                                        ) : deletingClassId === cls.id ? (
+                                                        {deletingClassId === cls.id ? (
                                                             <div className="flex items-center justify-end space-x-1">
                                                                 <button
                                                                     onClick={() => handleDeleteClass(cls.id)}
@@ -551,14 +718,7 @@ function SundaySchoolPage() {
                                                                     <Eye className="w-3.5 h-3.5" />
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => {
-                                                                        setEditingClassId(cls.id);
-                                                                        setEditClassForm({
-                                                                            name: cls.name,
-                                                                            description: cls.description ?? "",
-                                                                            teacherId: cls.teacher?.id ?? "",
-                                                                        });
-                                                                    }}
+                                                                    onClick={() => openClassPanelForEdit(cls)}
                                                                     className="p-2 text-[#8A817C] hover:text-[#121212] rounded-lg hover:bg-[#F4F1EA] border border-transparent transition-colors"
                                                                     title="Edit"
                                                                 >
@@ -590,37 +750,99 @@ function SundaySchoolPage() {
                         {/* Class detail panel */}
                         {classPanelOpen && selectedClass && (
                             <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl relative overflow-hidden">
-                                <button
-                                    onClick={closeClassPanel}
-                                    className="absolute top-4 right-4 p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/20 rounded-md z-10 transition-colors"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
+                                {!classEditing && (
+                                    <button
+                                        onClick={closeClassPanel}
+                                        className="absolute top-4 right-4 p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/20 rounded-md z-10 transition-colors"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                )}
 
                                 <div className="p-6 border-b border-[#121212]/5">
-                                    <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1">
-                                        Class Detail
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1">
+                                            Class Detail
+                                        </div>
+                                        {!classEditing && (
+                                            <button
+                                                onClick={() => setClassEditing(true)}
+                                                className="p-1.5 text-[#8A817C] hover:text-[#121212] rounded-md hover:bg-[#F4F1EA] border border-transparent transition-colors"
+                                                title="Edit class"
+                                            >
+                                                <Pencil className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
                                     </div>
-                                    <h2 className="text-xl font-light tracking-tight text-[#121212] pr-10">
-                                        {selectedClass.name}
-                                    </h2>
-                                    {selectedClass.description && (
-                                        <p className="text-xs text-[#8A817C] font-light mt-1">
-                                            {selectedClass.description}
-                                        </p>
+
+                                    {classEditing ? (
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">Name</label>
+                                                <input
+                                                    value={editClassForm.name}
+                                                    onChange={(e) => setEditClassForm((p) => ({ ...p, name: e.target.value }))}
+                                                    className="w-full h-9 px-3 bg-[#F4F1EA]/60 border border-[#121212]/20 text-sm text-[#121212] focus:outline-none focus:border-[#121212] rounded-lg"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">Description</label>
+                                                <textarea
+                                                    rows={2}
+                                                    value={editClassForm.description}
+                                                    onChange={(e) => setEditClassForm((p) => ({ ...p, description: e.target.value }))}
+                                                    placeholder="Brief description of this class..."
+                                                    className="w-full px-3 py-2 bg-[#F4F1EA]/60 border border-[#121212]/20 text-xs text-[#121212] focus:outline-none focus:border-[#121212] rounded-lg resize-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">Teacher</label>
+                                                <WorkerSearchInput
+                                                    value={editClassForm.teacherId}
+                                                    initialLabel={editTeacherLabel}
+                                                    onChange={(id) => setEditClassForm((p) => ({ ...p, teacherId: id }))}
+                                                />
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => handleUpdateClass(selectedClass.id)}
+                                                    disabled={ss.isSubmitting || !editClassForm.name.trim()}
+                                                    className="px-3 py-1.5 bg-[#121212] text-white text-[10px] font-bold uppercase tracking-wider rounded disabled:opacity-50 flex items-center gap-1"
+                                                >
+                                                    <Check className="w-3 h-3" /> Save
+                                                </button>
+                                                <button
+                                                    onClick={() => setClassEditing(false)}
+                                                    className="px-3 py-1.5 border border-[#121212]/10 text-[#8A817C] text-[10px] font-semibold uppercase tracking-wider rounded hover:text-[#121212]"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <h2 className="text-xl font-light tracking-tight text-[#121212] pr-10">
+                                                {selectedClass.name}
+                                            </h2>
+                                            {selectedClass.description && (
+                                                <p className="text-xs text-[#8A817C] font-light mt-1">
+                                                    {selectedClass.description}
+                                                </p>
+                                            )}
+                                            {selectedClass.teacher && (
+                                                <p className="text-xs font-mono text-[#8A817C] mt-1">
+                                                    Teacher: {fullName(selectedClass.teacher)}
+                                                </p>
+                                            )}
+                                            <button
+                                                onClick={() => switchToSessionsForClass(selectedClass)}
+                                                className="mt-3 flex items-center gap-1.5 h-8 px-3 border border-[#121212]/10 text-xs text-[#8A817C] hover:text-[#121212] hover:border-[#121212] rounded-lg transition-colors"
+                                            >
+                                                <Calendar className="w-3 h-3" />
+                                                View Sessions
+                                            </button>
+                                        </>
                                     )}
-                                    {selectedClass.teacher && (
-                                        <p className="text-xs font-mono text-[#8A817C] mt-1">
-                                            Teacher: {fullName(selectedClass.teacher)}
-                                        </p>
-                                    )}
-                                    <button
-                                        onClick={() => switchToSessionsForClass(selectedClass)}
-                                        className="mt-3 flex items-center gap-1.5 h-8 px-3 border border-[#121212]/10 text-xs text-[#8A817C] hover:text-[#121212] hover:border-[#121212] rounded-lg transition-colors"
-                                    >
-                                        <Calendar className="w-3 h-3" />
-                                        View Sessions
-                                    </button>
                                 </div>
 
                                 <div className="p-6 space-y-5">
@@ -645,21 +867,7 @@ function SundaySchoolPage() {
                                         </div>
                                     )}
 
-                                    <form onSubmit={handleAddMember} className="flex gap-2">
-                                        <input
-                                            value={addMemberId}
-                                            onChange={(e) => setAddMemberId(e.target.value)}
-                                            placeholder="Member ID"
-                                            className="flex-1 h-9 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] focus:outline-none focus:border-[#121212] rounded-lg"
-                                        />
-                                        <button
-                                            type="submit"
-                                            disabled={ss.isSubmitting || !addMemberId.trim()}
-                                            className="h-9 px-3 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 disabled:opacity-40 transition-colors"
-                                        >
-                                            Add
-                                        </button>
-                                    </form>
+                                    <MemberSearchInput onSelect={(m) => handleAddMember(m.id)} />
 
                                     <div className="border border-[#121212]/10 rounded-xl overflow-hidden">
                                         <table className="w-full text-left border-collapse">
@@ -759,13 +967,10 @@ function SundaySchoolPage() {
                                                 className="w-full p-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg resize-none"
                                             />
                                         </Field>
-                                        <Field label="Teacher ID (optional)">
-                                            <input
-                                                type="text"
+                                        <Field label="Teacher (optional)">
+                                            <WorkerSearchInput
                                                 value={classForm.teacherId}
-                                                onChange={(e) => setClassForm((p) => ({ ...p, teacherId: e.target.value }))}
-                                                placeholder="UUID of the teacher"
-                                                className={inputCls}
+                                                onChange={(id) => setClassForm((p) => ({ ...p, teacherId: id }))}
                                             />
                                         </Field>
                                         <button type="submit" disabled={ss.isSubmitting} className={submitCls}>

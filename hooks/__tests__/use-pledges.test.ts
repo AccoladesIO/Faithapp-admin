@@ -25,6 +25,18 @@ const pledge = {
     createdAt: "", updatedAt: "",
 };
 
+const contribution = {
+    id: "pc1", amount: 5000, paymentDate: "2026-07-01", reference: "TXN1",
+    status: "PENDING" as const, reviewedBy: null, reviewedAt: null, financeNote: null,
+    submittedBy: { id: "m1", firstname: "John", lastname: "Doe" },
+    pledge: {
+        id: "pl1", totalAmount: 20000,
+        member: { id: "m1", firstname: "John", lastname: "Doe" },
+        campaign: { id: "c1", name: "Building Fund Campaign" },
+    },
+    createdAt: "", updatedAt: "",
+};
+
 beforeEach(() => jest.clearAllMocks());
 
 describe("usePledges", () => {
@@ -61,7 +73,7 @@ describe("usePledges", () => {
         await waitFor(() => expect(result.current.isLoading).toBe(false));
 
         await act(async () => {
-            await result.current.createCampaign({ name: "Missions Campaign", targetAmount: 100000, startDate: "2026-06-01" });
+            await result.current.createCampaign({ name: "Missions Campaign", fundId: "f1", targetAmount: 100000, startDate: "2026-06-01", endDate: "2026-12-31" });
         });
 
         expect(result.current.campaigns[0].id).toBe("c2");
@@ -84,5 +96,83 @@ describe("usePledges", () => {
 
         expect(mockPatch).toHaveBeenCalledWith("/admin/finance/pledges/pl1/status", { status: "COMPLETED" });
         expect(result.current.pledges[0].status).toBe("COMPLETED");
+    });
+
+    it("fetches pending pledge contributions", async () => {
+        mockGet.mockResolvedValueOnce({ data: { data: [campaign] } });
+        mockGet.mockResolvedValueOnce({
+            data: { data: { data: [contribution], page: 1, limit: 20, totalCount: 1, totalPages: 1 } },
+        });
+
+        const { result } = renderHook(() => usePledges());
+        await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+        await act(async () => { await result.current.fetchContributions({ status: "PENDING" }); });
+
+        expect(mockGet).toHaveBeenCalledWith(
+            expect.stringContaining("/admin/finance/pledges/contributions?")
+        );
+        expect(mockGet).toHaveBeenCalledWith(expect.stringContaining("status=PENDING"));
+        expect(result.current.contributions).toEqual([contribution]);
+        expect(result.current.contributionsPagination?.totalCount).toBe(1);
+    });
+
+    it("confirms a contribution and refetches the queue", async () => {
+        mockGet.mockResolvedValueOnce({ data: { data: [campaign] } });
+        mockGet.mockResolvedValueOnce({
+            data: { data: { data: [contribution], page: 1, limit: 20, totalCount: 1, totalPages: 1 } },
+        });
+        const confirmed = { ...contribution, status: "CONFIRMED" as const };
+        mockPost.mockResolvedValueOnce({ data: { data: confirmed } });
+        mockGet.mockResolvedValueOnce({
+            data: { data: { data: [confirmed], page: 1, limit: 20, totalCount: 1, totalPages: 1 } },
+        });
+
+        const { result } = renderHook(() => usePledges());
+        await waitFor(() => expect(result.current.isLoading).toBe(false));
+        await act(async () => { await result.current.fetchContributions({ status: "PENDING" }); });
+
+        await act(async () => { await result.current.confirmContribution("pc1"); });
+
+        expect(mockPost).toHaveBeenCalledWith("/admin/finance/pledges/contributions/pc1/confirm");
+        await waitFor(() => expect(result.current.contributions[0]?.status).toBe("CONFIRMED"));
+    });
+
+    it("declines a contribution with a finance note", async () => {
+        mockGet.mockResolvedValueOnce({ data: { data: [campaign] } });
+        mockGet.mockResolvedValueOnce({
+            data: { data: { data: [contribution], page: 1, limit: 20, totalCount: 1, totalPages: 1 } },
+        });
+        const declined = { ...contribution, status: "DECLINED" as const, financeNote: "No match" };
+        mockPost.mockResolvedValueOnce({ data: { data: declined } });
+        mockGet.mockResolvedValueOnce({
+            data: { data: { data: [declined], page: 1, limit: 20, totalCount: 1, totalPages: 1 } },
+        });
+
+        const { result } = renderHook(() => usePledges());
+        await waitFor(() => expect(result.current.isLoading).toBe(false));
+        await act(async () => { await result.current.fetchContributions({ status: "PENDING" }); });
+
+        await act(async () => { await result.current.declineContribution("pc1", "No match"); });
+
+        expect(mockPost).toHaveBeenCalledWith(
+            "/admin/finance/pledges/contributions/pc1/decline",
+            { financeNote: "No match" }
+        );
+        await waitFor(() => expect(result.current.contributions[0]?.status).toBe("DECLINED"));
+    });
+
+    it("toggles a campaign's active state in-place", async () => {
+        mockGet.mockResolvedValueOnce({ data: { data: [campaign] } });
+        const deactivated = { ...campaign, isActive: false };
+        mockPatch.mockResolvedValueOnce({ data: { data: deactivated } });
+
+        const { result } = renderHook(() => usePledges());
+        await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+        await act(async () => { await result.current.updateCampaignActive("c1", false); });
+
+        expect(mockPatch).toHaveBeenCalledWith("/admin/finance/pledges/campaigns/c1/active", { isActive: false });
+        expect(result.current.campaigns[0].isActive).toBe(false);
     });
 });

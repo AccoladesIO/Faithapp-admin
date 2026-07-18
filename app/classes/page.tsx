@@ -17,10 +17,9 @@ import {
     Enrollment,
     CreateClassPayload,
 } from "@/hooks/use-classes";
-import { useMembers } from "@/hooks/use-member";
-import { useWorkers } from "@/hooks/use-workers";
 import { toLocalDate } from "@/utils/parse-local-time";
 import { DismissibleError } from "@/components/ui/dismissible-error";
+import { api } from "@/utils/auth/axios-client";
 
 type ApiError = { response?: { data?: { message?: string } }; message?: string };
 
@@ -31,7 +30,7 @@ const fullName = (p: { firstname: string; lastname: string }) =>
 
 const formatDate = (iso: string | null) => {
     if (!iso) return "—";
-    return new Date(iso).toLocaleDateString("en-GB", {
+    return new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString("en-GB", {
         day: "2-digit", month: "short", year: "numeric",
     });
 };
@@ -80,32 +79,36 @@ function SkeletonRow({ cols }: { cols: number }) {
 
 interface ComboOption { id: string; label: string; sub?: string; }
 
+// Server-searched (debounced /members?search=) rather than filtering a
+// pre-loaded list client-side — the church roster can grow well past what's
+// safe to fetch in full up front.
 function PersonCombobox({
-    options,
+    role,
+    excludeIds,
     value,
     onChange,
     placeholder = "Search by name…",
     required,
+    initialLabel,
 }: {
-    options: ComboOption[];
+    role?: "WORKER";
+    excludeIds?: Set<string>;
     value: string;
     onChange: (id: string) => void;
     placeholder?: string;
     required?: boolean;
+    initialLabel?: string;
 }) {
     const [query, setQuery] = useState("");
+    const [results, setResults] = useState<ComboOption[]>([]);
     const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [selectedLabel, setSelectedLabel] = useState(initialLabel ?? "");
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const selected = useMemo(() => options.find((o) => o.id === value), [options, value]);
-
-    const filtered = useMemo(() => {
-        const q = query.toLowerCase();
-        const list = q
-            ? options.filter((o) => o.label.toLowerCase().includes(q) || o.sub?.toLowerCase().includes(q))
-            : options;
-        return list.slice(0, 60);
-    }, [query, options]);
+    useEffect(() => { setSelectedLabel(initialLabel ?? ""); }, [initialLabel]);
+    useEffect(() => { if (!value) setSelectedLabel(""); }, [value]);
 
     useEffect(() => {
         const onDown = (e: MouseEvent) => {
@@ -118,8 +121,45 @@ function PersonCombobox({
         return () => document.removeEventListener("mousedown", onDown);
     }, []);
 
-    const select = (id: string) => { onChange(id); setQuery(""); setOpen(false); };
-    const clear = (e: React.MouseEvent) => { e.stopPropagation(); onChange(""); setQuery(""); };
+    const doSearch = async (q: string) => {
+        if (!q.trim()) { setResults([]); setOpen(false); return; }
+        setLoading(true);
+        try {
+            const roleParam = role ? `&role=${role}` : "";
+            const res = await api.get(`/members?page=1&limit=20${roleParam}&search=${encodeURIComponent(q)}`);
+            const list: { id: string; firstname: string; lastname: string; email: string }[] = res.data?.data?.data ?? [];
+            const opts = list
+                .filter((m) => !excludeIds?.has(m.id))
+                .map((m) => ({ id: m.id, label: fullName(m), sub: m.email }));
+            setResults(opts);
+            setOpen(opts.length > 0);
+        } catch {
+            setResults([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const q = e.target.value;
+        setQuery(q);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => doSearch(q), 300);
+    };
+
+    const select = (o: ComboOption) => {
+        onChange(o.id);
+        setSelectedLabel(o.label);
+        setQuery("");
+        setResults([]);
+        setOpen(false);
+    };
+    const clear = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onChange("");
+        setSelectedLabel("");
+        setQuery("");
+    };
 
     return (
         <div ref={containerRef} className="relative">
@@ -127,45 +167,46 @@ function PersonCombobox({
             {required && <input tabIndex={-1} required value={value} onChange={() => {}} className="sr-only" />}
             <div
                 className="flex items-center w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 rounded-lg focus-within:border-[#121212] transition-colors cursor-text gap-2"
-                onClick={() => { setOpen(true); }}
+                onClick={() => setOpen(true)}
             >
-                {selected && !open ? (
+                {selectedLabel && !open ? (
                     <>
-                        <span className="flex-1 text-sm text-[#121212] font-light truncate">{selected.label}</span>
+                        <span className="flex-1 text-sm text-[#121212] font-light truncate">{selectedLabel}</span>
                         <button type="button" onClick={clear} className="shrink-0 text-[#8A817C] hover:text-[#121212]">
                             <X className="w-3.5 h-3.5" />
                         </button>
                     </>
                 ) : (
-                    <input
-                        autoFocus={open}
-                        type="text"
-                        value={query}
-                        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
-                        onFocus={() => setOpen(true)}
-                        placeholder={selected ? selected.label : placeholder}
-                        className="flex-1 bg-transparent text-sm text-[#121212] font-light outline-none placeholder:text-[#8A817C]/60"
-                    />
+                    <div className="relative flex-1">
+                        <input
+                            autoFocus={open}
+                            type="text"
+                            value={query}
+                            onChange={handleInput}
+                            onFocus={() => results.length > 0 && setOpen(true)}
+                            placeholder={selectedLabel || placeholder}
+                            className="w-full bg-transparent text-sm text-[#121212] font-light outline-none placeholder:text-[#8A817C]/60"
+                        />
+                        {loading && (
+                            <RefreshCw className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 text-[#8A817C] animate-spin pointer-events-none" />
+                        )}
+                    </div>
                 )}
             </div>
-            {open && (
+            {open && results.length > 0 && (
                 <div className="absolute z-30 top-full mt-1 w-full bg-white border border-[#121212]/10 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                    {filtered.length === 0 ? (
-                        <div className="p-3 text-xs text-[#8A817C] text-center">No results</div>
-                    ) : (
-                        filtered.map((o) => (
-                            <button
-                                key={o.id}
-                                type="button"
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => select(o.id)}
-                                className={`w-full text-left px-3 py-2.5 hover:bg-[#F4F1EA] transition-colors ${o.id === value ? "bg-[#F4F1EA]/70" : ""}`}
-                            >
-                                <div className="text-xs font-medium text-[#121212]">{o.label}</div>
-                                {o.sub && <div className="text-[11px] text-[#8A817C] font-mono mt-0.5 truncate">{o.sub}</div>}
-                            </button>
-                        ))
-                    )}
+                    {results.map((o) => (
+                        <button
+                            key={o.id}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => select(o)}
+                            className="w-full text-left px-3 py-2.5 hover:bg-[#F4F1EA] transition-colors"
+                        >
+                            <div className="text-xs font-medium text-[#121212]">{o.label}</div>
+                            {o.sub && <div className="text-[11px] text-[#8A817C] font-mono mt-0.5 truncate">{o.sub}</div>}
+                        </button>
+                    ))}
                 </div>
             )}
         </div>
@@ -208,14 +249,6 @@ const ClassesPage = () => {
         updateEnrollmentStatus,
         closeClass,
     } = useClasses("", 10);
-
-    const { workers } = useWorkers(200);
-    const { members } = useMembers(200);
-
-    const facilitatorOptions = useMemo<ComboOption[]>(() =>
-        workers.map((w) => ({ id: w.id, label: fullName(w), sub: w.email })),
-        [workers]
-    );
 
     // Panel state
     const [showCreateForm, setShowCreateForm] = useState(false);
@@ -414,12 +447,10 @@ const ClassesPage = () => {
         }
     };
 
-    const enrollableOptions = useMemo<ComboOption[]>(() => {
-        const enrolledIds = new Set(enrollments.map((e) => e.member.id));
-        return members
-            .filter((m) => !enrolledIds.has(m.id))
-            .map((m) => ({ id: m.id, label: fullName(m), sub: m.email }));
-    }, [members, enrollments]);
+    const enrolledMemberIds = useMemo(
+        () => new Set(enrollments.map((e) => e.member.id)),
+        [enrollments]
+    );
 
     return (
         <div className="space-y-8 font-sans">
@@ -770,7 +801,7 @@ const ClassesPage = () => {
                                             Facilitator
                                         </label>
                                         <PersonCombobox
-                                            options={facilitatorOptions}
+                                            role="WORKER"
                                             value={createForm.facilitatorId}
                                             onChange={(id) => setCreateForm((p) => ({ ...p, facilitatorId: id }))}
                                             placeholder="Search workers by name…"
@@ -876,10 +907,11 @@ const ClassesPage = () => {
                                                 </div>
                                                 {editingFacilitator ? (
                                                     <PersonCombobox
-                                                        options={facilitatorOptions}
+                                                        role="WORKER"
                                                         value={facilitatorDraft}
                                                         onChange={setFacilitatorDraft}
                                                         placeholder="Search workers by name…"
+                                                        initialLabel={selectedClass.facilitator ? fullName(selectedClass.facilitator) : undefined}
                                                     />
                                                 ) : (
                                                     <div className="font-mono">
@@ -955,7 +987,7 @@ const ClassesPage = () => {
 
                                             <form onSubmit={handleEnroll} className="space-y-2">
                                                 <PersonCombobox
-                                                    options={enrollableOptions}
+                                                    excludeIds={enrolledMemberIds}
                                                     value={enrollMemberId}
                                                     onChange={setEnrollMemberId}
                                                     placeholder="Search members by name…"

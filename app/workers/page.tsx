@@ -24,7 +24,7 @@ const fullName = (w: Worker) =>
 
 const formatDate = (iso: string | null) => {
     if (!iso) return "—";
-    return new Date(iso).toLocaleDateString("en-GB", {
+    return new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString("en-GB", {
         day: "2-digit",
         month: "short",
         year: "numeric",

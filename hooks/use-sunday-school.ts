@@ -172,7 +172,13 @@ export function useSundaySchool(defaultLimit = 10) {
                 `/admin/sunday-school/classes/${classId}/members?page=${page}&limit=${defaultLimit}`
             );
             const outer = res.data?.data;
-            const members: SSMember[] = Array.isArray(outer?.data) ? outer.data : [];
+            // Each row is a SundaySchoolMember join record ({ id, member: {...},
+            // assignedAt }), not a flat member — unwrap .member so the roster
+            // gets the actual firstname/lastname/email (and so the id used for
+            // "Remove" is the member's id, which is what the backend expects,
+            // not the join row's own id).
+            const rows: { member: SSMember }[] = Array.isArray(outer?.data) ? outer.data : [];
+            const members: SSMember[] = rows.map((r) => r.member);
             const pagination = outer?.page !== undefined
                 ? extractPagination(outer, page, defaultLimit)
                 : null;

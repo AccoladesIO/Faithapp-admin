@@ -3,7 +3,7 @@ import { api } from "@/utils/auth/axios-client";
 
 type ApiError = { response?: { data?: { message?: string } }; message?: string };
 
-export type AnnouncementAudience = "ALL" | "WORKERS_ONLY" | "MEMBERS_ONLY" | "DEPARTMENT" | "INDIVIDUAL";
+export type AnnouncementAudience = "ALL" | "WORKERS_ONLY" | "MEMBERS_ONLY" | "DEPARTMENT" | "INDIVIDUAL" | "GROUP";
 
 export interface AnnouncementAuthor {
     id: string;
@@ -25,6 +25,11 @@ export interface AnnouncementTargetMember {
     email: string;
 }
 
+export interface AnnouncementGroup {
+    id: string;
+    name: string;
+}
+
 export interface Announcement {
     id: string;
     title: string;
@@ -32,9 +37,12 @@ export interface Announcement {
     audience: AnnouncementAudience;
     publishedAt: string;
     expiresAt: string | null;
-    author: AnnouncementAuthor;
+    author: AnnouncementAuthor | null;
     department: AnnouncementDepartment | null;
     targetMember: AnnouncementTargetMember | null;
+    group: AnnouncementGroup | null;
+    sendViaSms: boolean;
+    smsBody: string | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -54,9 +62,20 @@ export interface CreateAnnouncementPayload {
     expiresAt?: string | null;
     departmentId?: string;
     targetMemberId?: string;
+    groupId?: string;
+    sendViaSms?: boolean;
+    smsBody?: string;
 }
 
 export type UpdateAnnouncementPayload = Partial<Omit<CreateAnnouncementPayload, "audience" | "departmentId" | "targetMemberId">>;
+
+export interface SendSmsBroadcastPayload {
+    audience: AnnouncementAudience;
+    departmentId?: string;
+    targetMemberId?: string;
+    groupId?: string;
+    message: string;
+}
 
 export interface AnnouncementFilters {
     search?: string;
@@ -144,6 +163,27 @@ export function useAnnouncements(defaultLimit = 10) {
         }
     }, []);
 
+    const sendSmsBroadcast = useCallback(async (
+        payload: SendSmsBroadcastPayload
+    ): Promise<{ sentCount: number }> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            const res = await api.post("/announcements/sms-broadcast", payload);
+            return res.data?.data;
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message =
+                e?.response?.data?.message ||
+                e?.message ||
+                "Failed to send SMS broadcast.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
     const updateAnnouncement = useCallback(async (
         announcementId: string,
         payload: UpdateAnnouncementPayload
@@ -207,6 +247,7 @@ export function useAnnouncements(defaultLimit = 10) {
         goToPage,
         refetch: () => fetchAnnouncements(page, filters),
         createAnnouncement,
+        sendSmsBroadcast,
         updateAnnouncement,
         deleteAnnouncement,
     };

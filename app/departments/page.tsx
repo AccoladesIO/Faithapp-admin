@@ -15,7 +15,6 @@ import {
     DepartmentWorker,
     DepartmentPagination,
 } from "@/hooks/use-departments";
-import { useMembers } from "@/hooks/use-member";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
 import { DismissibleError } from "@/components/ui/dismissible-error";
 
@@ -47,13 +46,6 @@ function SkeletonRow({ cols }: { cols: number }) {
 
 const defaultCreateForm = { name: "", description: "", key: "" };
 
-function isWorkerInDept(m: { role: string; workerProfile: { department?: { id?: string } | null; secondaryDepartment?: { id?: string } | null } | null }, deptId: string): boolean {
-    if (m.role !== "WORKER") return false;
-    const primary = m.workerProfile?.department?.id;
-    const secondary = m.workerProfile?.secondaryDepartment?.id;
-    return primary === deptId || secondary === deptId;
-}
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 type SortKey = "name" | "key" | "createdAt";
@@ -76,8 +68,6 @@ fetchDepartments,
         fetchDepartmentLeads,
         fetchDepartmentWorkers,
     } = useDepartments();
-
-    const { members } = useMembers(100);
 
     // ── Table state ───────────────────────────────────────────────────────────
     const [searchQuery, setSearchQuery] = useState("");
@@ -106,6 +96,10 @@ fetchDepartments,
     const [workersLoading, setWorkersLoading] = useState(false);
     const [workersPagination, setWorkersPagination] = useState<DepartmentPagination | null>(null);
     const [workersPage, setWorkersPage] = useState(1);
+    // Full (unpaginated) roster of this department's workers, for the
+    // "assign lead" select — department worker counts are inherently small,
+    // unlike the global member pool this used to be filtered from.
+    const [leadEligibleWorkers, setLeadEligibleWorkers] = useState<DepartmentWorker[]>([]);
 
     // ── Assign/remove lead ────────────────────────────────────────────────────
     const [assignType, setAssignType] = useState<"head" | "assistant">("head");
@@ -179,7 +173,9 @@ fetchDepartments,
         setAssignType("head");
         loadLeads(dept.id);
         loadWorkers(dept.id, 1);
-    }, [loadLeads, loadWorkers]);
+        setLeadEligibleWorkers([]);
+        fetchDepartmentWorkers(dept.id, 1, 500).then(({ workers }) => setLeadEligibleWorkers(workers));
+    }, [loadLeads, loadWorkers, fetchDepartmentWorkers]);
 
     // ── Create ────────────────────────────────────────────────────────────────
     const handleCreate = async (e: React.FormEvent) => {
@@ -264,12 +260,6 @@ fetchDepartments,
             setLeadError(e?.message ?? "Failed to remove lead.");
         }
     };
-
-    // ── Workers eligible for lead assignment in the selected department ───────
-    const workerMembers = useMemo(() => {
-        const deptId = selectedDept?.id;
-        return deptId ? members.filter((m) => isWorkerInDept(m, deptId)) : [];
-    }, [members, selectedDept]);
 
     const openCreateForm = () => {
         setShowCreateForm(true);
@@ -793,9 +783,9 @@ fetchDepartments,
                                             className="w-full h-10 px-3 bg-white border border-[#121212]/10 text-xs text-[#121212] focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
                                         >
                                             <option value="">-- Select worker --</option>
-                                            {workerMembers.length === 0 ? (
+                                            {leadEligibleWorkers.length === 0 ? (
                                                 <option value="" disabled>No workers in this department</option>
-                                            ) : workerMembers.map((m) => (
+                                            ) : leadEligibleWorkers.map((m) => (
                                                 <option key={m.id} value={m.id}>
                                                     {[m.firstname, m.lastname].filter(Boolean).join(" ")} — {m.email}
                                                 </option>

@@ -20,6 +20,20 @@ export interface DepartmentWorker {
     role: string;
 }
 
+// Raw shape of a row from GET /departments/:id/workers — a WorkerProfile
+// with its member relation populated, not a flat member.
+interface WorkerProfileRow {
+    id: string;
+    member: {
+        id: string;
+        firstname: string;
+        lastname: string;
+        email: string;
+        phoneNumber: string | null;
+        role: string;
+    };
+}
+
 export interface Department {
     id: string;
     name: string;
@@ -233,8 +247,36 @@ export function useDepartments() {
     ): Promise<DepartmentLead[]> => {
         try {
             const res = await api.get(`/departments/leads/${departmentId}`);
-            const data = res.data?.data;
-            return Array.isArray(data) ? data : [];
+            // The endpoint returns { name, head, assistant } — each a
+            // WorkerProfile (member nested) or null — not an array, so the
+            // previous `Array.isArray(data) ? data : []` always fell through
+            // to [], making the leads panel appear empty even when a head or
+            // assistant was assigned. Build the flat array the UI expects.
+            const data: {
+                head: WorkerProfileRow | null;
+                assistant: WorkerProfileRow | null;
+            } | undefined = res.data?.data;
+            if (!data) return [];
+            const leads: DepartmentLead[] = [];
+            if (data.head) {
+                leads.push({
+                    id: data.head.member.id,
+                    firstname: data.head.member.firstname,
+                    lastname: data.head.member.lastname,
+                    email: data.head.member.email,
+                    type: "head",
+                });
+            }
+            if (data.assistant) {
+                leads.push({
+                    id: data.assistant.member.id,
+                    firstname: data.assistant.member.firstname,
+                    lastname: data.assistant.member.lastname,
+                    email: data.assistant.member.email,
+                    type: "assistant",
+                });
+            }
+            return leads;
         } catch {
             return [];
         }
@@ -272,11 +314,24 @@ export function useDepartments() {
                 `/departments/${departmentId}/workers?page=${page}&limit=${limit}`
             );
             const outer = res.data?.data;
-            const workers: DepartmentWorker[] = Array.isArray(outer?.data)
+            const rows: WorkerProfileRow[] = Array.isArray(outer?.data)
                 ? outer.data
                 : Array.isArray(outer)
                     ? outer
                     : [];
+            // Each row is a WorkerProfile ({ id: <worker profile id>, member: {...},
+            // status }), not a flat member — unwrap .member so the roster gets the
+            // actual firstname/lastname/email, and so the id used elsewhere (e.g.
+            // the "Assign Lead" picker) is the member's id, which the backend's
+            // assignLead endpoint expects, not the worker profile's own id.
+            const workers: DepartmentWorker[] = rows.map((r) => ({
+                id: r.member.id,
+                firstname: r.member.firstname,
+                lastname: r.member.lastname,
+                email: r.member.email,
+                phoneNumber: r.member.phoneNumber,
+                role: r.member.role,
+            }));
             const pagination = outer?.page !== undefined
                 ? {
                     page: outer.page,

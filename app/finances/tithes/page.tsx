@@ -59,7 +59,7 @@ const TABS: { key: Tab; label: string }[] = [
 const CURRENCIES: CurrencyCode[] = ["NGN", "USD", "GBP", "EUR"];
 
 const fmtDate = (iso: string) =>
-    new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
 const fmtMoney = (amount: number | string, currency = "NGN") => {
     const n = Number(amount);

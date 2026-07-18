@@ -33,12 +33,10 @@ export interface ChurchEvent {
 export interface CreateEventPayload {
     name: string;
     description: string;
-    eventDate: string;
     onlineAttendanceEnabled: boolean;
     isRecurring: boolean;
     recurrence?: Recurrence;
     serviceSlots: ServiceSlot[];
-    endDate: string;
 }
 
 export type UpdateEventPayload = Partial<CreateEventPayload>;
@@ -127,9 +125,10 @@ export function useEvents(defaultLimit = 20) {
         setError(null);
         try {
             const res = await api.post("/events", payload);
-            const created: ChurchEvent = res.data?.data.data;
-            setEvents((prev) => [created, ...prev]);
-            return created;
+            const created: ChurchEvent | ChurchEvent[] = res.data?.data;
+            const createdList = Array.isArray(created) ? created : [created];
+            setEvents((prev) => [...createdList, ...prev]);
+            return createdList[0];
         } catch (err: unknown) {
             const e = err as ApiError;
             const message =
@@ -148,7 +147,7 @@ export function useEvents(defaultLimit = 20) {
         setError(null);
         try {
             const res = await api.patch(`/events/${eventId}`, payload);
-            const updated: ChurchEvent = res.data?.data.data;
+            const updated: ChurchEvent = res.data?.data;
             setEvents((prev) =>
                 prev.map((e) => (e.id === eventId ? updated : e))
             );

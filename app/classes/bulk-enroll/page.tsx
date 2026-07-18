@@ -160,17 +160,25 @@ function MemberRow({
 const BulkEnrollPage = () => {
     const router = useRouter();
     const { classes, isLoading: classesLoading } = useClasses("", 200);
-    const { members, isLoading: membersLoading } = useMembers(500);
+    const {
+        members,
+        pagination,
+        page,
+        search,
+        onSearchChange,
+        goToPage,
+        isLoading: membersLoading,
+    } = useMembers(20);
 
     const [selectedClassId, setSelectedClassId] = useState("");
     const [enrolledIds, setEnrolledIds] = useState<Set<string>>(new Set());
     const [loadingEnrolled, setLoadingEnrolled] = useState(false);
 
-    const [search, setSearch] = useState("");
     const [selected, setSelected] = useState<Set<string>>(new Set());
-
-    const [page, setPage] = useState(1);
-    const PAGE_SIZE = 20;
+    // Selected members must survive page/search changes, since the summary
+    // panel needs to render names for members not on the currently loaded
+    // server page.
+    const [selectedMembers, setSelectedMembers] = useState<Map<string, Member>>(new Map());
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [result, setResult] = useState<{ enrolled: number; skipped: number } | null>(null);
@@ -197,47 +205,41 @@ const BulkEnrollPage = () => {
         if (selectedClassId) loadEnrolled(selectedClassId);
     }, [selectedClassId, loadEnrolled]);
 
-    // Filtered + paginated member list
-    const filteredMembers = useMemo(() => {
-        const q = search.toLowerCase();
-        return q
-            ? members.filter(
-                (m) =>
-                    fullName(m).toLowerCase().includes(q) ||
-                    m.email.toLowerCase().includes(q)
-            )
-            : members;
-    }, [members, search]);
-
-    const totalPages = Math.ceil(filteredMembers.length / PAGE_SIZE);
-    const pageMembers = filteredMembers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-    // Reset page when search changes
-    useEffect(() => { setPage(1); }, [search]);
-
-    const toggle = (id: string) => {
+    const toggle = (member: Member) => {
         setSelected((prev) => {
             const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
+            if (next.has(member.id)) next.delete(member.id);
+            else next.add(member.id);
+            return next;
+        });
+        setSelectedMembers((prev) => {
+            const next = new Map(prev);
+            if (next.has(member.id)) next.delete(member.id);
+            else next.set(member.id, member);
             return next;
         });
     };
 
     const togglePageAll = () => {
-        const eligible = pageMembers.filter((m) => !enrolledIds.has(m.id));
-        const allChecked = eligible.every((m) => selected.has(m.id));
+        const eligible = members.filter((m) => !enrolledIds.has(m.id));
+        const allChecked = eligible.length > 0 && eligible.every((m) => selected.has(m.id));
         setSelected((prev) => {
             const next = new Set(prev);
             if (allChecked) eligible.forEach((m) => next.delete(m.id));
             else eligible.forEach((m) => next.add(m.id));
             return next;
         });
+        setSelectedMembers((prev) => {
+            const next = new Map(prev);
+            if (allChecked) eligible.forEach((m) => next.delete(m.id));
+            else eligible.forEach((m) => next.set(m.id, m));
+            return next;
+        });
     };
 
     const selectedList = useMemo(
-        () => members.filter((m) => selected.has(m.id)),
-        [members, selected]
+        () => Array.from(selectedMembers.values()),
+        [selectedMembers]
     );
 
     const handleSubmit = async () => {
@@ -253,6 +255,7 @@ const BulkEnrollPage = () => {
             const data = res.data?.data;
             setResult(data);
             setSelected(new Set());
+            setSelectedMembers(new Map());
             // Refresh enrolled IDs
             loadEnrolled(selectedClassId);
         } catch (err: unknown) {
@@ -263,7 +266,7 @@ const BulkEnrollPage = () => {
         }
     };
 
-    const eligibleOnPage = pageMembers.filter((m) => !enrolledIds.has(m.id));
+    const eligibleOnPage = members.filter((m) => !enrolledIds.has(m.id));
     const allPageChecked = eligibleOnPage.length > 0 && eligibleOnPage.every((m) => selected.has(m.id));
 
     return (
@@ -315,7 +318,7 @@ const BulkEnrollPage = () => {
                                 <input
                                     type="text"
                                     value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
+                                    onChange={(e) => onSearchChange(e.target.value)}
                                     placeholder="Search members by name or email…"
                                     className="w-full h-9 pl-9 pr-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] focus:outline-none focus:border-[#121212] rounded-lg"
                                 />
@@ -336,39 +339,39 @@ const BulkEnrollPage = () => {
                         <div className="flex-1 overflow-y-auto">
                             {membersLoading || loadingEnrolled ? (
                                 <div className="p-8 text-center text-xs text-[#8A817C] animate-pulse">Loading members…</div>
-                            ) : pageMembers.length === 0 ? (
+                            ) : members.length === 0 ? (
                                 <div className="p-8 text-center text-xs text-[#8A817C]">No members found.</div>
                             ) : (
-                                pageMembers.map((m) => (
+                                members.map((m) => (
                                     <MemberRow
                                         key={m.id}
                                         member={m}
                                         checked={selected.has(m.id)}
                                         alreadyEnrolled={enrolledIds.has(m.id)}
-                                        onToggle={() => toggle(m.id)}
+                                        onToggle={() => toggle(m)}
                                     />
                                 ))
                             )}
                         </div>
 
                         {/* Pagination */}
-                        {totalPages > 1 && (
+                        {pagination && pagination.totalPages > 1 && (
                             <div className="p-3 border-t border-[#121212]/5 flex items-center justify-between">
                                 <span className="text-[11px] font-mono text-[#8A817C]">
-                                    Page {page} of {totalPages}
-                                    <span className="ml-2 text-[#121212]/30">({filteredMembers.length} members)</span>
+                                    Page {page} of {pagination.totalPages}
+                                    <span className="ml-2 text-[#121212]/30">({pagination.totalCount} members)</span>
                                 </span>
                                 <div className="flex gap-1">
                                     <button
                                         disabled={page <= 1}
-                                        onClick={() => setPage((p) => p - 1)}
+                                        onClick={() => goToPage(page - 1)}
                                         className="p-1.5 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212] hover:bg-[#F4F1EA]"
                                     >
                                         <ChevronLeft className="w-3.5 h-3.5" />
                                     </button>
                                     <button
-                                        disabled={page >= totalPages}
-                                        onClick={() => setPage((p) => p + 1)}
+                                        disabled={page >= pagination.totalPages}
+                                        onClick={() => goToPage(page + 1)}
                                         className="p-1.5 border border-[#121212]/10 rounded-md disabled:opacity-40 text-[#121212] hover:bg-[#F4F1EA]"
                                     >
                                         <ChevronRight className="w-3.5 h-3.5" />
@@ -411,7 +414,7 @@ const BulkEnrollPage = () => {
                                 </div>
                                 {selected.size > 0 && (
                                     <button
-                                        onClick={() => setSelected(new Set())}
+                                        onClick={() => { setSelected(new Set()); setSelectedMembers(new Map()); }}
                                         className="text-[10px] font-semibold uppercase tracking-wider text-[#8A817C] hover:text-[#121212] transition-colors"
                                     >
                                         Clear all
@@ -429,7 +432,7 @@ const BulkEnrollPage = () => {
                                         <div key={m.id} className="flex items-center justify-between gap-2 px-3 py-2 bg-[#F4F1EA]/40 rounded-lg">
                                             <span className="text-xs text-[#121212] truncate">{fullName(m)}</span>
                                             <button
-                                                onClick={() => toggle(m.id)}
+                                                onClick={() => toggle(m)}
                                                 className="shrink-0 text-[#8A817C] hover:text-[#121212] transition-colors"
                                             >
                                                 <X className="w-3 h-3" />

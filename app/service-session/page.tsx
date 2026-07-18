@@ -3,18 +3,25 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
     Play, Pause, StepForward, StepBack,
-    Square as SquareIcon, Radio, RefreshCw, ExternalLink,
+    Square as SquareIcon, Radio, RefreshCw, ExternalLink, Link2, Maximize2,
 } from "lucide-react";
 import Link from "next/link";
 import { withAuth } from "@/utils/auth/with-auth";
-import { useServiceProgramme, ServiceProgramme, ServiceProgrammeSlot } from "@/hooks/use-service-programme";
+import { useServiceProgramme, ServiceProgramme } from "@/hooks/use-service-programme";
 import { DismissibleError } from "@/components/ui/dismissible-error";
+import { useToast } from "@/context/toast-context";
 import {
-    useServiceSession, PauseReason,
+    useServiceSession, PauseReason, EffectiveSessionSlot,
     PAUSE_REASON_LABELS, calcElapsedSeconds, formatMMSS,
 } from "@/hooks/use-service-session";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const LINK_COPIED_LABELS: Record<"presentation" | "manage" | "audience", string> = {
+    presentation: "Presentation link copied",
+    manage: "Programme Manager link copied",
+    audience: "Audience link copied",
+};
 
 function SlotTypeBadge({ type }: { type: string }) {
     return (
@@ -35,21 +42,35 @@ function SessionRunner({ programme, onEnded }: SessionRunnerProps) {
     const {
         anchor, session, isSubmitting, error,
         fetchLatestSession, fetchState, advance, rewind,
-        pauseSession, resumeSession, endSession,
+        pauseSession, resumeSession, endSession, getShareLinks, rotateShareToken,
     } = useServiceSession();
+    const { success: toastSuccess, error: toastError } = useToast();
 
     const [nowMs, setNowMs] = useState(() => Date.now());
     const [showPause, setShowPause] = useState(false);
     const [pauseReason, setPauseReason] = useState<PauseReason>("TECHNICAL_ISSUE");
+    const [showRotateConfirm, setShowRotateConfirm] = useState(false);
     const [showEndConfirm, setShowEndConfirm] = useState(false);
+    const [showRewindConfirm, setShowRewindConfirm] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [shareToken, setShareToken] = useState<string | null>(null);
+    const [effectiveSlots, setEffectiveSlots] = useState<EffectiveSessionSlot[]>([]);
 
     const load = useCallback(async () => {
         setLoading(true);
         const s = await fetchLatestSession(programme.id);
-        if (s?.sessionCode) await fetchState(s.sessionCode);
+        if (s?.sessionCode) {
+            const state = await fetchState(s.sessionCode);
+            setEffectiveSlots(state?.effectiveSlots ?? []);
+            try {
+                const { shareToken: token } = await getShareLinks(s.sessionCode);
+                setShareToken(token);
+            } catch {
+                // Non-critical — the copy button falls back to fetching on click.
+            }
+        }
         setLoading(false);
-    }, [fetchLatestSession, fetchState, programme.id]);
+    }, [fetchLatestSession, fetchState, getShareLinks, programme.id]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -59,7 +80,7 @@ function SessionRunner({ programme, onEnded }: SessionRunnerProps) {
         return () => clearInterval(id);
     }, [anchor]);
 
-    const slots: ServiceProgrammeSlot[] = programme.slots ?? [];
+    const slots = effectiveSlots;
     const currentSlot = anchor ? slots.find((s) => s.position === anchor.currentSlotPosition) : null;
     const elapsed = anchor ? calcElapsedSeconds(anchor, nowMs) : 0;
     const allocated = (currentSlot?.allocatedMinutes ?? 0) * 60;
@@ -71,9 +92,10 @@ function SessionRunner({ programme, onEnded }: SessionRunnerProps) {
         await advance(session.sessionCode);
     };
 
-    const handleRewind = async () => {
+    const handleRewindConfirm = async () => {
         if (!session?.sessionCode) return;
         await rewind(session.sessionCode);
+        setShowRewindConfirm(false);
     };
 
     const handlePause = async () => {
@@ -92,6 +114,48 @@ function SessionRunner({ programme, onEnded }: SessionRunnerProps) {
         await endSession(session.sessionCode);
         setShowEndConfirm(false);
         onEnded();
+    };
+
+    const handleRotateLink = async () => {
+        if (!session?.sessionCode) return;
+        try {
+            const { shareToken: token } = await rotateShareToken(session.sessionCode);
+            setShareToken(token);
+            setShowRotateConfirm(false);
+            toastSuccess("Programme Manager link rotated — the old link no longer works.");
+        } catch {
+            toastError("Failed to rotate link.");
+        }
+    };
+
+    const handleCopyLink = async (view: "presentation" | "manage" | "audience") => {
+        if (!session?.sessionCode) return;
+        try {
+            let url: string;
+            if (view === "manage") {
+                // Use the pre-fetched token so the clipboard write stays inside this
+                // click's user-activation window — Safari silently rejects
+                // navigator.clipboard.writeText() once an awaited network call
+                // (getShareLinks) has pushed it outside that window.
+                const token = shareToken ?? (await getShareLinks(session.sessionCode)).shareToken;
+                url = `${window.location.origin}/live/${session.sessionCode}/manage?token=${token}`;
+            } else {
+                url = `${window.location.origin}/live/${session.sessionCode}/${view}`;
+            }
+            await navigator.clipboard.writeText(url);
+            toastSuccess(LINK_COPIED_LABELS[view]);
+        } catch {
+            toastError("Failed to copy link.");
+        }
+    };
+
+    const handleOpenPresentationWindow = () => {
+        if (!session?.sessionCode) return;
+        window.open(
+            `${window.location.origin}/live/${session.sessionCode}/presentation`,
+            `presentation-${session.sessionCode}`,
+            "noopener,noreferrer",
+        );
     };
 
     if (loading) {
@@ -125,11 +189,51 @@ function SessionRunner({ programme, onEnded }: SessionRunnerProps) {
                     <h2 className="text-sm font-light text-[#121212] truncate">
                         {programme.serviceSlotName ?? programme.serviceSlotId}
                     </h2>
+                    <div className="flex items-center gap-3 mt-1">
+                        <button onClick={() => handleCopyLink("presentation")}
+                            className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#8A817C] hover:text-[#121212] transition-colors">
+                            <Link2 className="w-3 h-3" /> Presentation Link
+                        </button>
+                        <button onClick={handleOpenPresentationWindow} title="Open in a new window for a projector or second screen"
+                            className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#8A817C] hover:text-[#121212] transition-colors">
+                            <ExternalLink className="w-3 h-3" /> Presentation Window
+                        </button>
+                        <button onClick={() => handleCopyLink("manage")}
+                            className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#8A817C] hover:text-[#121212] transition-colors">
+                            <Link2 className="w-3 h-3" /> Programme Manager Link
+                        </button>
+                        <button onClick={() => handleCopyLink("audience")}
+                            className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#8A817C] hover:text-[#121212] transition-colors">
+                            <Link2 className="w-3 h-3" /> Audience Link
+                        </button>
+                        {showRotateConfirm ? (
+                            <span className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-amber-700 font-semibold">Invalidate old link?</span>
+                                <button onClick={handleRotateLink}
+                                    className="text-[10px] font-bold uppercase text-white bg-amber-600 hover:bg-amber-700 rounded px-2 py-0.5 transition-colors">
+                                    Yes
+                                </button>
+                                <button onClick={() => setShowRotateConfirm(false)}
+                                    className="text-[10px] text-[#8A817C] border border-[#121212]/10 rounded px-2 py-0.5 hover:bg-[#F4F1EA] transition-colors">
+                                    No
+                                </button>
+                            </span>
+                        ) : (
+                            <button onClick={() => setShowRotateConfirm(true)} title="Rotate the Programme Manager link if it was shared with the wrong person"
+                                className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#8A817C] hover:text-[#121212] transition-colors">
+                                <RefreshCw className="w-3 h-3" /> Rotate Link
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                     <span className="text-[10px] text-[#8A817C] font-light">
                         Started {new Date(session.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
+                    <Link href={`/service-programme/live/${session.sessionCode}`} title="Open the full Live Session Dashboard"
+                        className="flex items-center gap-1.5 h-8 px-3 bg-[#121212] text-white text-[10px] font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors">
+                        <Maximize2 className="w-3.5 h-3.5" /> Open Dashboard
+                    </Link>
                     <Link href="/service-programme" title="Open in Programme view"
                         className="p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/10 rounded-lg transition-colors">
                         <ExternalLink className="w-3.5 h-3.5" />
@@ -205,9 +309,24 @@ function SessionRunner({ programme, onEnded }: SessionRunnerProps) {
                 </div>
             )}
 
+            {/* Rewind confirm */}
+            {showRewindConfirm && (
+                <div className="px-5 py-3 border-b border-[#121212]/5 bg-amber-50/60 flex items-center gap-2">
+                    <span className="text-[10px] text-amber-800 font-semibold flex-1">Go back a slot? This clears its recorded time.</span>
+                    <button onClick={handleRewindConfirm} disabled={isSubmitting}
+                        className="h-8 px-3 text-[10px] font-bold uppercase text-white bg-amber-600 hover:bg-amber-700 rounded-lg disabled:opacity-50 transition-colors">
+                        Yes
+                    </button>
+                    <button onClick={() => setShowRewindConfirm(false)}
+                        className="h-8 px-3 text-[10px] text-[#8A817C] border border-[#121212]/10 rounded-lg hover:bg-[#F4F1EA] transition-colors">
+                        No
+                    </button>
+                </div>
+            )}
+
             {/* Controls */}
             <div className="px-5 py-4 flex items-center gap-2">
-                <button onClick={handleRewind} disabled={isSubmitting || !anchor || anchor.currentSlotPosition === 0}
+                <button onClick={() => setShowRewindConfirm(true)} disabled={isSubmitting || !anchor || anchor.currentSlotPosition === 0}
                     title="Previous slot"
                     className="flex items-center gap-1 h-9 px-3 border border-[#121212]/10 text-[#8A817C] text-[10px] font-semibold uppercase tracking-wider rounded-lg hover:text-[#121212] hover:bg-[#F4F1EA] disabled:opacity-30 transition-colors">
                     <StepBack className="w-3.5 h-3.5" />

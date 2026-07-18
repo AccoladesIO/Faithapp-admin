@@ -2,7 +2,8 @@
 
 import { DismissibleError } from "@/components/ui/dismissible-error";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { api } from "@/utils/auth/axios-client";
 import { withAuth } from "@/utils/auth/with-auth";
 import {
     HandHeart,
@@ -18,16 +19,23 @@ import {
     Pledge,
     PledgeStatus,
     PledgeFrequency,
+    PledgeContribution,
+    PledgeContributionStatus,
     CreateCampaignPayload,
     CreatePledgePayload,
 } from "@/hooks/use-pledges";
 import { useFunds } from "@/hooks/use-funds";
-import { useMembers } from "@/hooks/use-member";
 
 const STATUS_COLORS: Record<PledgeStatus, string> = {
     ACTIVE: "bg-green-100 text-green-800",
     COMPLETED: "bg-blue-100 text-blue-800",
     CANCELLED: "bg-[#F4F1EA] text-[#8A817C]",
+};
+
+const CONTRIBUTION_STATUS_COLORS: Record<PledgeContributionStatus, string> = {
+    PENDING: "bg-amber-100 text-amber-800",
+    CONFIRMED: "bg-green-100 text-green-800",
+    DECLINED: "bg-red-100 text-red-800",
 };
 
 const FREQ_LABELS: Record<PledgeFrequency, string> = {
@@ -50,10 +58,43 @@ function RowSkeleton({ cols }: { cols: number }) {
 }
 
 export default withAuth(function PledgesPage() {
-    const { campaigns, isLoading, isSubmitting, error, selectedCampaignId, pledges, pledgePagination, isPledgesLoading, selectCampaign, goToPledgePage, createCampaign, createPledge, updatePledgeStatus, refetchCampaigns } =
-        usePledges();
+    const {
+        campaigns, isLoading, isSubmitting, error, selectedCampaignId, pledges, pledgePagination, isPledgesLoading,
+        selectCampaign, goToPledgePage, createCampaign, createPledge, updatePledgeStatus, updateCampaignActive, refetchCampaigns,
+        contributions, contributionsPagination, isContributionsLoading, fetchContributions, confirmContribution, declineContribution,
+    } = usePledges();
     const { funds } = useFunds();
-    const { members } = useMembers(200);
+
+    const [activeView, setActiveView] = useState<"campaigns" | "contributions">("campaigns");
+    const [contributionStatusFilter, setContributionStatusFilter] = useState<PledgeContributionStatus | "">("PENDING");
+    const [pendingContributionAction, setPendingContributionAction] = useState<{ contribution: PledgeContribution; action: "confirm" | "decline" } | null>(null);
+    const [declineNote, setDeclineNote] = useState("");
+    const [contributionActionError, setContributionActionError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (activeView === "contributions") {
+            fetchContributions({ status: contributionStatusFilter || undefined });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeView, contributionStatusFilter]);
+
+    async function handleConfirmContribution(contribution: PledgeContribution) {
+        setContributionActionError(null);
+        try {
+            await confirmContribution(contribution.id);
+            setPendingContributionAction(null);
+        } catch (e: unknown) { setContributionActionError((e as Error).message); }
+    }
+
+    async function handleDeclineContribution(contribution: PledgeContribution) {
+        if (!declineNote.trim()) return;
+        setContributionActionError(null);
+        try {
+            await declineContribution(contribution.id, declineNote.trim());
+            setPendingContributionAction(null);
+            setDeclineNote("");
+        } catch (e: unknown) { setContributionActionError((e as Error).message); }
+    }
 
     const [showCampaignForm, setShowCampaignForm] = useState(false);
     const [showPledgeForm, setShowPledgeForm] = useState(false);
@@ -69,10 +110,21 @@ export default withAuth(function PledgesPage() {
         const q = campaignSearch.toLowerCase();
         return campaigns.filter((c) => c.name.toLowerCase().includes(q));
     }, [campaigns, campaignSearch]);
-    const filteredMembers = useMemo(() => {
-        const q = memberSearch.trim().toLowerCase();
-        return q ? members.filter((m) => `${m.firstname} ${m.lastname}`.toLowerCase().includes(q)) : members;
-    }, [members, memberSearch]);
+    const [memberResults, setMemberResults] = useState<{ id: string; firstname: string; lastname: string }[]>([]);
+    const memberSearchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => {
+        const q = memberSearch.trim();
+        if (!q) { setMemberResults([]); return; }
+        if (memberSearchDebounceRef.current) clearTimeout(memberSearchDebounceRef.current);
+        memberSearchDebounceRef.current = setTimeout(async () => {
+            try {
+                const res = await api.get(`/members?page=1&limit=8&search=${encodeURIComponent(q)}`);
+                setMemberResults(res.data?.data?.data ?? []);
+            } catch {
+                setMemberResults([]);
+            }
+        }, 300);
+    }, [memberSearch]);
     const [campaignForm, setCampaignForm] = useState<CreateCampaignPayload>({ name: "", fundId: "", targetAmount: 0, startDate: "", endDate: "" });
     const [pledgeForm, setPledgeForm] = useState<CreatePledgePayload>({ totalAmount: 0, frequency: "ONE_OFF", startDate: "" });
 
@@ -113,6 +165,12 @@ export default withAuth(function PledgesPage() {
         catch (e: unknown) { setActionError((e as Error).message); }
     }
 
+    async function handleToggleCampaignActive(campaignId: string, isActive: boolean) {
+        setActionError(null);
+        try { await updateCampaignActive(campaignId, isActive); }
+        catch (e: unknown) { setActionError((e as Error).message); }
+    }
+
     return (
         <div className="space-y-8 font-sans">
             <div className="flex items-start justify-between">
@@ -134,7 +192,24 @@ export default withAuth(function PledgesPage() {
 
                             <DismissibleError message={error} />
                             <DismissibleError message={actionError} />
+                            <DismissibleError message={contributionActionError} />
 
+            <div className="flex bg-[#F4F1EA] p-1 rounded-xl w-fit">
+                <button
+                    onClick={() => setActiveView("campaigns")}
+                    className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors ${activeView === "campaigns" ? "bg-[#121212] text-white" : "text-[#8A817C] hover:text-[#121212]"}`}
+                >
+                    Campaigns
+                </button>
+                <button
+                    onClick={() => setActiveView("contributions")}
+                    className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors ${activeView === "contributions" ? "bg-[#121212] text-white" : "text-[#8A817C] hover:text-[#121212]"}`}
+                >
+                    Contributions
+                </button>
+            </div>
+
+            {activeView === "campaigns" && (
             <div className="flex gap-6 items-start">
                 {/* Campaigns list */}
                 <div className="w-72 shrink-0 space-y-3">
@@ -159,16 +234,26 @@ export default withAuth(function PledgesPage() {
                         <button key={c.id} onClick={() => selectCampaign(selectedCampaignId === c.id ? null : c.id)}
                             className={`w-full text-left bg-white border rounded-xl p-4 transition-colors ${selectedCampaignId === c.id ? "border-[#121212] bg-[#F4F1EA]/20" : "border-[#121212]/10 hover:border-[#121212]/30"}`}>
                             <div className="flex items-center justify-between">
-                                <p className="text-xs font-semibold text-[#121212] truncate">{c.name}</p>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <p className="text-xs font-semibold text-[#121212] truncate">{c.name}</p>
+                                    {!c.isActive && (
+                                        <span className="px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded bg-[#F4F1EA] text-[#8A817C] shrink-0">Inactive</span>
+                                    )}
+                                </div>
                                 <ChevronDown className={`w-3.5 h-3.5 text-[#8A817C] shrink-0 transition-transform ${selectedCampaignId === c.id ? "rotate-180" : ""}`} />
                             </div>
                             <p className="text-[10px] font-mono text-[#8A817C] mt-1">Target: {formatCurrency(c.targetAmount)}</p>
-                            <div className="mt-2 h-1.5 bg-[#F4F1EA] rounded-full overflow-hidden">
-                                <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.min(((c.totalPledged ?? 0) / c.targetAmount) * 100, 100)}%` }} />
+                            <div className="mt-2 h-1.5 bg-[#F4F1EA] rounded-full overflow-hidden relative">
+                                <div className="h-full bg-green-200 rounded-full absolute inset-y-0 left-0" style={{ width: `${Math.min(((c.totalPledged ?? 0) / c.targetAmount) * 100, 100)}%` }} />
+                                <div className="h-full bg-green-600 rounded-full absolute inset-y-0 left-0" style={{ width: `${Math.min(((c.totalPaid ?? 0) / c.targetAmount) * 100, 100)}%` }} />
                             </div>
                             <div className="flex justify-between mt-1">
                                 <p className="text-[9px] text-[#8A817C] font-mono">{c.pledgeCount ?? 0} pledges</p>
-                                <p className="text-[9px] font-mono text-green-700">{formatCurrency(c.totalPledged ?? 0)}</p>
+                                <p className="text-[9px] font-mono text-green-700">{formatCurrency(c.totalPledged ?? 0)} pledged</p>
+                            </div>
+                            <div className="flex justify-between">
+                                <p className="text-[9px] text-[#8A817C] font-mono">&nbsp;</p>
+                                <p className="text-[9px] font-mono text-green-800 font-semibold">{formatCurrency(c.totalPaid ?? 0)} paid</p>
                             </div>
                         </button>
                     ))}
@@ -228,14 +313,28 @@ export default withAuth(function PledgesPage() {
                         <>
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-semibold text-[#121212]">{selectedCampaign.name}</p>
+                                    <div className="flex items-center space-x-2">
+                                        <p className="text-sm font-semibold text-[#121212]">{selectedCampaign.name}</p>
+                                        <span className={`px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded ${selectedCampaign.isActive ? "bg-green-100 text-green-800" : "bg-[#F4F1EA] text-[#8A817C]"}`}>
+                                            {selectedCampaign.isActive ? "Active" : "Inactive"}
+                                        </span>
+                                    </div>
                                     <p className="text-[10px] text-[#8A817C] font-mono mt-0.5">
-                                        {formatCurrency(selectedCampaign.totalPledged ?? 0)} pledged of {formatCurrency(selectedCampaign.targetAmount)} target &bull; {selectedCampaign.pledgeCount ?? 0} pledges
+                                        {formatCurrency(selectedCampaign.totalPledged ?? 0)} pledged of {formatCurrency(selectedCampaign.targetAmount)} target &bull; {selectedCampaign.pledgeCount ?? 0} pledges &bull; <span className="text-green-700 font-semibold">{formatCurrency(selectedCampaign.totalPaid ?? 0)} actually paid</span>
                                     </p>
                                 </div>
-                                <button onClick={() => setShowPledgeForm((v) => !v)} className="h-9 px-3 border border-[#121212]/10 text-[10px] font-semibold uppercase tracking-widest text-[#121212] hover:bg-[#F4F1EA]/40 rounded-xl flex items-center space-x-1">
-                                    <Plus className="w-3 h-3" /><span>Add Pledge</span>
-                                </button>
+                                <div className="flex items-center space-x-2">
+                                    <button
+                                        onClick={() => handleToggleCampaignActive(selectedCampaign.id, !selectedCampaign.isActive)}
+                                        disabled={isSubmitting}
+                                        className="h-9 px-3 border border-[#121212]/10 text-[10px] font-semibold uppercase tracking-widest text-[#121212] hover:bg-[#F4F1EA]/40 disabled:opacity-40 rounded-xl"
+                                    >
+                                        {selectedCampaign.isActive ? "Deactivate" : "Reactivate"}
+                                    </button>
+                                    <button onClick={() => setShowPledgeForm((v) => !v)} className="h-9 px-3 border border-[#121212]/10 text-[10px] font-semibold uppercase tracking-widest text-[#121212] hover:bg-[#F4F1EA]/40 rounded-xl flex items-center space-x-1">
+                                        <Plus className="w-3 h-3" /><span>Add Pledge</span>
+                                    </button>
+                                </div>
                             </div>
 
                             {showPledgeForm && (
@@ -273,9 +372,9 @@ export default withAuth(function PledgesPage() {
                                                             <X className="w-3 h-3" />
                                                         </button>
                                                     )}
-                                                    {showMemberDrop && filteredMembers.length > 0 && (
+                                                    {showMemberDrop && memberResults.length > 0 && (
                                                         <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-[#121212]/10 rounded-lg shadow-md max-h-36 overflow-y-auto">
-                                                            {filteredMembers.map((m) => (
+                                                            {memberResults.map((m) => (
                                                                 <button key={m.id}
                                                                     onMouseDown={() => { const name = `${m.firstname} ${m.lastname}`; setSelectedMember({ id: m.id, name }); setPledgeForm((f) => ({ ...f, memberId: m.id })); setMemberSearch(""); setShowMemberDrop(false); }}
                                                                     className="w-full text-left px-3 py-2 text-[10px] text-[#121212] hover:bg-[#F4F1EA]/60">
@@ -313,7 +412,7 @@ export default withAuth(function PledgesPage() {
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">Start Date *</label>
+                                            <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">{pledgeForm.frequency === "ONE_OFF" ? "Day to Redeem *" : "Start Date *"}</label>
                                             <input type="date" value={pledgeForm.startDate} onChange={(e) => setPledgeForm((f) => ({ ...f, startDate: e.target.value }))}
                                                 className="w-full h-8 px-2 border border-[#121212]/10 text-[10px] text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none" />
                                         </div>
@@ -329,7 +428,7 @@ export default withAuth(function PledgesPage() {
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
-                                            {["Member", "Amount", "Frequency", "Status", ""].map((h) => (
+                                            {["Member", "Amount", "Paid", "Frequency", "Status", ""].map((h) => (
                                                 <th key={h} className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">{h}</th>
                                             ))}
                                         </tr>
@@ -337,13 +436,14 @@ export default withAuth(function PledgesPage() {
                                     <tbody className="divide-y divide-[#121212]/5">
                                         {isPledgesLoading ? Array.from({ length: 4 }).map((_, i) => <RowSkeleton key={i} cols={6} />) :
                                             pledges.length === 0 ? (
-                                                <tr><td colSpan={5} className="p-8 text-center text-xs text-[#8A817C] font-light">No pledges for this campaign yet.</td></tr>
+                                                <tr><td colSpan={6} className="p-8 text-center text-xs text-[#8A817C] font-light">No pledges for this campaign yet.</td></tr>
                                             ) : pledges.map((p) => (
                                                 <tr key={p.id} className="hover:bg-[#F4F1EA]/20 transition-colors">
                                                     <td className="p-4 text-xs text-[#121212]">
                                                         {p.member ? `${p.member.firstname} ${p.member.lastname}` : (p.guestName ?? "—")}
                                                     </td>
                                                     <td className="p-4 font-mono text-xs font-medium text-[#121212]">{formatCurrency(Number(p.totalAmount))}</td>
+                                                    <td className="p-4 font-mono text-xs font-medium text-green-700">{formatCurrency(p.amountPaid ?? 0)}</td>
                                                     <td className="p-4 text-xs text-[#8A817C]">{FREQ_LABELS[p.frequency]}</td>
                                                     <td className="p-4">
                                                         <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded ${STATUS_COLORS[p.status]}`}>{p.status}</span>
@@ -388,6 +488,89 @@ export default withAuth(function PledgesPage() {
                     )}
                 </div>
             </div>
+            )}
+
+            {activeView === "contributions" && (
+                <div className="space-y-4">
+                    <div className="flex items-center space-x-1">
+                        {(["", "PENDING", "CONFIRMED", "DECLINED"] as const).map((s) => (
+                            <button key={s || "ALL"}
+                                onClick={() => setContributionStatusFilter(s)}
+                                className={`h-7 px-3 rounded-full text-[10px] font-semibold uppercase tracking-widest transition-colors ${contributionStatusFilter === s ? "bg-[#121212] text-white" : "bg-[#F4F1EA] text-[#8A817C] hover:bg-[#F4F1EA]/80"}`}>
+                                {s || "All"}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="bg-white border border-[#121212]/10 rounded-xl overflow-hidden">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
+                                    {["Member", "Campaign", "Amount", "Payment Date", "Status", ""].map((h) => (
+                                        <th key={h} className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#121212]/5">
+                                {isContributionsLoading ? Array.from({ length: 4 }).map((_, i) => <RowSkeleton key={i} cols={6} />) :
+                                    contributions.length === 0 ? (
+                                        <tr><td colSpan={6} className="p-8 text-center text-xs text-[#8A817C] font-light">No pledge contributions match this filter.</td></tr>
+                                    ) : contributions.map((c) => (
+                                        <tr key={c.id} className="hover:bg-[#F4F1EA]/20 transition-colors">
+                                            <td className="p-4 text-xs text-[#121212]">
+                                                {c.pledge.member ? `${c.pledge.member.firstname} ${c.pledge.member.lastname}` : "—"}
+                                            </td>
+                                            <td className="p-4 text-xs text-[#8A817C]">{c.pledge.campaign.name}</td>
+                                            <td className="p-4 font-mono text-xs font-medium text-[#121212]">{formatCurrency(c.amount)}</td>
+                                            <td className="p-4 text-xs text-[#8A817C] font-mono">{c.paymentDate}</td>
+                                            <td className="p-4">
+                                                <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded ${CONTRIBUTION_STATUS_COLORS[c.status]}`}>{c.status}</span>
+                                            </td>
+                                            <td className="p-4">
+                                                {c.status === "PENDING" && (
+                                                    pendingContributionAction?.contribution.id === c.id ? (
+                                                        pendingContributionAction.action === "confirm" ? (
+                                                            <div className="flex items-center space-x-2 bg-green-50 border border-green-200 rounded-lg px-2 py-1.5">
+                                                                <span className="text-[10px] font-semibold text-green-800">Confirm this payment?</span>
+                                                                <button onClick={() => handleConfirmContribution(c)} className="text-[10px] font-bold px-2.5 py-1 rounded bg-green-600 text-white hover:bg-green-700">Yes, Confirm</button>
+                                                                <button onClick={() => setPendingContributionAction(null)} className="text-[10px] text-[#8A817C] border border-[#121212]/10 px-2 py-1 rounded hover:bg-white">Cancel</button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center space-x-1">
+                                                                <input
+                                                                    type="text"
+                                                                    autoFocus
+                                                                    value={declineNote}
+                                                                    onChange={(e) => setDeclineNote(e.target.value)}
+                                                                    placeholder="Reason…"
+                                                                    className="h-6 px-2 border border-[#121212]/10 text-[9px] text-[#121212] bg-[#F4F1EA]/30 rounded-md focus:outline-none w-32"
+                                                                />
+                                                                <button onClick={() => handleDeclineContribution(c)} disabled={!declineNote.trim()} className="text-[9px] px-2 py-0.5 rounded border text-red-700 border-red-300 hover:bg-red-50 disabled:opacity-40">Decline</button>
+                                                                <button onClick={() => { setPendingContributionAction(null); setDeclineNote(""); }} className="text-[9px] text-[#8A817C] border border-[#121212]/10 px-2 py-0.5 rounded hover:bg-[#F4F1EA]/60">Cancel</button>
+                                                            </div>
+                                                        )
+                                                    ) : (
+                                                        <div className="flex space-x-1">
+                                                            <button onClick={() => setPendingContributionAction({ contribution: c, action: "confirm" })} className="text-[9px] text-green-700 border border-green-300 px-2 py-0.5 rounded hover:bg-green-50">Confirm</button>
+                                                            <button onClick={() => setPendingContributionAction({ contribution: c, action: "decline" })} className="text-[9px] text-red-700 border border-red-300 px-2 py-0.5 rounded hover:bg-red-50">Decline</button>
+                                                        </div>
+                                                    )
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <PaginationBar
+                        pagination={contributionsPagination}
+                        onPage={(page) => fetchContributions({ status: contributionStatusFilter || undefined, page })}
+                        isLoading={isContributionsLoading}
+                        label="contributions"
+                    />
+                </div>
+            )}
         </div>
     );
 }, { requiredPermission: 'finance:read' });

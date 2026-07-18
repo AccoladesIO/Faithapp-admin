@@ -32,31 +32,6 @@ function SkeletonRow({ cols }: { cols: number }) {
 }
 
 
-interface ModalProps {
-    title: string;
-    onClose: () => void;
-    children: React.ReactNode;
-}
-
-function Modal({ title, onClose, children }: ModalProps) {
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#121212]/40 backdrop-blur-sm">
-            <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between p-6 border-b border-[#121212]/5">
-                    <h2 className="text-base font-light tracking-tight text-[#121212]">{title}</h2>
-                    <button
-                        onClick={onClose}
-                        className="p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/20 rounded-md transition-colors"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
-                </div>
-                <div className="p-6 space-y-4">{children}</div>
-            </div>
-        </div>
-    );
-}
-
 const inputCls = "w-full h-10 px-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg";
 const labelCls = "block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5";
 const submitBtnCls = "w-full h-11 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 rounded-xl";
@@ -327,84 +302,160 @@ const ChildrensChurchPage = () => {
                         </form>
                     </div>
 
-                    <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
-                                        <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Name</th>
-                                        <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Age Range</th>
-                                        <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] hidden sm:table-cell">Display Order</th>
-                                        <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[#121212]/5 text-[#121212]">
-                                    {isLoading ? (
-                                        Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} cols={4} />)
-                                    ) : ageGroups.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={4} className="p-12 text-center text-xs text-[#8A817C] font-light">
-                                                No age groups configured.
-                                            </td>
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                        <div className={`${editingAgeGroup ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden transition-all`}>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
+                                            <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Name</th>
+                                            <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Age Range</th>
+                                            <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] hidden sm:table-cell">Display Order</th>
+                                            <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] text-right">Actions</th>
                                         </tr>
-                                    ) : (
-                                        ageGroups.map((ag) => (
-                                            <tr key={ag.id} className="hover:bg-[#F4F1EA]/10 transition-colors">
-                                                <td className="p-4 text-sm font-medium text-[#121212]">{ag.name}</td>
-                                                <td className="p-4 text-xs font-mono text-[#121212]">
-                                                    {ag.minAgeMonths}–{ag.maxAgeMonths} mo
-                                                </td>
-                                                <td className="p-4 text-xs font-mono text-[#8A817C] hidden sm:table-cell">
-                                                    {ag.displayOrder ?? "—"}
-                                                </td>
-                                                <td className="p-4 text-right">
-                                                    {deletingAgeGroupId === ag.id ? (
-                                                        <div className="flex items-center justify-end gap-1">
-                                                            <button
-                                                                onClick={() => handleDeleteAgeGroup(ag.id)}
-                                                                disabled={isSubmitting}
-                                                                className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white bg-red-600 hover:bg-red-700 rounded disabled:opacity-50"
-                                                            >
-                                                                Confirm
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setDeletingAgeGroupId(null)}
-                                                                className="p-2 text-[#8A817C] hover:bg-[#F4F1EA] rounded-lg"
-                                                            >
-                                                                <X className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex items-center justify-end gap-1">
-                                                            <button
-                                                                onClick={() => {
-                                                                    setEditingAgeGroup(ag);
-                                                                    setEditAgeGroupForm({
-                                                                        name: ag.name,
-                                                                        minAgeMonths: String(ag.minAgeMonths),
-                                                                        maxAgeMonths: String(ag.maxAgeMonths),
-                                                                        displayOrder: ag.displayOrder != null ? String(ag.displayOrder) : "",
-                                                                    });
-                                                                }}
-                                                                className="p-2 text-[#8A817C] hover:text-[#121212] rounded-lg hover:bg-[#F4F1EA] transition-colors"
-                                                            >
-                                                                <Pencil className="w-3.5 h-3.5" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setDeletingAgeGroupId(ag.id)}
-                                                                className="p-2 text-[#8A817C] hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        </div>
-                                                    )}
+                                    </thead>
+                                    <tbody className="divide-y divide-[#121212]/5 text-[#121212]">
+                                        {isLoading ? (
+                                            Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} cols={4} />)
+                                        ) : ageGroups.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} className="p-12 text-center text-xs text-[#8A817C] font-light">
+                                                    No age groups configured.
                                                 </td>
                                             </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
+                                        ) : (
+                                            ageGroups.map((ag) => (
+                                                <tr key={ag.id} className={`hover:bg-[#F4F1EA]/10 transition-colors ${editingAgeGroup?.id === ag.id ? "bg-[#F4F1EA]/50" : ""}`}>
+                                                    <td className="p-4 text-sm font-medium text-[#121212]">{ag.name}</td>
+                                                    <td className="p-4 text-xs font-mono text-[#121212]">
+                                                        {ag.minAgeMonths}–{ag.maxAgeMonths} mo
+                                                    </td>
+                                                    <td className="p-4 text-xs font-mono text-[#8A817C] hidden sm:table-cell">
+                                                        {ag.displayOrder ?? "—"}
+                                                    </td>
+                                                    <td className="p-4 text-right">
+                                                        {deletingAgeGroupId === ag.id ? (
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <button
+                                                                    onClick={() => handleDeleteAgeGroup(ag.id)}
+                                                                    disabled={isSubmitting}
+                                                                    className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white bg-red-600 hover:bg-red-700 rounded disabled:opacity-50"
+                                                                >
+                                                                    Confirm
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setDeletingAgeGroupId(null)}
+                                                                    className="p-2 text-[#8A817C] hover:bg-[#F4F1EA] rounded-lg"
+                                                                >
+                                                                    <X className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditingAgeGroup(ag);
+                                                                        setEditAgeGroupForm({
+                                                                            name: ag.name,
+                                                                            minAgeMonths: String(ag.minAgeMonths),
+                                                                            maxAgeMonths: String(ag.maxAgeMonths),
+                                                                            displayOrder: ag.displayOrder != null ? String(ag.displayOrder) : "",
+                                                                        });
+                                                                    }}
+                                                                    className="p-2 text-[#8A817C] hover:text-[#121212] rounded-lg hover:bg-[#F4F1EA] transition-colors"
+                                                                >
+                                                                    <Pencil className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setDeletingAgeGroupId(ag.id)}
+                                                                    className="p-2 text-[#8A817C] hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
+
+                        {editingAgeGroup && (
+                            <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col">
+                                <div className="flex items-center justify-between px-5 py-4 border-b border-[#121212]/5">
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C]">Edit</p>
+                                        <h2 className="text-sm font-light text-[#121212]">{editingAgeGroup.name}</h2>
+                                    </div>
+                                    <button onClick={() => setEditingAgeGroup(null)} className="p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/10 rounded-md transition-colors">
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <form onSubmit={handleSaveEditAgeGroup} className="p-5 space-y-4">
+                                    <div>
+                                        <label className={labelCls}>Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={editAgeGroupForm.name}
+                                            onChange={(e) => setEditAgeGroupForm((p) => ({ ...p, name: e.target.value }))}
+                                            className={inputCls}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className={labelCls}>Min Age (months)</label>
+                                            <input
+                                                type="number"
+                                                required
+                                                min={0}
+                                                value={editAgeGroupForm.minAgeMonths}
+                                                onChange={(e) => setEditAgeGroupForm((p) => ({ ...p, minAgeMonths: e.target.value }))}
+                                                className={inputCls}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}>Max Age (months)</label>
+                                            <input
+                                                type="number"
+                                                required
+                                                min={0}
+                                                value={editAgeGroupForm.maxAgeMonths}
+                                                onChange={(e) => setEditAgeGroupForm((p) => ({ ...p, maxAgeMonths: e.target.value }))}
+                                                className={inputCls}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className={labelCls}>Display Order <span className="normal-case font-light">(optional)</span></label>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            value={editAgeGroupForm.displayOrder}
+                                            onChange={(e) => setEditAgeGroupForm((p) => ({ ...p, displayOrder: e.target.value }))}
+                                            placeholder="Optional"
+                                            className={inputCls}
+                                        />
+                                    </div>
+                                    <div className="flex gap-3 justify-end pt-2 border-t border-[#121212]/5">
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditingAgeGroup(null)}
+                                            className="h-9 px-4 border border-[#121212]/10 text-[#8A817C] text-xs font-semibold uppercase tracking-wider rounded-lg hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button type="submit" disabled={isSubmitting} className={submitBtnCls.replace("w-full h-11", "h-9 px-5")}>
+                                            {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                            Save Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -495,80 +546,156 @@ const ChildrensChurchPage = () => {
                         </select>
                     </div>
 
-                    <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
-                                        <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Name</th>
-                                        <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Age Group</th>
-                                        <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] hidden sm:table-cell">Capacity</th>
-                                        <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[#121212]/5 text-[#121212]">
-                                    {isLoading ? (
-                                        Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} cols={4} />)
-                                    ) : filteredClassGroups.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={4} className="p-12 text-center text-xs text-[#8A817C] font-light">
-                                                No class groups found.
-                                            </td>
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                        <div className={`${editingClassGroup ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden transition-all`}>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
+                                            <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Name</th>
+                                            <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Age Group</th>
+                                            <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] hidden sm:table-cell">Capacity</th>
+                                            <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] text-right">Actions</th>
                                         </tr>
-                                    ) : (
-                                        filteredClassGroups.map((cg) => (
-                                            <tr key={cg.id} className="hover:bg-[#F4F1EA]/10 transition-colors">
-                                                <td className="p-4 text-sm font-medium text-[#121212]">{cg.name}</td>
-                                                <td className="p-4 text-xs text-[#121212]">{cg.ageGroup?.name ?? "—"}</td>
-                                                <td className="p-4 text-xs font-mono text-[#8A817C] hidden sm:table-cell">{cg.capacity ?? "—"}</td>
-                                                <td className="p-4 text-right">
-                                                    {deletingClassGroupId === cg.id ? (
-                                                        <div className="flex items-center justify-end gap-1">
-                                                            <button
-                                                                onClick={() => handleDeleteClassGroup(cg.id)}
-                                                                disabled={isSubmitting}
-                                                                className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white bg-red-600 hover:bg-red-700 rounded disabled:opacity-50"
-                                                            >
-                                                                Confirm
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setDeletingClassGroupId(null)}
-                                                                className="p-2 text-[#8A817C] hover:bg-[#F4F1EA] rounded-lg"
-                                                            >
-                                                                <X className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex items-center justify-end gap-1">
-                                                            <button
-                                                                onClick={() => {
-                                                                    setEditingClassGroup(cg);
-                                                                    setEditClassGroupForm({
-                                                                        ageGroupId: cg.ageGroup?.id ?? "",
-                                                                        name: cg.name,
-                                                                        capacity: cg.capacity != null ? String(cg.capacity) : "",
-                                                                        teacherNote: cg.teacherNote ?? "",
-                                                                    });
-                                                                }}
-                                                                className="p-2 text-[#8A817C] hover:text-[#121212] rounded-lg hover:bg-[#F4F1EA] transition-colors"
-                                                            >
-                                                                <Pencil className="w-3.5 h-3.5" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setDeletingClassGroupId(cg.id)}
-                                                                className="p-2 text-[#8A817C] hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        </div>
-                                                    )}
+                                    </thead>
+                                    <tbody className="divide-y divide-[#121212]/5 text-[#121212]">
+                                        {isLoading ? (
+                                            Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} cols={4} />)
+                                        ) : filteredClassGroups.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} className="p-12 text-center text-xs text-[#8A817C] font-light">
+                                                    No class groups found.
                                                 </td>
                                             </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
+                                        ) : (
+                                            filteredClassGroups.map((cg) => (
+                                                <tr key={cg.id} className={`hover:bg-[#F4F1EA]/10 transition-colors ${editingClassGroup?.id === cg.id ? "bg-[#F4F1EA]/50" : ""}`}>
+                                                    <td className="p-4 text-sm font-medium text-[#121212]">{cg.name}</td>
+                                                    <td className="p-4 text-xs text-[#121212]">{cg.ageGroup?.name ?? "—"}</td>
+                                                    <td className="p-4 text-xs font-mono text-[#8A817C] hidden sm:table-cell">{cg.capacity ?? "—"}</td>
+                                                    <td className="p-4 text-right">
+                                                        {deletingClassGroupId === cg.id ? (
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <button
+                                                                    onClick={() => handleDeleteClassGroup(cg.id)}
+                                                                    disabled={isSubmitting}
+                                                                    className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white bg-red-600 hover:bg-red-700 rounded disabled:opacity-50"
+                                                                >
+                                                                    Confirm
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setDeletingClassGroupId(null)}
+                                                                    className="p-2 text-[#8A817C] hover:bg-[#F4F1EA] rounded-lg"
+                                                                >
+                                                                    <X className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditingClassGroup(cg);
+                                                                        setEditClassGroupForm({
+                                                                            ageGroupId: cg.ageGroup?.id ?? "",
+                                                                            name: cg.name,
+                                                                            capacity: cg.capacity != null ? String(cg.capacity) : "",
+                                                                            teacherNote: cg.teacherNote ?? "",
+                                                                        });
+                                                                    }}
+                                                                    className="p-2 text-[#8A817C] hover:text-[#121212] rounded-lg hover:bg-[#F4F1EA] transition-colors"
+                                                                >
+                                                                    <Pencil className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setDeletingClassGroupId(cg.id)}
+                                                                    className="p-2 text-[#8A817C] hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
+
+                        {editingClassGroup && (
+                            <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col">
+                                <div className="flex items-center justify-between px-5 py-4 border-b border-[#121212]/5">
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C]">Edit</p>
+                                        <h2 className="text-sm font-light text-[#121212]">{editingClassGroup.name}</h2>
+                                    </div>
+                                    <button onClick={() => setEditingClassGroup(null)} className="p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/10 rounded-md transition-colors">
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <form onSubmit={handleSaveEditClassGroup} className="p-5 space-y-4">
+                                    <div>
+                                        <label className={labelCls}>Age Group</label>
+                                        <select
+                                            value={editClassGroupForm.ageGroupId}
+                                            onChange={(e) => setEditClassGroupForm((p) => ({ ...p, ageGroupId: e.target.value }))}
+                                            className="w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
+                                        >
+                                            <option value="">Select age group…</option>
+                                            {ageGroups.map((ag) => (
+                                                <option key={ag.id} value={ag.id}>{ag.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className={labelCls}>Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={editClassGroupForm.name}
+                                            onChange={(e) => setEditClassGroupForm((p) => ({ ...p, name: e.target.value }))}
+                                            className={inputCls}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className={labelCls}>Capacity <span className="normal-case font-light">(optional)</span></label>
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                value={editClassGroupForm.capacity}
+                                                onChange={(e) => setEditClassGroupForm((p) => ({ ...p, capacity: e.target.value }))}
+                                                placeholder="e.g., 20"
+                                                className={inputCls}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}>Teacher Note <span className="normal-case font-light">(optional)</span></label>
+                                            <input
+                                                type="text"
+                                                value={editClassGroupForm.teacherNote}
+                                                onChange={(e) => setEditClassGroupForm((p) => ({ ...p, teacherNote: e.target.value }))}
+                                                className={inputCls}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-3 justify-end pt-2 border-t border-[#121212]/5">
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditingClassGroup(null)}
+                                            className="h-9 px-4 border border-[#121212]/10 text-[#8A817C] text-xs font-semibold uppercase tracking-wider rounded-lg hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button type="submit" disabled={isSubmitting} className={submitBtnCls.replace("w-full h-11", "h-9 px-5")}>
+                                            {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                            Save Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -612,57 +739,103 @@ const ChildrensChurchPage = () => {
                                 </select>
                                 <span className="text-[11px] text-[#8A817C] font-light">{activeCheckIns.length} currently checked in</span>
                             </div>
-                            <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr className="border-b border-[#121212]/5 bg-[#F4F1EA]/30">
-                                                <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Child</th>
-                                                <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] hidden sm:table-cell">Class</th>
-                                                <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Status</th>
-                                                <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] hidden md:table-cell">Pickup Code</th>
-                                                <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] hidden lg:table-cell">Checked In</th>
-                                                <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {isLoading ? (
-                                                Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} cols={6} />)
-                                            ) : activeCheckIns.length === 0 ? (
-                                                <tr><td colSpan={6} className="p-8 text-center text-sm text-[#8A817C] font-light">No children are currently checked in.</td></tr>
-                                            ) : activeCheckIns.map((ci) => (
-                                                <tr key={ci.id} className="border-b border-[#121212]/5 hover:bg-[#F4F1EA]/20 transition-colors">
-                                                    <td className="p-4">
-                                                        <div className="text-sm text-[#121212] font-light">{ci.child.firstname} {ci.child.lastname}</div>
-                                                        {ci.droppedOffByName && <div className="text-[10px] text-[#8A817C]">Drop-off: {ci.droppedOffByName}</div>}
-                                                    </td>
-                                                    <td className="p-4 text-xs text-[#8A817C] font-light hidden sm:table-cell">{ci.child.classGroup?.name ?? "—"}</td>
-                                                    <td className="p-4">
-                                                        <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${ci.status === "FLAGGED" ? "bg-red-50 text-red-700 border-red-200" : "bg-green-50 text-green-700 border-green-200"}`}>
-                                                            {ci.status === "FLAGGED" ? "Flagged" : "Checked In"}
-                                                        </span>
-                                                        {ci.flagReason && <div className="text-[10px] text-red-600 mt-0.5">{ci.flagReason}</div>}
-                                                    </td>
-                                                    <td className="p-4 text-xs font-mono text-[#8A817C] hidden md:table-cell">{ci.pickupCode}</td>
-                                                    <td className="p-4 text-xs text-[#8A817C] font-light hidden lg:table-cell">
-                                                        {new Date(ci.checkinTime).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: true })}
-                                                    </td>
-                                                    <td className="p-4">
-                                                        {ci.status !== "FLAGGED" && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => { setFlaggingCheckIn(ci); setFlagReason(""); setFlagError(null); }}
-                                                                className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider border border-red-200 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                            >
-                                                                <Flag className="w-3 h-3" /> Flag
-                                                            </button>
-                                                        )}
-                                                    </td>
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                                <div className={`${flaggingCheckIn ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden transition-all`}>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="border-b border-[#121212]/5 bg-[#F4F1EA]/30">
+                                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Child</th>
+                                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] hidden sm:table-cell">Class</th>
+                                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Status</th>
+                                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] hidden md:table-cell">Pickup Code</th>
+                                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] hidden lg:table-cell">Checked In</th>
+                                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">Actions</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                                {isLoading ? (
+                                                    Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} cols={6} />)
+                                                ) : activeCheckIns.length === 0 ? (
+                                                    <tr><td colSpan={6} className="p-8 text-center text-sm text-[#8A817C] font-light">No children are currently checked in.</td></tr>
+                                                ) : activeCheckIns.map((ci) => (
+                                                    <tr key={ci.id} className={`border-b border-[#121212]/5 hover:bg-[#F4F1EA]/20 transition-colors ${flaggingCheckIn?.id === ci.id ? "bg-[#F4F1EA]/50" : ""}`}>
+                                                        <td className="p-4">
+                                                            <div className="text-sm text-[#121212] font-light">{ci.child.firstname} {ci.child.lastname}</div>
+                                                            {ci.droppedOffByName && <div className="text-[10px] text-[#8A817C]">Drop-off: {ci.droppedOffByName}</div>}
+                                                        </td>
+                                                        <td className="p-4 text-xs text-[#8A817C] font-light hidden sm:table-cell">{ci.child.classGroup?.name ?? "—"}</td>
+                                                        <td className="p-4">
+                                                            <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${ci.status === "FLAGGED" ? "bg-red-50 text-red-700 border-red-200" : "bg-green-50 text-green-700 border-green-200"}`}>
+                                                                {ci.status === "FLAGGED" ? "Flagged" : "Checked In"}
+                                                            </span>
+                                                            {ci.flagReason && <div className="text-[10px] text-red-600 mt-0.5">{ci.flagReason}</div>}
+                                                        </td>
+                                                        <td className="p-4 text-xs font-mono text-[#8A817C] hidden md:table-cell">{ci.pickupCode}</td>
+                                                        <td className="p-4 text-xs text-[#8A817C] font-light hidden lg:table-cell">
+                                                            {new Date(ci.checkinTime).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: true })}
+                                                        </td>
+                                                        <td className="p-4">
+                                                            {ci.status !== "FLAGGED" && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => { setFlaggingCheckIn(ci); setFlagReason(""); setFlagError(null); }}
+                                                                    className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider border border-red-200 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                                >
+                                                                    <Flag className="w-3 h-3" /> Flag
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
+
+                                {flaggingCheckIn && (
+                                    <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col">
+                                        <div className="flex items-center justify-between px-5 py-4 border-b border-[#121212]/5">
+                                            <div>
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C]">Flag Check-in</p>
+                                                <h2 className="text-sm font-light text-[#121212]">{flaggingCheckIn.child.firstname} {flaggingCheckIn.child.lastname}</h2>
+                                            </div>
+                                            <button onClick={() => { setFlaggingCheckIn(null); setFlagReason(""); setFlagError(null); }} className="p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/10 rounded-md transition-colors">
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                        <form onSubmit={handleFlagCheckIn} className="p-5 space-y-4">
+                                            {flagError && (
+                                                <div className="p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700">{flagError}</div>
+                                            )}
+                                            <div>
+                                                <label htmlFor="flag-reason" className={labelCls}>Reason for flagging</label>
+                                                <input
+                                                    id="flag-reason"
+                                                    type="text"
+                                                    required
+                                                    value={flagReason}
+                                                    onChange={(e) => setFlagReason(e.target.value)}
+                                                    placeholder="e.g. Unauthorised pickup attempt"
+                                                    className={inputCls}
+                                                />
+                                            </div>
+                                            <div className="flex gap-3 justify-end pt-2 border-t border-[#121212]/5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setFlaggingCheckIn(null); setFlagReason(""); setFlagError(null); }}
+                                                    className="h-9 px-4 border border-[#121212]/10 text-[#8A817C] text-xs font-semibold uppercase tracking-wider rounded-lg hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button type="submit" disabled={isSubmitting} className="h-9 px-5 bg-red-600 text-white text-xs font-semibold uppercase tracking-widest hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2 rounded-lg">
+                                                    {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Flag className="w-3.5 h-3.5" />}
+                                                    Flag Check-in
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -764,172 +937,6 @@ const ChildrensChurchPage = () => {
                 </div>
             )}
 
-        {/* ── Edit Age Group Modal ─────────────────────────────────────────────── */}
-        {editingAgeGroup && (
-            <Modal title={`Edit Age Group: ${editingAgeGroup.name}`} onClose={() => setEditingAgeGroup(null)}>
-                <form onSubmit={handleSaveEditAgeGroup} className="space-y-4">
-                    <div>
-                        <label className={labelCls}>Name</label>
-                        <input
-                            type="text"
-                            required
-                            value={editAgeGroupForm.name}
-                            onChange={(e) => setEditAgeGroupForm((p) => ({ ...p, name: e.target.value }))}
-                            className={inputCls}
-                        />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className={labelCls}>Min Age (months)</label>
-                            <input
-                                type="number"
-                                required
-                                min={0}
-                                value={editAgeGroupForm.minAgeMonths}
-                                onChange={(e) => setEditAgeGroupForm((p) => ({ ...p, minAgeMonths: e.target.value }))}
-                                className={inputCls}
-                            />
-                        </div>
-                        <div>
-                            <label className={labelCls}>Max Age (months)</label>
-                            <input
-                                type="number"
-                                required
-                                min={0}
-                                value={editAgeGroupForm.maxAgeMonths}
-                                onChange={(e) => setEditAgeGroupForm((p) => ({ ...p, maxAgeMonths: e.target.value }))}
-                                className={inputCls}
-                            />
-                        </div>
-                    </div>
-                    <div>
-                        <label className={labelCls}>Display Order <span className="normal-case font-light">(optional)</span></label>
-                        <input
-                            type="number"
-                            min={0}
-                            value={editAgeGroupForm.displayOrder}
-                            onChange={(e) => setEditAgeGroupForm((p) => ({ ...p, displayOrder: e.target.value }))}
-                            placeholder="Optional"
-                            className={inputCls}
-                        />
-                    </div>
-                    <div className="flex gap-3 justify-end pt-2 border-t border-[#121212]/5">
-                        <button
-                            type="button"
-                            onClick={() => setEditingAgeGroup(null)}
-                            className="h-9 px-4 border border-[#121212]/10 text-[#8A817C] text-xs font-semibold uppercase tracking-wider rounded-lg hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button type="submit" disabled={isSubmitting} className={submitBtnCls.replace("w-full h-11", "h-9 px-5")}>
-                            {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                            Save Changes
-                        </button>
-                    </div>
-                </form>
-            </Modal>
-        )}
-
-        {/* ── Edit Class Group Modal ───────────────────────────────────────────── */}
-        {editingClassGroup && (
-            <Modal title={`Edit Class Group: ${editingClassGroup.name}`} onClose={() => setEditingClassGroup(null)}>
-                <form onSubmit={handleSaveEditClassGroup} className="space-y-4">
-                    <div>
-                        <label className={labelCls}>Age Group</label>
-                        <select
-                            value={editClassGroupForm.ageGroupId}
-                            onChange={(e) => setEditClassGroupForm((p) => ({ ...p, ageGroupId: e.target.value }))}
-                            className="w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
-                        >
-                            <option value="">Select age group…</option>
-                            {ageGroups.map((ag) => (
-                                <option key={ag.id} value={ag.id}>{ag.name}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label className={labelCls}>Name</label>
-                        <input
-                            type="text"
-                            required
-                            value={editClassGroupForm.name}
-                            onChange={(e) => setEditClassGroupForm((p) => ({ ...p, name: e.target.value }))}
-                            className={inputCls}
-                        />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className={labelCls}>Capacity <span className="normal-case font-light">(optional)</span></label>
-                            <input
-                                type="number"
-                                min={1}
-                                value={editClassGroupForm.capacity}
-                                onChange={(e) => setEditClassGroupForm((p) => ({ ...p, capacity: e.target.value }))}
-                                placeholder="e.g., 20"
-                                className={inputCls}
-                            />
-                        </div>
-                        <div>
-                            <label className={labelCls}>Teacher Note <span className="normal-case font-light">(optional)</span></label>
-                            <input
-                                type="text"
-                                value={editClassGroupForm.teacherNote}
-                                onChange={(e) => setEditClassGroupForm((p) => ({ ...p, teacherNote: e.target.value }))}
-                                className={inputCls}
-                            />
-                        </div>
-                    </div>
-                    <div className="flex gap-3 justify-end pt-2 border-t border-[#121212]/5">
-                        <button
-                            type="button"
-                            onClick={() => setEditingClassGroup(null)}
-                            className="h-9 px-4 border border-[#121212]/10 text-[#8A817C] text-xs font-semibold uppercase tracking-wider rounded-lg hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button type="submit" disabled={isSubmitting} className={submitBtnCls.replace("w-full h-11", "h-9 px-5")}>
-                            {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                            Save Changes
-                        </button>
-                    </div>
-                </form>
-            </Modal>
-        )}
-        {/* ── Flag Check-in Modal ──────────────────────────────────────────────── */}
-        {flaggingCheckIn && (
-            <Modal title={`Flag Check-in: ${flaggingCheckIn.child.firstname} ${flaggingCheckIn.child.lastname}`} onClose={() => { setFlaggingCheckIn(null); setFlagReason(""); setFlagError(null); }}>
-                <form onSubmit={handleFlagCheckIn} className="space-y-4">
-                    {flagError && (
-                        <div className="p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700">{flagError}</div>
-                    )}
-                    <div>
-                        <label htmlFor="flag-reason" className={labelCls}>Reason for flagging</label>
-                        <input
-                            id="flag-reason"
-                            type="text"
-                            required
-                            value={flagReason}
-                            onChange={(e) => setFlagReason(e.target.value)}
-                            placeholder="e.g. Unauthorised pickup attempt"
-                            className={inputCls}
-                        />
-                    </div>
-                    <div className="flex gap-3 justify-end pt-2 border-t border-[#121212]/5">
-                        <button
-                            type="button"
-                            onClick={() => { setFlaggingCheckIn(null); setFlagReason(""); setFlagError(null); }}
-                            className="h-9 px-4 border border-[#121212]/10 text-[#8A817C] text-xs font-semibold uppercase tracking-wider rounded-lg hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button type="submit" disabled={isSubmitting} className="h-9 px-5 bg-red-600 text-white text-xs font-semibold uppercase tracking-widest hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2 rounded-lg">
-                            {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Flag className="w-3.5 h-3.5" />}
-                            Flag Check-in
-                        </button>
-                    </div>
-                </form>
-            </Modal>
-        )}
     </div>
     );
 };

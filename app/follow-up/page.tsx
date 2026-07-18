@@ -21,8 +21,9 @@ import {
     CreateFirstTimerDto,
 } from "@/hooks/use-follow-up";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import { useEvents, ChurchEvent } from "@/hooks/use-events";
+import { EventSearchInput } from "@/components/ui/event-search-input";
 import { toLocalDate } from "@/utils/parse-local-time";
+import { DatePreset, presetRange } from "@/utils/date-presets";
 import { DismissibleError } from "@/components/ui/dismissible-error";
 
 type ApiError = { response?: { data?: { message?: string } }; message?: string };
@@ -36,7 +37,7 @@ const fullName = (p: { firstname: string; lastname: string } | null | undefined)
 
 const formatDate = (iso: string | null | undefined) => {
     if (!iso) return "—";
-    return new Date(iso).toLocaleDateString("en-GB", {
+    return new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString("en-GB", {
         day: "2-digit", month: "short", year: "numeric",
     });
 };
@@ -279,10 +280,9 @@ interface AddFirstTimerPanelProps {
     isSubmitting: boolean;
     onClose: () => void;
     onSubmit: (dto: CreateFirstTimerDto) => Promise<FirstTimer>;
-    events: ChurchEvent[];
 }
 
-function AddFirstTimerPanel({ isSubmitting, onClose, onSubmit, events }: AddFirstTimerPanelProps) {
+function AddFirstTimerPanel({ isSubmitting, onClose, onSubmit }: AddFirstTimerPanelProps) {
     const [form, setForm] = useState<CreateFirstTimerDto>(defaultFirstTimerForm);
     const [localError, setLocalError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
@@ -426,18 +426,10 @@ function AddFirstTimerPanel({ isSubmitting, onClose, onSubmit, events }: AddFirs
                         <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
                             Event visited <span className="normal-case font-light">(optional)</span>
                         </label>
-                        <select
+                        <EventSearchInput
                             value={form.visitedEventId ?? ""}
-                            onChange={(e) => setForm((p) => ({ ...p, visitedEventId: e.target.value || undefined }))}
-                            className="w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
-                        >
-                            <option value="">— Select event —</option>
-                            {events.map((ev) => (
-                                <option key={ev.id} value={ev.id}>
-                                    {ev.name}
-                                </option>
-                            ))}
-                        </select>
+                            onChange={(id) => setForm((p) => ({ ...p, visitedEventId: id || undefined }))}
+                        />
                     </div>
 
                     <div>
@@ -476,28 +468,9 @@ interface FtFilters {
     search: string;
     dateFrom: string;
     dateTo: string;
+    eventId: string;
 }
 
-type DatePreset = "all" | "7d" | "30d" | "month" | "custom";
-
-function presetRange(preset: DatePreset): { dateFrom: string; dateTo: string } {
-    const today = new Date();
-    if (preset === "7d") {
-        const from = new Date(today); from.setDate(from.getDate() - 7);
-        return { dateFrom: toIsoDate(from), dateTo: toIsoDate(today) };
-    }
-    if (preset === "30d") {
-        const from = new Date(today); from.setDate(from.getDate() - 30);
-        return { dateFrom: toIsoDate(from), dateTo: toIsoDate(today) };
-    }
-    if (preset === "month") {
-        return {
-            dateFrom: toIsoDate(new Date(today.getFullYear(), today.getMonth(), 1)),
-            dateTo: toIsoDate(today),
-        };
-    }
-    return { dateFrom: "", dateTo: "" };
-}
 
 type Tab = "first-timers" | "tasks" | "pipeline" | "report";
 type ActivePanel = null | "add" | "visit";
@@ -538,8 +511,6 @@ const FollowUpPage = () => {
         goToTaskPage,
     } = useFollowUp(10);
 
-    const { events } = useEvents(50);
-
     const [activeTab, setActiveTab] = useState<Tab>("first-timers");
     const [hasLoadedTasks, setHasLoadedTasks] = useState(false);
 
@@ -555,7 +526,7 @@ const FollowUpPage = () => {
     // First-timer filters
     const [ftFilters, setFtFilters] = useState<FtFilters>({
         source: "", wantsToJoinChurch: "", wantsToJoinWorkforce: "",
-        search: "", dateFrom: "", dateTo: "",
+        search: "", dateFrom: "", dateTo: "", eventId: "",
     });
     const [datePreset, setDatePreset] = useState<DatePreset>("all");
 
@@ -608,6 +579,7 @@ const FollowUpPage = () => {
             search: next.search || undefined,
             dateFrom: next.dateFrom || undefined,
             dateTo: next.dateTo || undefined,
+            eventId: next.eventId || undefined,
         });
     }, [ftFilters, fetchFirstTimers]);
 
@@ -800,14 +772,23 @@ const FollowUpPage = () => {
                                 <option value="true">Wants to Join</option>
                                 <option value="false">Not Interested</option>
                             </select>
+                            <div className="w-56">
+                                <EventSearchInput
+                                    value={ftFilters.eventId}
+                                    onChange={(id) => applyFtFilters({ eventId: id })}
+                                    placeholder="Service: All — search to filter"
+                                />
+                            </div>
                         </div>
-                        <button
-                            onClick={openAddPanel}
-                            className="flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors shrink-0"
-                        >
-                            <Plus className="w-3.5 h-3.5" />
-                            Add First Timer
-                        </button>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button
+                                onClick={openAddPanel}
+                                className="flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                                Add First Timer
+                            </button>
+                        </div>
                     </div>
 
                     {/* Date filter */}
@@ -989,7 +970,6 @@ const FollowUpPage = () => {
                                 isSubmitting={isSubmitting}
                                 onClose={closePanel}
                                 onSubmit={createFirstTimer}
-                                events={events}
                             />
                         )}
                         {activePanel === "visit" && visitTarget && (

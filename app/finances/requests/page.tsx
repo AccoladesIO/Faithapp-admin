@@ -275,15 +275,15 @@ function DetailPanel({ request, isSubmitting, onClose, onApprove, onReject }: De
     );
 }
 
-// ─── Add category modal (stays as modal — it's a small creation form) ─────────
+// ─── Add category panel ────────────────────────────────────────────────────────
 
-interface AddCategoryModalProps {
+interface AddCategoryPanelProps {
     isSubmitting: boolean;
     onClose: () => void;
     onSave: (dto: { name: string; description?: string }) => Promise<void>;
 }
 
-function AddCategoryModal({ isSubmitting, onClose, onSave }: AddCategoryModalProps) {
+function AddCategoryPanel({ isSubmitting, onClose, onSave }: AddCategoryPanelProps) {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [localError, setLocalError] = useState<string | null>(null);
@@ -303,44 +303,42 @@ function AddCategoryModal({ isSubmitting, onClose, onSave }: AddCategoryModalPro
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#121212]/40 backdrop-blur-sm">
-            <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl w-full max-w-sm">
-                <div className="flex items-center justify-between p-6 border-b border-[#121212]/5">
-                    <h2 className="text-base font-light tracking-tight text-[#121212]">Add Category</h2>
-                    <button onClick={onClose} className="p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/20 rounded-md transition-colors">
-                        <X className="w-4 h-4" />
-                    </button>
+        <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#121212]/5">
+                <h2 className="text-sm font-light text-[#121212]">Add Category</h2>
+                <button onClick={onClose} className="p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/20 rounded-md transition-colors">
+                    <X className="w-4 h-4" />
+                </button>
+            </div>
+            <div className="p-5 space-y-4">
+                <div>
+                    <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
+                        Name <span className="text-red-500">*</span>
+                    </label>
+                    <input type="text"
+                        className="w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                        placeholder="e.g. Equipment Purchase"
+                        value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
-                <div className="p-6 space-y-4">
-                    <div>
-                        <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
-                            Name <span className="text-red-500">*</span>
-                        </label>
-                        <input type="text"
-                            className="w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
-                            placeholder="e.g. Equipment Purchase"
-                            value={name} onChange={(e) => setName(e.target.value)} />
-                    </div>
-                    <div>
-                        <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
-                            Description <span className="text-[#8A817C] font-normal normal-case tracking-normal">(optional)</span>
-                        </label>
-                        <textarea
-                            className="w-full px-3 py-2 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg resize-none"
-                            rows={2} placeholder="Brief description of this category"
-                            value={description} onChange={(e) => setDescription(e.target.value)} />
-                    </div>
-                    <DismissibleError message={localError} />
-                    <div className="flex gap-2 pt-1">
-                        <button onClick={handleSave} disabled={isSubmitting}
-                            className="flex-1 flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 disabled:opacity-50 transition-colors justify-center">
-                            {isSubmitting && <RefreshCw className="w-3 h-3 animate-spin" />}
-                            {isSubmitting ? "Saving…" : "Save Category"}
-                        </button>
-                        <button onClick={onClose} className="h-9 px-4 border border-[#121212]/10 text-[#8A817C] text-xs font-semibold uppercase tracking-wider rounded-lg hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors">
-                            Cancel
-                        </button>
-                    </div>
+                <div>
+                    <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
+                        Description <span className="text-[#8A817C] font-normal normal-case tracking-normal">(optional)</span>
+                    </label>
+                    <textarea
+                        className="w-full px-3 py-2 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg resize-none"
+                        rows={2} placeholder="Brief description of this category"
+                        value={description} onChange={(e) => setDescription(e.target.value)} />
+                </div>
+                <DismissibleError message={localError} />
+                <div className="flex gap-2 pt-1">
+                    <button onClick={handleSave} disabled={isSubmitting}
+                        className="flex-1 flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 disabled:opacity-50 transition-colors justify-center">
+                        {isSubmitting && <RefreshCw className="w-3 h-3 animate-spin" />}
+                        {isSubmitting ? "Saving…" : "Save Category"}
+                    </button>
+                    <button onClick={onClose} className="h-9 px-4 border border-[#121212]/10 text-[#8A817C] text-xs font-semibold uppercase tracking-wider rounded-lg hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors">
+                        Cancel
+                    </button>
                 </div>
             </div>
         </div>
@@ -526,36 +524,38 @@ function FinanceRequestsPage() {
                             <Plus className="w-3.5 h-3.5" /> Add Category
                         </button>
                     </div>
-                    <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
-                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-widest text-[#8A817C]">Name</th>
-                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-widest text-[#8A817C]">Description</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {categories.length === 0
-                                    ? <tr><td colSpan={2} className="p-12 text-center text-xs text-[#8A817C] font-light">No categories yet. Add one above.</td></tr>
-                                    : categories.map((cat) => (
-                                        <tr key={cat.id} className="border-b border-[#121212]/5 hover:bg-[#F4F1EA]/20 transition-colors">
-                                            <td className="p-4 text-sm text-[#121212] font-light">{cat.name}</td>
-                                            <td className="p-4 text-sm text-[#8A817C] font-light">{cat.description ?? "—"}</td>
-                                        </tr>
-                                    ))
-                                }
-                            </tbody>
-                        </table>
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                        <div className={`${showAddCategory ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden transition-all`}>
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
+                                        <th className="p-4 text-[11px] font-semibold uppercase tracking-widest text-[#8A817C]">Name</th>
+                                        <th className="p-4 text-[11px] font-semibold uppercase tracking-widest text-[#8A817C]">Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {categories.length === 0
+                                        ? <tr><td colSpan={2} className="p-12 text-center text-xs text-[#8A817C] font-light">No categories yet. Add one above.</td></tr>
+                                        : categories.map((cat) => (
+                                            <tr key={cat.id} className="border-b border-[#121212]/5 hover:bg-[#F4F1EA]/20 transition-colors">
+                                                <td className="p-4 text-sm text-[#121212] font-light">{cat.name}</td>
+                                                <td className="p-4 text-sm text-[#8A817C] font-light">{cat.description ?? "—"}</td>
+                                            </tr>
+                                        ))
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {showAddCategory && (
+                            <AddCategoryPanel
+                                isSubmitting={isSubmitting}
+                                onClose={() => setShowAddCategory(false)}
+                                onSave={handleCreateCategory}
+                            />
+                        )}
                     </div>
                 </div>
-            )}
-
-            {showAddCategory && (
-                <AddCategoryModal
-                    isSubmitting={isSubmitting}
-                    onClose={() => setShowAddCategory(false)}
-                    onSave={handleCreateCategory}
-                />
             )}
         </div>
     );

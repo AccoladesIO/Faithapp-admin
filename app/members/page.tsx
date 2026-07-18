@@ -7,11 +7,12 @@ import {
     Search, SlidersHorizontal,
     ArrowUpDown, Eye, X, UserPlus, ShieldAlert, CheckCircle2,
     RefreshCw, KeyRound, ToggleLeft, ToggleRight, BadgeCheck,
-    Phone, Mail, Calendar, Users,
+    Phone, Mail, Calendar, Users, Church, UserMinus,
 } from "lucide-react";
-import { useMembers, Member } from "@/hooks/use-member";
+import {
+    useMembers, Member, PastorType, PASTOR_TYPE_LABELS, PromoteToWorkerPayload,
+} from "@/hooks/use-member";
 import { useDepartments } from "@/hooks/use-departments";
-import { PromoteToWorkerPayload } from "@/hooks/use-member";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
 import { DismissibleError } from "@/components/ui/dismissible-error";
@@ -24,7 +25,7 @@ const fullName = (m: Member) =>
 
 const formatDate = (iso: string | null) => {
     if (!iso) return "—";
-    return new Date(iso).toLocaleDateString("en-GB", {
+    return new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString("en-GB", {
         day: "2-digit",
         month: "short",
         year: "numeric",
@@ -132,7 +133,15 @@ function ConfirmBanner({
 
 type SortKey = "firstname" | "role" | "status" | "createdAt";
 type SortOrder = "asc" | "desc";
-type ConfirmAction = "promote" | "deactivate" | "activate" | "reset-password" | null;
+type ConfirmAction =
+    | "promote"
+    | "deactivate"
+    | "activate"
+    | "reset-password"
+    | "assign-pastor"
+    | "edit-pastor"
+    | "remove-pastor"
+    | null;
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
@@ -149,6 +158,9 @@ export default withAuth(function MembersPage() {
         promoteToWorker,
         changeStatus,
         resetPassword,
+        assignPastor,
+        updatePastorType,
+        removePastor,
         search: searchQuery,
         onSearchChange,
     } = useMembers(10);
@@ -159,6 +171,7 @@ export default withAuth(function MembersPage() {
         profession: "",
         yearJoinedWorkforce: "",
     });
+    const [pastorType, setPastorType] = useState<PastorType>("ASSOCIATE");
     // Detail panel
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
@@ -214,6 +227,9 @@ export default withAuth(function MembersPage() {
         deactivate: `Deactivate ${selectedMember ? fullName(selectedMember) : "this member"}? They will lose system access.`,
         activate: `Re-activate ${selectedMember ? fullName(selectedMember) : "this member"}?`,
         "reset-password": `Send a password reset link to ${selectedMember?.email}?`,
+        "assign-pastor": `Designate ${selectedMember ? fullName(selectedMember) : "this member"} as a pastor?`,
+        "edit-pastor": `Update the pastor type for ${selectedMember ? fullName(selectedMember) : "this member"}?`,
+        "remove-pastor": `Remove the pastor designation from ${selectedMember ? fullName(selectedMember) : "this member"}? This is purely informational and does not affect their login or worker access.`,
     };
 
     const handleConfirm = async () => {
@@ -236,6 +252,18 @@ export default withAuth(function MembersPage() {
             } else if (confirmAction === "reset-password") {
                 await resetPassword(selectedMember.id);
                 setActionSuccess("Password reset email sent successfully.");
+            } else if (confirmAction === "assign-pastor") {
+                const updated = await assignPastor(selectedMember.id, pastorType);
+                setSelectedMember((prev) => prev ? { ...prev, ...updated } : prev);
+                setActionSuccess("Pastor designation assigned.");
+            } else if (confirmAction === "edit-pastor") {
+                const updated = await updatePastorType(selectedMember.id, pastorType);
+                setSelectedMember((prev) => prev ? { ...prev, ...updated } : prev);
+                setActionSuccess("Pastor type updated.");
+            } else if (confirmAction === "remove-pastor") {
+                await removePastor(selectedMember.id);
+                setSelectedMember((prev) => prev ? { ...prev, pastorType: null } : prev);
+                setActionSuccess("Pastor designation removed.");
             }
             setConfirmAction(null);
         } catch (err: unknown) {
@@ -266,6 +294,13 @@ export default withAuth(function MembersPage() {
                             {pagination.totalCount} members
                         </span>
                     )}
+                    <button
+                        onClick={() => router.push("/members/bulk-import")}
+                        className="flex items-center gap-1.5 h-9 px-4 border border-[#121212]/10 text-[#121212] text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#F4F1EA] transition-colors"
+                    >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        Bulk Import
+                    </button>
                     <button
                         onClick={() => router.push("/members/bulk-promote")}
                         className="flex items-center gap-1.5 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors"
@@ -469,6 +504,12 @@ export default withAuth(function MembersPage() {
                                             Worker Profile Active
                                         </span>
                                     )}
+                                    {selectedMember.pastorType && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#EADCC9]/60 border border-[#EADCC9] text-[#121212] text-[9px] font-bold uppercase tracking-wider rounded">
+                                            <Church className="w-2.5 h-2.5" />
+                                            {PASTOR_TYPE_LABELS[selectedMember.pastorType]}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
@@ -629,7 +670,58 @@ export default withAuth(function MembersPage() {
                                 </div>
                             )}
 
-                            {confirmAction && confirmAction !== "promote" && (
+                            {(confirmAction === "assign-pastor" || confirmAction === "edit-pastor") && (
+                                <div className="p-4 bg-[#fdfaf2] border border-dashed border-[#121212]/15 rounded-lg space-y-4">
+                                    <div>
+                                        <strong className="block text-[11px] font-semibold uppercase tracking-wider text-[#121212] mb-0.5">
+                                            {confirmAction === "assign-pastor" ? "Assign Pastor Designation" : "Change Pastor Type"}
+                                        </strong>
+                                        <p className="text-xs text-[#8A817C] font-light">
+                                            Purely informational — does not affect login, check-in, or worker/department access.
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
+                                            Pastor Type
+                                        </label>
+                                        <select
+                                            value={pastorType}
+                                            onChange={(e) => setPastorType(e.target.value as PastorType)}
+                                            className="w-full h-10 px-3 bg-[#FFFFFF] border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
+                                        >
+                                            {(Object.keys(PASTOR_TYPE_LABELS) as PastorType[]).map((key) => (
+                                                <option key={key} value={key}>
+                                                    {PASTOR_TYPE_LABELS[key]}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="flex gap-2 pt-1">
+                                        <button
+                                            onClick={handleConfirm}
+                                            disabled={isSubmitting}
+                                            className="px-4 py-1.5 bg-[#121212] text-white text-[10px] font-bold uppercase tracking-wider rounded disabled:opacity-50 flex items-center gap-1.5"
+                                        >
+                                            {isSubmitting && <RefreshCw className="w-3 h-3 animate-spin" />}
+                                            Confirm
+                                        </button>
+                                        <button
+                                            onClick={() => setConfirmAction(null)}
+                                            disabled={isSubmitting}
+                                            className="px-4 py-1.5 border border-[#121212]/10 text-[#8A817C] text-[10px] font-semibold uppercase tracking-wider rounded hover:text-[#121212] disabled:opacity-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {confirmAction &&
+                                confirmAction !== "promote" &&
+                                confirmAction !== "assign-pastor" &&
+                                confirmAction !== "edit-pastor" && (
                                 <ConfirmBanner
                                     message={confirmMessages[confirmAction]}
                                     onConfirm={handleConfirm}
@@ -692,6 +784,42 @@ export default withAuth(function MembersPage() {
                                         <KeyRound className="w-3.5 h-3.5" />
                                         <span>Reset Password</span>
                                     </button>
+
+                                    {selectedMember.pastorType ? (
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    setPastorType(selectedMember.pastorType!);
+                                                    setConfirmAction("edit-pastor");
+                                                }}
+                                                disabled={isSubmitting}
+                                                className="flex-1 h-11 border border-[#121212]/10 text-[#121212] text-xs font-semibold uppercase tracking-widest hover:bg-[#F4F1EA] transition-colors flex items-center justify-center space-x-2 rounded-xl disabled:opacity-50"
+                                            >
+                                                <Church className="w-3.5 h-3.5" />
+                                                <span>Change Pastor Type</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setConfirmAction("remove-pastor")}
+                                                disabled={isSubmitting}
+                                                className="h-11 px-4 border border-[#121212]/10 text-[#8A817C] text-xs font-semibold uppercase tracking-widest hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors flex items-center justify-center rounded-xl disabled:opacity-50"
+                                                title="Remove pastor designation"
+                                            >
+                                                <UserMinus className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => {
+                                                setPastorType("ASSOCIATE");
+                                                setConfirmAction("assign-pastor");
+                                            }}
+                                            disabled={isSubmitting}
+                                            className="w-full h-11 border border-[#121212]/10 text-[#121212] text-xs font-semibold uppercase tracking-widest hover:bg-[#F4F1EA] transition-colors flex items-center justify-center space-x-2 rounded-xl disabled:opacity-50"
+                                        >
+                                            <Church className="w-3.5 h-3.5" />
+                                            <span>Assign Pastor Designation</span>
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>

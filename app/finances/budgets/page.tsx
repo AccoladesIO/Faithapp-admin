@@ -178,9 +178,9 @@ export default withAuth(function BudgetsPage() {
                                             </div>
                                         </div>
                                         <div className="flex justify-between text-[9px] text-[#8A817C] font-mono">
-                                            <span>{new Date(b.startDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                                            <span>{new Date(b.startDate + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span>
                                             <span>→</span>
-                                            <span>{new Date(b.endDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                                            <span>{new Date(b.endDate + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span>
                                         </div>
                                     </div>
                                 );
