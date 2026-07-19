@@ -35,9 +35,18 @@ export interface Member {
     baptizedWithHolyGhost: boolean;
     dateJoinedChurch: string | null;
     workerProfile: WorkerProfile | null;
+    pastorType: PastorType | null;
     createdAt: string;
     updatedAt: string;
 }
+
+export type PastorType = "LEAD" | "PARISH" | "ASSOCIATE";
+
+export const PASTOR_TYPE_LABELS: Record<PastorType, string> = {
+    LEAD: "Lead Pastor",
+    PARISH: "Parish Pastor",
+    ASSOCIATE: "Associate Pastor",
+};
 
 export interface MemberPagination {
     page: number;
@@ -196,6 +205,79 @@ export function useMembers(defaultLimit = 10, roleFilter?: "MEMBER" | "WORKER") 
         }
     }, []);
 
+    const assignPastor = useCallback(async (
+        memberId: string,
+        type: PastorType
+    ): Promise<Member> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            const res = await api.post(`/members/${memberId}/pastor`, { type });
+            const updated: Member = res.data?.data;
+            setMembers((prev) =>
+                prev.map((m) => (m.id === memberId ? { ...m, ...updated } : m))
+            );
+            return updated;
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message =
+                e?.response?.data?.message ||
+                e?.message ||
+                "Failed to assign pastor designation.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
+    const updatePastorType = useCallback(async (
+        memberId: string,
+        type: PastorType
+    ): Promise<Member> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            const res = await api.patch(`/members/${memberId}/pastor`, { type });
+            const updated: Member = res.data?.data;
+            setMembers((prev) =>
+                prev.map((m) => (m.id === memberId ? { ...m, ...updated } : m))
+            );
+            return updated;
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message =
+                e?.response?.data?.message ||
+                e?.message ||
+                "Failed to update pastor type.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
+    const removePastor = useCallback(async (memberId: string): Promise<void> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            await api.delete(`/members/${memberId}/pastor`);
+            setMembers((prev) =>
+                prev.map((m) => (m.id === memberId ? { ...m, pastorType: null } : m))
+            );
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message =
+                e?.response?.data?.message ||
+                e?.message ||
+                "Failed to remove pastor designation.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
     const resetPassword = useCallback(async (memberId: string): Promise<void> => {
         setIsSubmitting(true);
         setError(null);
@@ -233,5 +315,8 @@ export function useMembers(defaultLimit = 10, roleFilter?: "MEMBER" | "WORKER") 
         bulkPromote,
         changeStatus,
         resetPassword,
+        assignPastor,
+        updatePastorType,
+        removePastor,
     };
 }

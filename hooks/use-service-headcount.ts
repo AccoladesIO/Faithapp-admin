@@ -18,6 +18,7 @@ export interface ServiceHeadcount {
     mobileChurch: number;
     customGroups?: Record<string, number>;
     notes?: string;
+    recordedBy?: { member?: { firstname: string; lastname: string } } | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -60,6 +61,32 @@ export interface FetchRecordsParams {
     serviceSlotId?: string;
     from?: string;
     to?: string;
+}
+
+export interface HeadcountTotal {
+    maleAdults: number;
+    femaleAdults: number;
+    teenagers: number;
+    children: number;
+    mobileChurch: number;
+    customGroups: Record<string, number>;
+    total: number;
+}
+
+export interface ServiceSlotHeadcountSummary {
+    serviceSlotId: string;
+    serviceSlotName: string;
+    startTime: string;
+    headcount: (HeadcountTotal & { id: string; notes: string | null }) | null;
+}
+
+export interface EventHeadcountSummary {
+    eventId: string;
+    eventName: string;
+    slotCount: number;
+    recordedCount: number;
+    serviceSlots: ServiceSlotHeadcountSummary[];
+    total: HeadcountTotal;
 }
 
 export function useServiceHeadcount(defaultLimit = 10) {
@@ -107,6 +134,11 @@ export function useServiceHeadcount(defaultLimit = 10) {
         fetchRecords({ ...currentParams, page });
     }, [fetchRecords, currentParams]);
 
+    const fetchRecordDetail = useCallback(async (id: string): Promise<ServiceHeadcount> => {
+        const res = await api.get(`/service-headcount/${id}`);
+        return res.data?.data;
+    }, []);
+
     const createRecord = useCallback(async (dto: CreateHeadcountDto): Promise<ServiceHeadcount> => {
         setIsSubmitting(true);
         setError(null);
@@ -128,32 +160,6 @@ export function useServiceHeadcount(defaultLimit = 10) {
         }
     }, []);
 
-    const updateRecord = useCallback(async (
-        id: string,
-        dto: Partial<CreateHeadcountDto>
-    ): Promise<ServiceHeadcount> => {
-        setIsSubmitting(true);
-        setError(null);
-        try {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { serviceSlotId: _omit, ...patch } = dto;
-            const res = await api.patch(`/service-headcount/${id}`, patch);
-            const updated: ServiceHeadcount = res.data?.data;
-            setRecords((prev) => prev.map((r) => (r.id === id ? updated : r)));
-            return updated;
-        } catch (err: unknown) {
-            const e = err as ApiError;
-            const message =
-                e?.response?.data?.message ||
-                e?.message ||
-                "Failed to update headcount record.";
-            setError(message);
-            throw new Error(message);
-        } finally {
-            setIsSubmitting(false);
-        }
-    }, []);
-
     const fetchTrends = useCallback(async (
         period: "weekly" | "monthly" | "yearly",
         from?: string,
@@ -163,6 +169,11 @@ export function useServiceHeadcount(defaultLimit = 10) {
         if (from) query.set("from", from);
         if (to) query.set("to", to);
         const res = await api.get(`/service-headcount/trends?${query.toString()}`);
+        return res.data?.data;
+    }, []);
+
+    const fetchEventSummary = useCallback(async (eventId: string): Promise<EventHeadcountSummary> => {
+        const res = await api.get(`/service-headcount/event/${eventId}/summary`);
         return res.data?.data;
     }, []);
 
@@ -196,9 +207,10 @@ export function useServiceHeadcount(defaultLimit = 10) {
         error,
         fetchRecords,
         createRecord,
-        updateRecord,
+        fetchRecordDetail,
         fetchTrends,
         fetchSlots,
+        fetchEventSummary,
         goToPage,
     };
 }

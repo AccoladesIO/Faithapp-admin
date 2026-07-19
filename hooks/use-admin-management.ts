@@ -12,6 +12,8 @@ export type AdminPermission =
     | "leave:read" | "leave:write"
     | "classes:read" | "classes:write"
     | "announcements:read" | "announcements:write"
+    | "groups:read" | "groups:write"
+    | "sms:read" | "sms:send"
     | "notes:read" | "notes:write"
     | "dashboard:read"
     | "sunday_school:read" | "sunday_school:write"
@@ -95,6 +97,8 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     { group: "Announcements", permissions: [
         { value: "announcements:read", label: "View Announcements" },
         { value: "announcements:write", label: "Manage Announcements" },
+        { value: "groups:read", label: "View Groups" },
+        { value: "groups:write", label: "Manage Groups" },
     ]},
     { group: "Notes & Follow-Up", permissions: [
         { value: "notes:read", label: "View Notes" },
@@ -118,6 +122,10 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     { group: "Facility Rental", permissions: [
         { value: "facility_rental:read", label: "View Facility Bookings" },
         { value: "facility_rental:write", label: "Manage Facility Rentals" },
+    ]},
+    { group: "SMS Messaging", permissions: [
+        { value: "sms:read", label: "View SMS Logs" },
+        { value: "sms:send", label: "Send SMS Broadcasts" },
     ]},
     { group: "Administration", permissions: [
         { value: "dashboard:read", label: "View Dashboard" },

@@ -147,94 +147,93 @@ export default withAuth(function RecurringEntriesPage() {
 
                             <DismissibleError message={actionError} />
 
-            <div className="bg-white border border-[#121212]/10 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
-                                {["Description", "Debit Account", "Credit Account", "Amount", "Frequency", "Next Due", "Status", ""].map((h) => (
-                                    <th key={h} className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">
-                                        {h}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#121212]/5 text-[#121212]">
-                            {isLoading ? (
-                                Array.from({ length: 3 }).map((_, i) => <RowSkeleton key={i} />)
-                            ) : entries.length === 0 ? (
-                                <tr>
-                                    <td colSpan={8} className="p-10 text-center text-xs text-[#8A817C] font-light">
-                                        No recurring entries. Add one to automate regular journal postings.
-                                    </td>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <div className={`${panelOpen ? "lg:col-span-7" : "lg:col-span-12"} bg-white border border-[#121212]/10 rounded-xl overflow-hidden transition-all`}>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
+                                    {["Description", "Debit Account", "Credit Account", "Amount", "Frequency", "Next Due", "Status", ""].map((h) => (
+                                        <th key={h} className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">
+                                            {h}
+                                        </th>
+                                    ))}
                                 </tr>
-                            ) : (
-                                entries.map((e) => (
-                                    <tr key={e.id} className={`hover:bg-[#F4F1EA]/20 transition-colors ${!e.isActive ? "opacity-50" : ""}`}>
-                                        <td className="p-4 text-xs font-medium text-[#121212]">
-                                            <div className="flex items-center space-x-2">
-                                                <Repeat className="w-3.5 h-3.5 text-[#8A817C] shrink-0" />
-                                                <span>{e.description}</span>
-                                            </div>
-                                        </td>
-                                        <td className="p-4 text-xs text-[#8A817C]">
-                                            <div>{e.debitAccount.name}</div>
-                                            <div className="font-mono text-[10px]">{e.debitAccount.code}</div>
-                                        </td>
-                                        <td className="p-4 text-xs text-[#8A817C]">
-                                            <div>{e.creditAccount.name}</div>
-                                            <div className="font-mono text-[10px]">{e.creditAccount.code}</div>
-                                        </td>
-                                        <td className="p-4 font-mono text-xs font-medium text-[#121212]">{formatCurrency(e.amount)}</td>
-                                        <td className="p-4">
-                                            <span className={`inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded ${FREQ_COLORS[e.frequency]}`}>
-                                                {FREQ_LABELS[e.frequency]}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 font-mono text-xs text-[#8A817C]">
-                                            {new Date(e.nextDueAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
-                                        </td>
-                                        <td className="p-4">
-                                            {e.isActive ? (
-                                                <span className="inline-flex items-center space-x-1 text-[9px] font-bold uppercase tracking-wider text-green-700">
-                                                    <CheckCircle className="w-3 h-3" /><span>Active</span>
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center space-x-1 text-[9px] font-bold uppercase tracking-wider text-[#8A817C]">
-                                                    <XCircle className="w-3 h-3" /><span>Paused</span>
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="p-4">
-                                            <div className="flex items-center space-x-2 justify-end">
-                                                <button
-                                                    onClick={() => toggleActive(e)}
-                                                    disabled={isSubmitting}
-                                                    className="h-7 px-2.5 border border-[#121212]/10 text-[#8A817C] text-[10px] font-semibold uppercase tracking-wider hover:bg-[#F4F1EA]/40 rounded-lg transition-colors disabled:opacity-40"
-                                                >
-                                                    {e.isActive ? "Pause" : "Resume"}
-                                                </button>
-                                                <button
-                                                    onClick={() => openEdit(e)}
-                                                    className="h-7 px-2.5 border border-[#121212]/10 text-[#121212] text-[10px] font-semibold uppercase tracking-wider hover:bg-[#F4F1EA]/40 rounded-lg flex items-center space-x-1.5 transition-colors"
-                                                >
-                                                    <Pencil className="w-3 h-3" />
-                                                    <span>Edit</span>
-                                                </button>
-                                            </div>
+                            </thead>
+                            <tbody className="divide-y divide-[#121212]/5 text-[#121212]">
+                                {isLoading ? (
+                                    Array.from({ length: 3 }).map((_, i) => <RowSkeleton key={i} />)
+                                ) : entries.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={8} className="p-10 text-center text-xs text-[#8A817C] font-light">
+                                            No recurring entries. Add one to automate regular journal postings.
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                ) : (
+                                    entries.map((e) => (
+                                        <tr key={e.id} className={`hover:bg-[#F4F1EA]/20 transition-colors ${!e.isActive ? "opacity-50" : ""} ${editing?.id === e.id ? "bg-[#F4F1EA]/50" : ""}`}>
+                                            <td className="p-4 text-xs font-medium text-[#121212]">
+                                                <div className="flex items-center space-x-2">
+                                                    <Repeat className="w-3.5 h-3.5 text-[#8A817C] shrink-0" />
+                                                    <span>{e.description}</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-4 text-xs text-[#8A817C]">
+                                                <div>{e.debitAccount.name}</div>
+                                                <div className="font-mono text-[10px]">{e.debitAccount.code}</div>
+                                            </td>
+                                            <td className="p-4 text-xs text-[#8A817C]">
+                                                <div>{e.creditAccount.name}</div>
+                                                <div className="font-mono text-[10px]">{e.creditAccount.code}</div>
+                                            </td>
+                                            <td className="p-4 font-mono text-xs font-medium text-[#121212]">{formatCurrency(e.amount)}</td>
+                                            <td className="p-4">
+                                                <span className={`inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded ${FREQ_COLORS[e.frequency]}`}>
+                                                    {FREQ_LABELS[e.frequency]}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 font-mono text-xs text-[#8A817C]">
+                                                {new Date(e.nextDueAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                                            </td>
+                                            <td className="p-4">
+                                                {e.isActive ? (
+                                                    <span className="inline-flex items-center space-x-1 text-[9px] font-bold uppercase tracking-wider text-green-700">
+                                                        <CheckCircle className="w-3 h-3" /><span>Active</span>
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center space-x-1 text-[9px] font-bold uppercase tracking-wider text-[#8A817C]">
+                                                        <XCircle className="w-3 h-3" /><span>Paused</span>
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="flex items-center space-x-2 justify-end">
+                                                    <button
+                                                        onClick={() => toggleActive(e)}
+                                                        disabled={isSubmitting}
+                                                        className="h-7 px-2.5 border border-[#121212]/10 text-[#8A817C] text-[10px] font-semibold uppercase tracking-wider hover:bg-[#F4F1EA]/40 rounded-lg transition-colors disabled:opacity-40"
+                                                    >
+                                                        {e.isActive ? "Pause" : "Resume"}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => openEdit(e)}
+                                                        className="h-7 px-2.5 border border-[#121212]/10 text-[#121212] text-[10px] font-semibold uppercase tracking-wider hover:bg-[#F4F1EA]/40 rounded-lg flex items-center space-x-1.5 transition-colors"
+                                                    >
+                                                        <Pencil className="w-3 h-3" />
+                                                        <span>Edit</span>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
 
-            {panelOpen && (
-                <div className="fixed inset-0 z-40 flex">
-                    <div className="flex-1 bg-black/20" onClick={closePanel} />
-                    <div className="w-full max-w-md bg-white shadow-2xl flex flex-col overflow-y-auto">
+                {panelOpen && (
+                    <div className="lg:col-span-5 bg-white border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col">
                         <div className="flex items-center justify-between px-6 py-5 border-b border-[#121212]/10">
                             <h2 className="text-sm font-semibold uppercase tracking-widest text-[#121212]">
                                 {editing ? "Edit Recurring Entry" : "New Recurring Entry"}
@@ -245,7 +244,7 @@ export default withAuth(function RecurringEntriesPage() {
                         </div>
 
                         <div className="p-6 space-y-4 flex-1">
-                                                            <DismissibleError message={actionError} />
+                            <DismissibleError message={actionError} />
 
                             {editing ? (
                                 <>
@@ -336,8 +335,8 @@ export default withAuth(function RecurringEntriesPage() {
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 }, { requiredPermission: 'finance:read' });

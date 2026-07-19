@@ -292,17 +292,43 @@ const HELP: Record<string, PageHelp> = {
     },
     "/announcements": {
         title: "Announcements",
-        summary: "Send in-app messages to members — broadcast to the whole congregation, target specific roles, or message a single person. Announcements appear immediately in the member app's notification centre.",
+        summary: "Send in-app messages to members — broadcast to the whole congregation, target specific roles, or message a single person — or, with the 'SMS Only' toggle, text a targeted audience without publishing anything to the app. Announcements appear immediately in the member app's notification centre; this page is also the one place SMS balance, sending, and delivery logs live.",
         tips: [
             "Double-check the audience before sending — 'All Members' reaches the entire congregation instantly.",
             "There is no recall or unsend once a message is sent — proof-read carefully.",
             "Use Individual announcements for personal matters (e.g. appointment reminders, birthday messages).",
             "Workers-only announcements are ideal for internal logistics that members don't need to see.",
+            "Switch to 'SMS Only' to text an audience directly — no title, body, or feed entry is created, just a text message.",
+            "Group audience reaches everyone in that group, including phone-only entries (e.g. imported first-timers) alongside real members — see the Groups page.",
+            "Your SMS balance is shown at the top whenever you have SMS permissions — top up before it runs low, since a broadcast can't send without balance.",
+            "Use 'View Logs' next to the SMS balance to check delivery status for any SMS you've sent — it's a live read from the SMS provider, not a local record.",
         ],
         tasks: [
             { label: "Broadcast to all members", how: "Audience → All Members → write message → Send" },
             { label: "Message a specific person", how: "Audience → Individual → search member → write → Send" },
             { label: "Target workers only", how: "Audience → Workers → write → Send" },
+            { label: "Send an SMS without publishing an announcement", how: "Toggle 'SMS Only' → choose audience → write message → Send SMS" },
+            { label: "Text a group (e.g. first-timers)", how: "Toggle 'SMS Only' → Audience → Group → pick group → write → Send SMS" },
+            { label: "Check SMS delivery status", how: "'View Logs' link next to the SMS Balance chip" },
+        ],
+    },
+    "/groups": {
+        title: "Groups",
+        summary: "Reusable rosters of people to target from Announcements, without re-selecting individuals each time. A group can hold real members and workers, plus phone-only entries — people with no member account, like first-timers — added manually or imported in bulk from a date range.",
+        tips: [
+            "A group's membership is independent of Department — mix members and workers from any department in one group.",
+            "Phone-only entries (shown with a 'Guest' badge) can't receive push notifications or in-app announcements — they can only be reached by SMS, via Announcements' 'SMS Only' mode with a Group audience.",
+            "'Add from First-Timers' pulls in everyone captured in the chosen date range who has a phone number on file — reuse this to build a fresh 'this month's first-timers' group before every outreach text.",
+            "Paste multiple phone numbers at once (one per line, optionally 'number, label') when you have a list from outside the system.",
+            "Deleting a group removes its roster but does not affect the underlying members or first-timer records.",
+        ],
+        tasks: [
+            { label: "Create a group", how: "'New Group' → name it → Create" },
+            { label: "Add real members/workers", how: "Select a group → 'Add Members' → search by name or phone → select → Add" },
+            { label: "Add phone numbers manually", how: "Select a group → 'Add by Phone Number' → paste numbers (one per line) → Add Numbers" },
+            { label: "Import first-timers from a date range", how: "Select a group → 'Add from First-Timers' → pick a date range → Import First-Timers" },
+            { label: "Remove someone from a group", how: "Select the group → click the X on their roster row (works for members and phone-only entries alike)" },
+            { label: "Send a message to a group", how: "Go to Announcements → set Audience to Group → pick the group → write → Send" },
         ],
     },
     "/inventories": {
@@ -684,6 +710,21 @@ const HELP: Record<string, PageHelp> = {
             { label: "Confirm an email was sent", how: "Search the recipient's email address → check the sent timestamp" },
             { label: "Find emails of a specific type", how: "Template filter → select the email type (e.g. Password Reset, Announcement)" },
             { label: "Investigate a failed send", how: "Filter Status → Failed → open the row to see the error reason" },
+        ],
+    },
+    "/sms-logs": {
+        title: "SMS Logs",
+        summary: "View delivery history for every SMS sent from Announcements — this page reads live from the SMS provider (Termii), it is not a locally stored record, so it always reflects the provider's current data.",
+        tips: [
+            "This is a live query to the SMS provider on every refresh — there's no local copy, so results may take a moment to load for a long history.",
+            "Status values (e.g. Delivered, Sent, Failed) come directly from the provider and aren't standardised by this app — the status filter's options are built from whatever values have actually appeared.",
+            "Click a row to see the full message text, timestamp, and message ID in the detail panel.",
+            "If a recipient says they didn't get a text, search their phone number here first to confirm what the provider recorded.",
+        ],
+        tasks: [
+            { label: "Check if an SMS was delivered", how: "Filters → Recipient → enter the phone number → Apply" },
+            { label: "Find all failed sends", how: "Filters → Status → select the failed/undelivered value seen in your data → Apply" },
+            { label: "Refresh with the latest provider data", how: "Refresh button, top right" },
         ],
     },
     "/incident-reports": {

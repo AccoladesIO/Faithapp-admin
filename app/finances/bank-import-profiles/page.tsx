@@ -138,81 +138,80 @@ export default withAuth(function BankImportProfilesPage() {
 
                             <DismissibleError message={error} />
 
-            <div className="bg-white border border-[#121212]/10 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
-                                {["Profile Name", "Delimiter", "Date Format", "Convention", "Skip Rows", ""].map((h) => (
-                                    <th key={h} className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">
-                                        {h}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#121212]/5 text-[#121212]">
-                            {isLoading ? (
-                                Array.from({ length: 3 }).map((_, i) => <RowSkeleton key={i} />)
-                            ) : profiles.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="p-10 text-center text-xs text-[#8A817C] font-light">
-                                        No import profiles yet. Create one to configure CSV parsing for bank statements.
-                                    </td>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <div className={`${panelOpen ? "lg:col-span-7" : "lg:col-span-12"} bg-white border border-[#121212]/10 rounded-xl overflow-hidden transition-all`}>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-[#121212]/10 bg-[#F4F1EA]/40">
+                                    {["Profile Name", "Delimiter", "Date Format", "Convention", "Skip Rows", ""].map((h) => (
+                                        <th key={h} className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">
+                                            {h}
+                                        </th>
+                                    ))}
                                 </tr>
-                            ) : (
-                                profiles.map((p) => (
-                                    <tr key={p.id} className="hover:bg-[#F4F1EA]/20 transition-colors">
-                                        <td className="p-4 text-xs font-medium text-[#121212]">
-                                            <div className="flex items-center space-x-2">
-                                                <Settings2 className="w-3.5 h-3.5 text-[#8A817C]" />
-                                                <span>{p.name}</span>
-                                                {p.isDefault && (
-                                                    <span className="inline-flex items-center space-x-1 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded bg-green-100 text-green-800">
-                                                        <CheckCircle className="w-2.5 h-2.5" />
-                                                        <span>Default</span>
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="p-4 font-mono text-xs text-[#8A817C]">
-                                            {p.delimiter === "," ? "Comma" : p.delimiter === "\t" ? "Tab" : p.delimiter === ";" ? "Semicolon" : p.delimiter}
-                                        </td>
-                                        <td className="p-4 font-mono text-xs text-[#8A817C]">{p.dateFormat}</td>
-                                        <td className="p-4 text-xs text-[#8A817C]">
-                                            {CONVENTIONS.find((c) => c.value === p.amountConvention)?.label ?? p.amountConvention}
-                                        </td>
-                                        <td className="p-4 font-mono text-xs text-[#8A817C]">{p.skipHeaderRows}</td>
-                                        <td className="p-4">
-                                            <div className="flex items-center space-x-2 justify-end">
-                                                <button
-                                                    onClick={() => downloadTemplate(p.id, p.name)}
-                                                    title="Download CSV template"
-                                                    className="h-7 px-2.5 border border-[#121212]/10 text-[#8A817C] text-[10px] font-semibold uppercase tracking-wider hover:bg-[#F4F1EA]/40 rounded-lg flex items-center space-x-1.5 transition-colors"
-                                                >
-                                                    <Download className="w-3 h-3" />
-                                                    <span>Template</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => openEdit(p)}
-                                                    className="h-7 px-2.5 border border-[#121212]/10 text-[#121212] text-[10px] font-semibold uppercase tracking-wider hover:bg-[#F4F1EA]/40 rounded-lg flex items-center space-x-1.5 transition-colors"
-                                                >
-                                                    <Pencil className="w-3 h-3" />
-                                                    <span>Edit</span>
-                                                </button>
-                                            </div>
+                            </thead>
+                            <tbody className="divide-y divide-[#121212]/5 text-[#121212]">
+                                {isLoading ? (
+                                    Array.from({ length: 3 }).map((_, i) => <RowSkeleton key={i} />)
+                                ) : profiles.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="p-10 text-center text-xs text-[#8A817C] font-light">
+                                            No import profiles yet. Create one to configure CSV parsing for bank statements.
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                ) : (
+                                    profiles.map((p) => (
+                                        <tr key={p.id} className={`hover:bg-[#F4F1EA]/20 transition-colors ${editing?.id === p.id ? "bg-[#F4F1EA]/50" : ""}`}>
+                                            <td className="p-4 text-xs font-medium text-[#121212]">
+                                                <div className="flex items-center space-x-2">
+                                                    <Settings2 className="w-3.5 h-3.5 text-[#8A817C]" />
+                                                    <span>{p.name}</span>
+                                                    {p.isDefault && (
+                                                        <span className="inline-flex items-center space-x-1 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded bg-green-100 text-green-800">
+                                                            <CheckCircle className="w-2.5 h-2.5" />
+                                                            <span>Default</span>
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="p-4 font-mono text-xs text-[#8A817C]">
+                                                {p.delimiter === "," ? "Comma" : p.delimiter === "\t" ? "Tab" : p.delimiter === ";" ? "Semicolon" : p.delimiter}
+                                            </td>
+                                            <td className="p-4 font-mono text-xs text-[#8A817C]">{p.dateFormat}</td>
+                                            <td className="p-4 text-xs text-[#8A817C]">
+                                                {CONVENTIONS.find((c) => c.value === p.amountConvention)?.label ?? p.amountConvention}
+                                            </td>
+                                            <td className="p-4 font-mono text-xs text-[#8A817C]">{p.skipHeaderRows}</td>
+                                            <td className="p-4">
+                                                <div className="flex items-center space-x-2 justify-end">
+                                                    <button
+                                                        onClick={() => downloadTemplate(p.id, p.name)}
+                                                        title="Download CSV template"
+                                                        className="h-7 px-2.5 border border-[#121212]/10 text-[#8A817C] text-[10px] font-semibold uppercase tracking-wider hover:bg-[#F4F1EA]/40 rounded-lg flex items-center space-x-1.5 transition-colors"
+                                                    >
+                                                        <Download className="w-3 h-3" />
+                                                        <span>Template</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => openEdit(p)}
+                                                        className="h-7 px-2.5 border border-[#121212]/10 text-[#121212] text-[10px] font-semibold uppercase tracking-wider hover:bg-[#F4F1EA]/40 rounded-lg flex items-center space-x-1.5 transition-colors"
+                                                    >
+                                                        <Pencil className="w-3 h-3" />
+                                                        <span>Edit</span>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
 
-            {panelOpen && (
-                <div className="fixed inset-0 z-40 flex">
-                    <div className="flex-1 bg-black/20" onClick={closePanel} />
-                    <div className="w-full max-w-lg bg-white shadow-2xl flex flex-col overflow-y-auto">
+                {panelOpen && (
+                    <div className="lg:col-span-5 bg-white border border-[#121212]/10 rounded-xl overflow-hidden flex flex-col">
                         <div className="flex items-center justify-between px-6 py-5 border-b border-[#121212]/10">
                             <h2 className="text-sm font-semibold uppercase tracking-widest text-[#121212]">
                                 {editing ? "Edit Profile" : "New Import Profile"}
@@ -223,7 +222,7 @@ export default withAuth(function BankImportProfilesPage() {
                         </div>
 
                         <div className="p-6 space-y-5 flex-1">
-                                                            <DismissibleError message={actionError} />
+                            <DismissibleError message={actionError} />
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="col-span-2">
@@ -390,8 +389,8 @@ export default withAuth(function BankImportProfilesPage() {
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 }, { requiredPermission: 'finance:read' });

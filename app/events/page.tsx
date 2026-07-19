@@ -55,11 +55,12 @@ function EmptyState({ icon: Icon, title, description }: {
 
 // ─── Service slot row ─────────────────────────────────────────────────────────
 
-function SlotRow({ slot, index, configs, venues, onChange, onRemove }: {
+function SlotRow({ slot, index, configs, venues, minStartTime, onChange, onRemove }: {
     slot: ServiceSlot;
     index: number;
     configs: { id: string; name: string }[];
     venues: { id: string; name: string }[];
+    minStartTime?: string;
     onChange: (index: number, field: keyof ServiceSlot, value: string) => void;
     onRemove: (index: number) => void;
 }) {
@@ -89,6 +90,7 @@ function SlotRow({ slot, index, configs, venues, onChange, onRemove }: {
                     <input
                         type="datetime-local"
                         required
+                        min={minStartTime || undefined}
                         value={toInputDateTime(slot.startTime)}
                         onChange={(e) => onChange(index, "startTime", toPayloadDateTime(e.target.value))}
                         className="w-full h-9 px-3 bg-[#FFFFFF] border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
@@ -99,6 +101,7 @@ function SlotRow({ slot, index, configs, venues, onChange, onRemove }: {
                     <input
                         type="datetime-local"
                         required
+                        min={toInputDateTime(slot.startTime) || undefined}
                         value={toInputDateTime(slot.endTime)}
                         onChange={(e) => onChange(index, "endTime", toPayloadDateTime(e.target.value))}
                         className="w-full h-9 px-3 bg-[#FFFFFF] border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
@@ -140,8 +143,6 @@ function SlotRow({ slot, index, configs, venues, onChange, onRemove }: {
 const defaultEventForm = {
     name: "",
     description: "",
-    eventDate: "",
-    endDate: "",
     onlineAttendanceEnabled: false,
     isRecurring: false,
     recurrence: {
@@ -161,6 +162,20 @@ const defaultConfigForm: CreateEventConfigPayload = {
     memberCheckinStartOffsetSeconds: -1800,
     checkinStopOffsetSeconds: 3600,
     allowedDistanceInMeters: 150,
+};
+
+const formatDate = (iso: string | null | undefined) => {
+    if (!iso) return "—";
+    return new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString("en-GB", {
+        day: "2-digit", month: "short", year: "numeric",
+    });
+};
+
+const formatTime = (iso: string | null | undefined) => {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleTimeString("en-GB", {
+        hour: "2-digit", minute: "2-digit",
+    });
 };
 
 // ─── Main page ────────────────────────────────────────────────────────────────
@@ -204,11 +219,40 @@ export default withAuth(function AdminEventsPage() {
         serviceSlots: prev.serviceSlots.filter((_, i) => i !== index),
     }));
 
+    // datetime-local's `min` only reliably restricts the calendar's date view —
+    // the time-of-day spinner on an already-valid date isn't blocked by browsers
+    // interactively, only flagged invalid on blur/submit. Clamp here instead, so
+    // an out-of-order time snaps back into range the instant it's picked.
     const updateSlot = (index: number, field: keyof ServiceSlot, value: string) =>
-        setEventForm((prev) => ({
-            ...prev,
-            serviceSlots: prev.serviceSlots.map((s, i) => i === index ? { ...s, [field]: value } : s),
-        }));
+        setEventForm((prev) => {
+            const slots = prev.serviceSlots.map((s) => ({ ...s }));
+            slots[index] = { ...slots[index], [field]: value };
+            const slot = slots[index];
+
+            if (field === "startTime" && slot.endTime && slot.startTime > slot.endTime) {
+                slot.endTime = slot.startTime;
+            }
+            if (field === "endTime" && slot.startTime && slot.endTime < slot.startTime) {
+                slot.endTime = slot.startTime;
+            }
+
+            if (field === "startTime" && index > 0) {
+                const prevEnd = slots[index - 1].endTime;
+                if (prevEnd && slot.startTime < prevEnd) {
+                    slot.startTime = prevEnd;
+                    if (slot.endTime && slot.endTime < prevEnd) slot.endTime = prevEnd;
+                }
+            }
+
+            if (field === "endTime" && index < slots.length - 1) {
+                const nextSlot = slots[index + 1];
+                if (nextSlot.startTime && nextSlot.startTime < slot.endTime) {
+                    nextSlot.startTime = slot.endTime;
+                }
+            }
+
+            return { ...prev, serviceSlots: slots };
+        });
 
     // ── Event panel helpers ───────────────────────────────────────────────────
 
@@ -239,8 +283,6 @@ export default withAuth(function AdminEventsPage() {
         setEventForm({
             name: event?.name ?? "",
             description: event?.description ?? "",
-            eventDate: event?.eventDate ?? "",
-            endDate: event?.endDate ?? "",
             onlineAttendanceEnabled: !!event?.onlineAttendanceEnabled,
             isRecurring: !!event?.isRecurring,
             recurrence: event?.recurrence ?? {
@@ -266,8 +308,6 @@ export default withAuth(function AdminEventsPage() {
         setEventForm({
             name: event?.name ?? "",
             description: event?.description ?? "",
-            eventDate: "",
-            endDate: "",
             onlineAttendanceEnabled: !!event?.onlineAttendanceEnabled,
             isRecurring: !!event?.isRecurring,
             recurrence: event?.recurrence ?? {
@@ -336,8 +376,6 @@ export default withAuth(function AdminEventsPage() {
         const payload: CreateEventPayload = {
             name: eventForm.name,
             description: eventForm.description,
-            eventDate: eventForm.eventDate,
-            endDate: eventForm.endDate,
             onlineAttendanceEnabled: eventForm.onlineAttendanceEnabled,
             isRecurring: eventForm.isRecurring,
             serviceSlots: eventForm.serviceSlots.map((s) => ({
@@ -494,10 +532,10 @@ export default withAuth(function AdminEventsPage() {
                                                     <td className="p-4 align-top font-mono text-xs">
                                                         <div className="flex items-center space-x-1 text-[#121212]">
                                                             <Calendar className="w-3 h-3 text-[#8A817C]" />
-                                                            <span>{event?.eventDate}</span>
+                                                            <span>{formatDate(event?.eventDate)}</span>
                                                         </div>
                                                         {event?.endDate !== event?.eventDate && (
-                                                            <div className="text-[10px] text-[#8A817C] mt-1">→ {event?.endDate}</div>
+                                                            <div className="text-[10px] text-[#8A817C] mt-1">→ {formatDate(event?.endDate)}</div>
                                                         )}
                                                     </td>
                                                     <td className="p-4 align-top">
@@ -617,38 +655,6 @@ export default withAuth(function AdminEventsPage() {
                                             />
                                         </div>
 
-                                        <div className="p-4 bg-[#F4F1EA]/20 border border-[#121212]/5 rounded-xl space-y-4">
-                                            <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C]">Timeline</div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">Event Date</label>
-                                                    <div className="relative">
-                                                        <Calendar className="absolute left-3 top-3 w-3.5 h-3.5 text-[#8A817C]" />
-                                                        <input
-                                                            type="date"
-                                                            required
-                                                            value={eventForm.eventDate}
-                                                            onChange={(e) => setEventForm((p) => ({ ...p, eventDate: e.target.value }))}
-                                                            className="w-full h-10 pl-9 pr-3 bg-[#FFFFFF] border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">End Date</label>
-                                                    <div className="relative">
-                                                        <Calendar className="absolute left-3 top-3 w-3.5 h-3.5 text-[#8A817C]" />
-                                                        <input
-                                                            type="date"
-                                                            required
-                                                            value={eventForm.endDate}
-                                                            onChange={(e) => setEventForm((p) => ({ ...p, endDate: e.target.value }))}
-                                                            className="w-full h-10 pl-9 pr-3 bg-[#FFFFFF] border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
                                         <label className="flex items-center space-x-3 cursor-pointer select-none">
                                             <button
                                                 type="button"
@@ -734,7 +740,9 @@ export default withAuth(function AdminEventsPage() {
                                                 <p className="text-[10px] text-[#8A817C] font-mono">No slots added. At least one service slot is required.</p>
                                             )}
                                             {eventForm.serviceSlots.map((slot, i) => (
-                                                <SlotRow key={i} slot={slot} index={i} configs={eventConfigs} venues={venues} onChange={updateSlot} onRemove={removeSlot} />
+                                                <SlotRow key={i} slot={slot} index={i} configs={eventConfigs} venues={venues}
+                                                    minStartTime={i > 0 ? toInputDateTime(eventForm.serviceSlots[i - 1].endTime) : undefined}
+                                                    onChange={updateSlot} onRemove={removeSlot} />
                                             ))}
                                         </div>
 
@@ -783,11 +791,11 @@ export default withAuth(function AdminEventsPage() {
                                     <div className="grid grid-cols-2 gap-3">
                                         <div className="p-3 bg-[#F4F1EA]/30 border border-[#121212]/5 rounded-lg">
                                             <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1">Start</div>
-                                            <div className="text-xs font-mono text-[#121212]">{selectedEvent.eventDate}</div>
+                                            <div className="text-xs font-mono text-[#121212]">{formatDate(selectedEvent.eventDate)}</div>
                                         </div>
                                         <div className="p-3 bg-[#F4F1EA]/30 border border-[#121212]/5 rounded-lg">
                                             <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1">End</div>
-                                            <div className="text-xs font-mono text-[#121212]">{selectedEvent.endDate}</div>
+                                            <div className="text-xs font-mono text-[#121212]">{formatDate(selectedEvent.endDate)}</div>
                                         </div>
                                     </div>
 
@@ -798,7 +806,7 @@ export default withAuth(function AdminEventsPage() {
                                                 {selectedEvent.serviceSlots?.map((s: ServiceSlot, i: number) => (
                                                     <div key={i} className="p-3 bg-[#F4F1EA]/20 border border-[#121212]/5 rounded-lg">
                                                         <div className="text-xs font-medium text-[#121212]">{s.name}</div>
-                                                        <div className="text-[10px] text-[#8A817C] font-mono mt-0.5 truncate">{s.startTime} → {s.endTime}</div>
+                                                        <div className="text-[10px] text-[#8A817C] font-mono mt-0.5 truncate">{formatDate(s.startTime)}, {formatTime(s.startTime)} → {formatTime(s.endTime)}</div>
                                                     </div>
                                                 ))}
                                             </div>

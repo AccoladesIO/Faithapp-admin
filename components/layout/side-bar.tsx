@@ -172,9 +172,11 @@ export default function Sidebar() {
         },
         {
             name: "Announcements",
-            href: "/announcements",
             icon: Megaphone,
-            permission: "announcements:read",
+            subItems: [
+                { name: "Broadcasts", href: "/announcements", permission: "announcements:read" },
+                { name: "Groups",     href: "/groups",         permission: "groups:read" },
+            ],
         },
         {
             name: "System",
@@ -182,6 +184,7 @@ export default function Sidebar() {
             subItems: [
                 { name: "Audit Trail",       href: "/audit-logs",        permission: "audit:read" },
                 { name: "Email Logs",        href: "/email-logs",         permission: "email_logs:read" },
+                { name: "SMS Logs",          href: "/sms-logs",           permission: "sms:read" },
                 { name: "Incident Reports",  href: "/incident-reports",   permission: "incident_report:read" },
                 { name: "Module Settings",   href: "/system-settings",    permission: "admin:read" },
             ],

@@ -31,7 +31,7 @@ const STATUS_CONFIG: Record<JournalEntryStatus, { label: string; cls: string; Ic
 
 
 const fmtDate = (iso: string) =>
-    new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
 const EMPTY_LINE: CreateJournalLinePayload = { accountId: "", entryType: "DEBIT", amount: 0 };
 

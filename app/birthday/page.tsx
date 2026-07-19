@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Image from "next/image";
 import { withAuth } from "@/utils/auth/with-auth";
 import { Mail, Phone, RefreshCw, CheckCircle2, Calendar } from "lucide-react";
 import { useBirthday, BirthdayMember } from "@/hooks/use-birthday";
@@ -82,21 +81,11 @@ function BirthdayCard({ member, onSend, isSubmitting }: BirthdayCardProps) {
     return (
         <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl p-6 space-y-5 flex flex-col">
             <div className="flex items-center gap-4">
-                {member.profilePhoto ? (
-                    <Image
-                        src={member.profilePhoto}
-                        alt={`${member.firstname} ${member.lastname}`}
-                        className="w-14 h-14 rounded-full object-cover shrink-0"
-                        width={56}
-                        height={56}
-                    />
-                ) : (
-                    <div
-                        className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-semibold shrink-0 ${avatarColor(member.id)}`}
-                    >
-                        {initials(member)}
-                    </div>
-                )}
+                <div
+                    className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-semibold shrink-0 ${avatarColor(member.id)}`}
+                >
+                    {initials(member)}
+                </div>
                 <div className="min-w-0">
                     <h3 className="text-sm font-light text-[#121212] truncate">
                         {member.firstname} {member.lastname}
@@ -150,29 +139,21 @@ function BirthdayCard({ member, onSend, isSubmitting }: BirthdayCardProps) {
 }
 
 function formatDayLabel(member: BirthdayMember): string {
-    if (!member.dateOfBirth && (!member.birthMonth || !member.birthDay)) return "";
-    const dob = member.dateOfBirth
-        ? new Date(member.dateOfBirth)
-        : new Date(new Date().getFullYear(), (member.birthMonth ?? 1) - 1, member.birthDay ?? 1);
-    return dob.toLocaleDateString("en-GB", { day: "numeric", month: "long" });
+    if (!member.birthMonth || !member.birthDay) return "";
+    const dob = new Date(member.birthYear ?? new Date().getFullYear(), member.birthMonth - 1, member.birthDay);
+    return dob.toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        ...(member.birthYear ? { year: "numeric" } : {}),
+    });
 }
 
 function UpcomingRow({ member }: { readonly member: BirthdayMember }) {
     return (
         <div className="flex items-center gap-4 p-4 border-b border-[#121212]/5 last:border-0">
-            {member.profilePhoto ? (
-                <Image
-                    src={member.profilePhoto}
-                    alt={`${member.firstname} ${member.lastname}`}
-                    className="w-10 h-10 rounded-full object-cover shrink-0"
-                    width={40}
-                    height={40}
-                />
-            ) : (
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${avatarColor(member.id)}`}>
-                    {initials(member)}
-                </div>
-            )}
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${avatarColor(member.id)}`}>
+                {initials(member)}
+            </div>
             <div className="min-w-0 flex-1">
                 <p className="text-sm font-light text-[#121212] truncate">
                     {member.firstname} {member.lastname}

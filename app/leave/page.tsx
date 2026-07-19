@@ -17,7 +17,7 @@ const fullName = (m: Readonly<{ firstname: string; lastname: string }>) =>
 
 const fmtDate = (val: string | null) => {
     if (!val) return "—";
-    return new Date(val).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    return new Date(val.length === 10 ? `${val}T00:00:00` : val).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 };
 
 const fmtDateTime = (val: string | null) => {

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import NextLink from "next/link";
 import { useEditor, EditorContent, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -10,7 +11,8 @@ import {
     Megaphone, FileText, Send, Trash2, Calendar, User, Clock,
     Bold, Italic, Underline as UnderlineIcon, List, ListOrdered,
     Heading1, Heading2, Undo, Redo,
-    RefreshCw, Pencil, X, Check, Building2, UserCircle, Globe, Users, HardHat,
+    RefreshCw, Pencil, X, Check, Building2, UserCircle, Globe, Users, HardHat, Users2,
+    MessageSquare, Wallet, ScrollText,
 } from "lucide-react";
 import {
     useAnnouncements,
@@ -21,6 +23,9 @@ import {
 } from "@/hooks/use-announcements";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { useDepartments } from "@/hooks/use-departments";
+import { useGroupLookup, GroupLookup } from "@/hooks/use-groups";
+import { useAuth } from "@/context/auth-context";
+import { useSmsBalance, getSegmentCount, SegmentCount } from "@/hooks/use-sms";
 import { api } from "@/utils/auth/axios-client";
 import { toInputDateTime } from "@/utils/parse-local-time";
 import { DismissibleError } from "@/components/ui/dismissible-error";
@@ -85,6 +90,14 @@ function AudienceBadge({ announcement }: { announcement: Announcement }) {
             </span>
         );
     }
+    if (announcement.audience === "GROUP") {
+        return (
+            <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-teal-50 border border-teal-100 text-teal-700 text-[9px] font-semibold uppercase tracking-wider rounded">
+                <Users2 className="w-2.5 h-2.5" />
+                <span>{announcement.group?.name ?? "Group"}</span>
+            </span>
+        );
+    }
     return (
         <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-purple-50 border border-purple-100 text-purple-700 text-[9px] font-semibold uppercase tracking-wider rounded">
             <UserCircle className="w-2.5 h-2.5" />
@@ -112,7 +125,7 @@ interface MemberResult {
     id: string;
     firstname: string;
     lastname: string;
-    email: string;
+    phoneNumber: string | null;
 }
 
 interface MemberSearchInputProps {
@@ -217,9 +230,94 @@ function MemberSearchInput({ value, onChange }: MemberSearchInputProps) {
                             className="w-full text-left px-4 py-3 hover:bg-[#F4F1EA]/60 transition-colors border-b border-[#121212]/5 last:border-0"
                         >
                             <div className="text-sm text-[#121212] font-light">{m.firstname} {m.lastname}</div>
-                            <div className="text-[11px] text-[#8A817C] font-mono">{m.email}</div>
+                            <div className="text-[11px] text-[#8A817C] font-mono">{m.phoneNumber ?? "No phone on file"}</div>
                         </button>
                     ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Group search combobox ────────────────────────────────────────────────────
+// Groups are reference data (no pagination, small list already fetched
+// up front via useGroupLookup), so this filters the in-memory list as the
+// admin types instead of round-tripping to the server per keystroke.
+
+interface GroupSearchInputProps {
+    groups: GroupLookup[];
+    value: string;
+    onChange: (id: string) => void;
+}
+
+function GroupSearchInput({ groups, value, onChange }: GroupSearchInputProps) {
+    const [query, setQuery] = useState("");
+    const [open, setOpen] = useState(false);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    const selected = groups.find((g) => g.id === value);
+    const results = query.trim()
+        ? groups.filter((g) => g.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 8)
+        : groups.slice(0, 8);
+
+    React.useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
+
+    const handleSelect = (g: GroupLookup) => {
+        onChange(g.id);
+        setQuery("");
+        setOpen(false);
+    };
+
+    const handleClear = () => {
+        onChange("");
+        setQuery("");
+        setOpen(false);
+    };
+
+    return (
+        <div ref={wrapperRef} className="relative">
+            {selected ? (
+                <div className="flex items-center gap-3 h-11 px-4 bg-[#F4F1EA]/40 border border-[#121212]/10 rounded-lg">
+                    <Users2 className="w-4 h-4 text-[#8A817C] shrink-0" />
+                    <span className="text-sm text-[#121212] font-light flex-1 truncate">{selected.name}</span>
+                    <button type="button" onClick={handleClear} className="p-0.5 text-[#8A817C] hover:text-[#121212] transition-colors">
+                        <X className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            ) : (
+                <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+                    onFocus={() => setOpen(true)}
+                    placeholder="Type to search groups…"
+                    className="w-full h-11 px-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                />
+            )}
+            {open && !selected && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#121212]/10 rounded-xl shadow-lg z-20 overflow-hidden max-h-60 overflow-y-auto">
+                    {results.length === 0 ? (
+                        <p className="px-4 py-3 text-xs text-[#8A817C] font-light">No groups found.</p>
+                    ) : (
+                        results.map((g) => (
+                            <button
+                                key={g.id}
+                                type="button"
+                                onMouseDown={(e) => { e.preventDefault(); handleSelect(g); }}
+                                className="w-full text-left px-4 py-3 hover:bg-[#F4F1EA]/60 transition-colors border-b border-[#121212]/5 last:border-0"
+                            >
+                                <div className="text-sm text-[#121212] font-light">{g.name}</div>
+                            </button>
+                        ))
+                    )}
                 </div>
             )}
         </div>
@@ -267,17 +365,73 @@ function EditorToolbar({ editor }: { editor: Editor | null }) {
     );
 }
 
+function SmsMessageField({
+    value,
+    onChange,
+    segmentInfo,
+    helperText,
+    placeholder = "e.g. Reminder: Church Picnic this Saturday at 10am. See you there!",
+}: Readonly<{
+    value: string;
+    onChange: (value: string) => void;
+    segmentInfo: SegmentCount | null;
+    helperText: string;
+    placeholder?: string;
+}>) {
+    return (
+        <div className="p-4 bg-[#F4F1EA]/50 border border-[#121212]/5 rounded-xl space-y-2">
+            <p className="text-[10px] text-[#8A817C] font-light">{helperText}</p>
+            <textarea
+                required
+                rows={3}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={placeholder}
+                className="w-full px-3 py-2 bg-white border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg resize-none"
+            />
+            {segmentInfo && (
+                <div
+                    className={`flex items-center justify-between text-[10px] font-mono ${segmentInfo.segments > 1 ? "text-amber-600" : "text-[#8A817C]"
+                        }`}
+                >
+                    <span>
+                        {segmentInfo.characterCount} character{segmentInfo.characterCount !== 1 ? "s" : ""}
+                        {segmentInfo.encoding === "unicode" ? " · unicode (70/segment)" : " · plain (160/segment)"}
+                    </span>
+                    <span className={segmentInfo.segments > 1 ? "font-bold" : ""}>
+                        {segmentInfo.segments > 1 && "⚠ "}
+                        {segmentInfo.segments} segment{segmentInfo.segments !== 1 ? "s" : ""}
+                    </span>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ─── Default form ─────────────────────────────────────────────────────────────
+
+const AUDIENCE_FILTER_LABELS: Record<AnnouncementAudience | "", string> = {
+    "": "All",
+    ALL: "Everyone",
+    WORKERS_ONLY: "Workers",
+    MEMBERS_ONLY: "Members",
+    DEPARTMENT: "Dept",
+    INDIVIDUAL: "Individual",
+    GROUP: "Group",
+};
 
 const defaultForm = {
     title: "",
     audience: "ALL" as AnnouncementAudience,
     departmentId: "",
     targetMemberId: "",
+    groupId: "",
     schedulePublish: false,
     publishedAt: "",
     setExpiry: false,
     expiresAt: "",
+    sendViaSms: false,
+    smsBody: "",
 };
 
 // ─── Main page ────────────────────────────────────────────────────────────────
@@ -294,16 +448,23 @@ export default withAuth(function AnnouncementsPage() {
         refetch,
         applyFilters,
         createAnnouncement,
+        sendSmsBroadcast,
         updateAnnouncement,
         deleteAnnouncement,
     } = useAnnouncements(10);
 
     const { departments } = useDepartments();
+    const { groups } = useGroupLookup();
+    const { hasPermission } = useAuth();
+    const canSendSms = hasPermission("sms:send");
+    const { balance, fetchBalance } = useSmsBalance();
 
     const [form, setForm] = useState(defaultForm);
+    const [composeMode, setComposeMode] = useState<"broadcast" | "sms">("broadcast");
     const [memberInputKey, setMemberInputKey] = useState(0);
     const [createError, setCreateError] = useState<string | null>(null);
     const [createSuccess, setCreateSuccess] = useState<string | null>(null);
+    const [segmentInfo, setSegmentInfo] = useState<SegmentCount | null>(null);
 
     const [audienceFilter, setAudienceFilter] = useState<AnnouncementAudience | "">("");
     const [titleSearch, setTitleSearch] = useState("");
@@ -316,6 +477,16 @@ export default withAuth(function AnnouncementsPage() {
 
     // Delete confirm
     const [deletingId, setDeletingId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (canSendSms) fetchBalance();
+    }, [canSendSms, fetchBalance]);
+
+    const handleSmsBodyChange = (value: string) => {
+        setForm((p) => ({ ...p, smsBody: value }));
+        if (!value) { setSegmentInfo(null); return; }
+        getSegmentCount(value).then(setSegmentInfo).catch(() => setSegmentInfo(null));
+    };
 
     const editor = useEditor({
         extensions: [
@@ -335,11 +506,35 @@ export default withAuth(function AnnouncementsPage() {
         immediatelyRender: false,
     });
 
+    const validateAudienceTarget = (): boolean => {
+        if (form.audience === "DEPARTMENT" && !form.departmentId) {
+            setCreateError("Please select a department.");
+            return false;
+        }
+        if (form.audience === "INDIVIDUAL" && !form.targetMemberId) {
+            setCreateError("Please select a target member.");
+            return false;
+        }
+        if (form.audience === "GROUP" && !form.groupId) {
+            setCreateError("Please select a group.");
+            return false;
+        }
+        return true;
+    };
+
+    const resetComposeForm = () => {
+        setForm(defaultForm);
+        setMemberInputKey((k) => k + 1);
+        setSegmentInfo(null);
+        editor?.commands.clearContent();
+    };
+
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!form.title || !editor || editor.isEmpty) return;
         setCreateError(null);
         setCreateSuccess(null);
+        if (!validateAudienceTarget()) return;
 
         const payload: CreateAnnouncementPayload = {
             title: form.title,
@@ -347,21 +542,9 @@ export default withAuth(function AnnouncementsPage() {
             audience: form.audience,
         };
 
-        if (form.audience === "DEPARTMENT") {
-            if (!form.departmentId) {
-                setCreateError("Please select a department.");
-                return;
-            }
-            payload.departmentId = form.departmentId;
-        }
-
-        if (form.audience === "INDIVIDUAL") {
-            if (!form.targetMemberId) {
-                setCreateError("Please select a target member.");
-                return;
-            }
-            payload.targetMemberId = form.targetMemberId;
-        }
+        if (form.audience === "DEPARTMENT") payload.departmentId = form.departmentId;
+        if (form.audience === "INDIVIDUAL") payload.targetMemberId = form.targetMemberId;
+        if (form.audience === "GROUP") payload.groupId = form.groupId;
 
         if (form.schedulePublish && form.publishedAt) {
             payload.publishedAt = new Date(form.publishedAt).toISOString();
@@ -371,16 +554,56 @@ export default withAuth(function AnnouncementsPage() {
             payload.expiresAt = new Date(form.expiresAt).toISOString();
         }
 
+        if (form.sendViaSms) {
+            if (!form.smsBody.trim()) {
+                setCreateError("Please write the SMS message text.");
+                return;
+            }
+            payload.sendViaSms = true;
+            payload.smsBody = form.smsBody;
+        }
+
         try {
             await createAnnouncement(payload);
-            setForm(defaultForm);
-            setMemberInputKey((k) => k + 1);
-            editor.commands.clearContent();
+            resetComposeForm();
             setCreateSuccess("Announcement published successfully.");
             setTimeout(() => setCreateSuccess(null), 3000);
+            if (form.sendViaSms) fetchBalance();
         } catch (err: unknown) {
             const e = err as ApiError;
             setCreateError(e?.message ?? "Failed to create announcement.");
+        }
+    };
+
+    const handleSendSmsOnly = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setCreateError(null);
+        setCreateSuccess(null);
+        if (!form.smsBody.trim()) {
+            setCreateError("Please write the SMS message text.");
+            return;
+        }
+        if (!validateAudienceTarget()) return;
+
+        try {
+            const { sentCount } = await sendSmsBroadcast({
+                audience: form.audience,
+                departmentId: form.audience === "DEPARTMENT" ? form.departmentId : undefined,
+                targetMemberId: form.audience === "INDIVIDUAL" ? form.targetMemberId : undefined,
+                groupId: form.audience === "GROUP" ? form.groupId : undefined,
+                message: form.smsBody,
+            });
+            resetComposeForm();
+            setCreateSuccess(
+                sentCount > 0
+                    ? `SMS sent to ${sentCount} recipient${sentCount !== 1 ? "s" : ""}.`
+                    : "No recipients with a phone number were found for this audience."
+            );
+            setTimeout(() => setCreateSuccess(null), 3000);
+            fetchBalance();
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setCreateError(e?.message ?? "Failed to send SMS.");
         }
     };
 
@@ -424,14 +647,40 @@ export default withAuth(function AnnouncementsPage() {
                         Publish broadcasts to everyone, a department, or an individual member
                     </p>
                 </div>
-                <button
-                    onClick={refetch}
-                    disabled={isLoading}
-                    className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40 self-start sm:self-auto"
-                    title="Refresh"
-                >
-                    <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-                </button>
+                <div className="flex items-center gap-3 self-start sm:self-auto">
+                    {canSendSms && balance && (
+                        <div className="flex items-center gap-2.5 h-11 pl-2.5 pr-4 bg-teal-50 border border-teal-200 rounded-xl">
+                            <div className="w-7 h-7 rounded-lg bg-teal-600 flex items-center justify-center shrink-0">
+                                <Wallet className="w-3.5 h-3.5 text-white" />
+                            </div>
+                            <div className="flex flex-col leading-tight">
+                                <span className="text-[9px] uppercase tracking-widest font-bold text-teal-700/70">
+                                    SMS Balance
+                                </span>
+                                <span className="text-sm font-bold font-mono text-teal-900">
+                                    {balance.currency} {balance.balance.toFixed(2)}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+                    {canSendSms && (
+                        <NextLink
+                            href="/sms-logs"
+                            className="flex items-center gap-1.5 h-9 px-3 border border-[#121212]/10 rounded-lg text-xs font-semibold uppercase tracking-wider text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors"
+                        >
+                            <ScrollText className="w-3.5 h-3.5" />
+                            View SMS Logs
+                        </NextLink>
+                    )}
+                    <button
+                        onClick={refetch}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
+                </div>
             </div>
 
             <DismissibleError message={error} />
@@ -441,9 +690,40 @@ export default withAuth(function AnnouncementsPage() {
                 {/* Compose form */}
                 <div className="lg:col-span-6 bg-[#FFFFFF] border border-[#121212]/10 p-8 rounded-xl">
                     <h2 className="text-sm font-semibold uppercase tracking-wider text-[#121212] mb-6 flex items-center space-x-2">
-                        <Megaphone className="w-4 h-4 text-[#8A817C]" />
-                        <span>Compose Broadcast</span>
+                        {composeMode === "broadcast" ? (
+                            <Megaphone className="w-4 h-4 text-[#8A817C]" />
+                        ) : (
+                            <MessageSquare className="w-4 h-4 text-[#8A817C]" />
+                        )}
+                        <span>{composeMode === "broadcast" ? "Compose Broadcast" : "Send SMS Only"}</span>
                     </h2>
+
+                    {canSendSms && (
+                        <div className="grid grid-cols-2 gap-2 p-1 bg-[#F4F1EA]/60 rounded-lg mb-6">
+                            <button
+                                type="button"
+                                onClick={() => setComposeMode("broadcast")}
+                                className={`h-9 text-[11px] font-semibold uppercase tracking-wider rounded-md transition-colors flex items-center justify-center gap-1.5 ${composeMode === "broadcast"
+                                        ? "bg-white text-[#121212] shadow-sm"
+                                        : "text-[#8A817C] hover:text-[#121212]"
+                                    }`}
+                            >
+                                <Megaphone className="w-3.5 h-3.5" />
+                                Broadcast
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setComposeMode("sms")}
+                                className={`h-9 text-[11px] font-semibold uppercase tracking-wider rounded-md transition-colors flex items-center justify-center gap-1.5 ${composeMode === "sms"
+                                        ? "bg-white text-[#121212] shadow-sm"
+                                        : "text-[#8A817C] hover:text-[#121212]"
+                                    }`}
+                            >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                                SMS Only
+                            </button>
+                        </div>
+                    )}
 
                     {createSuccess && (
                         <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-100 rounded-lg text-xs text-green-700 mb-5">
@@ -457,30 +737,34 @@ export default withAuth(function AnnouncementsPage() {
                         </div>
                     )}
 
-                    <form onSubmit={handleCreate} className="space-y-5">
-                        <div>
-                            <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                Announcement Title
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                value={form.title}
-                                onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-                                placeholder="e.g., Church Picnic — July 20th"
-                                className="w-full h-11 px-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
-                            />
-                        </div>
+                    <form onSubmit={composeMode === "broadcast" ? handleCreate : handleSendSmsOnly} className="space-y-5">
+                        {composeMode === "broadcast" && (
+                            <>
+                                <div>
+                                    <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
+                                        Announcement Title
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={form.title}
+                                        onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+                                        placeholder="e.g., Church Picnic — July 20th"
+                                        className="w-full h-11 px-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                                    />
+                                </div>
 
-                        <div>
-                            <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                Broadcast Body
-                            </label>
-                            <div className="border border-[#121212]/10 rounded-lg overflow-hidden bg-[#F4F1EA]/20">
-                                <EditorToolbar editor={editor} />
-                                <EditorContent editor={editor} />
-                            </div>
-                        </div>
+                                <div>
+                                    <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
+                                        Broadcast Body
+                                    </label>
+                                    <div className="border border-[#121212]/10 rounded-lg overflow-hidden bg-[#F4F1EA]/20">
+                                        <EditorToolbar editor={editor} />
+                                        <EditorContent editor={editor} />
+                                    </div>
+                                </div>
+                            </>
+                        )}
 
                         {/* Audience */}
                         <div>
@@ -494,6 +778,7 @@ export default withAuth(function AnnouncementsPage() {
                                     ["MEMBERS_ONLY", "Members"],
                                     ["DEPARTMENT", "Department"],
                                     ["INDIVIDUAL", "Individual"],
+                                    ["GROUP", "Group"],
                                 ] as const).map(([aud, label]) => (
                                     <button
                                         key={aud}
@@ -542,65 +827,133 @@ export default withAuth(function AnnouncementsPage() {
                             </div>
                         )}
 
-                        {/* Schedule publish */}
-                        <div className="pt-2 border-t border-[#121212]/5 space-y-3">
-                            <label className="flex items-center space-x-3 cursor-pointer select-none">
-                                <input
-                                    type="checkbox"
-                                    checked={form.schedulePublish}
-                                    onChange={(e) => setForm((p) => ({ ...p, schedulePublish: e.target.checked }))}
-                                    className="w-4 h-4 rounded border-[#121212]/10 text-[#121212] focus:ring-0"
+                        {form.audience === "GROUP" && (
+                            <div>
+                                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
+                                    Select Group
+                                </label>
+                                <GroupSearchInput
+                                    groups={groups}
+                                    value={form.groupId}
+                                    onChange={(id) => setForm((p) => ({ ...p, groupId: id }))}
                                 />
-                                <span className="text-xs uppercase tracking-wider font-semibold text-[#121212]">
-                                    Schedule for Later
-                                </span>
-                            </label>
+                                {composeMode === "broadcast" && (
+                                    <p className="text-[10px] text-[#8A817C] font-light mt-1.5">
+                                        Every member in this group also receives a push notification.
+                                    </p>
+                                )}
+                            </div>
+                        )}
 
-                            {form.schedulePublish && (
-                                <div className="p-4 bg-[#F4F1EA]/50 border border-[#121212]/5 rounded-xl">
-                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-2">
-                                        Publish At
+                        {composeMode === "broadcast" && (
+                            <>
+                                {/* Schedule publish */}
+                                <div className="pt-2 border-t border-[#121212]/5 space-y-3">
+                                    <label className="flex items-center space-x-3 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={form.schedulePublish}
+                                            onChange={(e) => setForm((p) => ({ ...p, schedulePublish: e.target.checked }))}
+                                            className="w-4 h-4 rounded border-[#121212]/10 text-[#121212] focus:ring-0"
+                                        />
+                                        <span className="text-xs uppercase tracking-wider font-semibold text-[#121212]">
+                                            Schedule for Later
+                                        </span>
                                     </label>
-                                    <input
-                                        type="datetime-local"
-                                        required
-                                        value={form.publishedAt}
-                                        onChange={(e) => setForm((p) => ({ ...p, publishedAt: e.target.value }))}
-                                        className="w-full h-10 px-3 bg-white border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
-                                    />
-                                </div>
-                            )}
-                        </div>
 
-                        {/* Expiry */}
-                        <div className="space-y-3">
-                            <label className="flex items-center space-x-3 cursor-pointer select-none">
-                                <input
-                                    type="checkbox"
-                                    checked={form.setExpiry}
-                                    onChange={(e) => setForm((p) => ({ ...p, setExpiry: e.target.checked }))}
-                                    className="w-4 h-4 rounded border-[#121212]/10 text-[#121212] focus:ring-0"
+                                    {form.schedulePublish && (
+                                        <div className="p-4 bg-[#F4F1EA]/50 border border-[#121212]/5 rounded-xl">
+                                            <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-2">
+                                                Publish At
+                                            </label>
+                                            <input
+                                                type="datetime-local"
+                                                required
+                                                value={form.publishedAt}
+                                                onChange={(e) => setForm((p) => ({ ...p, publishedAt: e.target.value }))}
+                                                className="w-full h-10 px-3 bg-white border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Expiry */}
+                                <div className="space-y-3">
+                                    <label className="flex items-center space-x-3 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={form.setExpiry}
+                                            onChange={(e) => setForm((p) => ({ ...p, setExpiry: e.target.checked }))}
+                                            className="w-4 h-4 rounded border-[#121212]/10 text-[#121212] focus:ring-0"
+                                        />
+                                        <span className="text-xs uppercase tracking-wider font-semibold text-[#121212]">
+                                            Set Expiry Date
+                                        </span>
+                                    </label>
+
+                                    {form.setExpiry && (
+                                        <div className="p-4 bg-[#F4F1EA]/50 border border-[#121212]/5 rounded-xl">
+                                            <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-2">
+                                                Expires At
+                                            </label>
+                                            <input
+                                                type="datetime-local"
+                                                required
+                                                value={form.expiresAt}
+                                                onChange={(e) => setForm((p) => ({ ...p, expiresAt: e.target.value }))}
+                                                className="w-full h-10 px-3 bg-white border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* SMS */}
+                                {canSendSms && (
+                                    <div className="space-y-3 pt-2 border-t border-[#121212]/5">
+                                        <label className="flex items-center space-x-3 cursor-pointer select-none">
+                                            <input
+                                                type="checkbox"
+                                                checked={form.sendViaSms}
+                                                onChange={(e) => {
+                                                    const checked = e.target.checked;
+                                                    setForm((p) => ({ ...p, sendViaSms: checked }));
+                                                    if (!checked) setSegmentInfo(null);
+                                                }}
+                                                className="w-4 h-4 rounded border-[#121212]/10 text-[#121212] focus:ring-0"
+                                            />
+                                            <span className="text-xs uppercase tracking-wider font-semibold text-[#121212] flex items-center gap-1.5">
+                                                <MessageSquare className="w-3.5 h-3.5 text-[#8A817C]" />
+                                                Also Send via SMS
+                                            </span>
+                                        </label>
+
+                                        {form.sendViaSms && (
+                                            <SmsMessageField
+                                                value={form.smsBody}
+                                                onChange={handleSmsBodyChange}
+                                                segmentInfo={segmentInfo}
+                                                helperText="Separate from the broadcast body above — keep this short, SMS is billed per segment."
+                                            />
+                                        )}
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {composeMode === "sms" && (
+                            <div className="pt-2 border-t border-[#121212]/5">
+                                <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
+                                    SMS Message
+                                </label>
+                                <SmsMessageField
+                                    value={form.smsBody}
+                                    onChange={handleSmsBodyChange}
+                                    segmentInfo={segmentInfo}
+                                    helperText="Sent directly as a text message — no announcement is created or shown in the feed."
+                                    placeholder="e.g. Reminder: Church Picnic this Saturday at 10am. See you there!"
                                 />
-                                <span className="text-xs uppercase tracking-wider font-semibold text-[#121212]">
-                                    Set Expiry Date
-                                </span>
-                            </label>
-
-                            {form.setExpiry && (
-                                <div className="p-4 bg-[#F4F1EA]/50 border border-[#121212]/5 rounded-xl">
-                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-2">
-                                        Expires At
-                                    </label>
-                                    <input
-                                        type="datetime-local"
-                                        required
-                                        value={form.expiresAt}
-                                        onChange={(e) => setForm((p) => ({ ...p, expiresAt: e.target.value }))}
-                                        className="w-full h-10 px-3 bg-white border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
-                                    />
-                                </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
 
                         <button
                             type="submit"
@@ -608,7 +961,11 @@ export default withAuth(function AnnouncementsPage() {
                             className="w-full h-12 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 rounded-xl mt-6"
                         >
                             {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                            <span>{isSubmitting ? "Publishing..." : "Publish Announcement"}</span>
+                            <span>
+                                {isSubmitting
+                                    ? (composeMode === "broadcast" ? "Publishing..." : "Sending...")
+                                    : (composeMode === "broadcast" ? "Publish Announcement" : "Send SMS")}
+                            </span>
                         </button>
                     </form>
                 </div>
@@ -638,8 +995,8 @@ export default withAuth(function AnnouncementsPage() {
                             placeholder="Search by title…"
                             className="h-8 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] focus:outline-none rounded-lg min-w-[180px] flex-1"
                         />
-                        {(["", "ALL", "WORKERS_ONLY", "MEMBERS_ONLY", "DEPARTMENT", "INDIVIDUAL"] as const).map((val) => {
-                            const label = val === "" ? "All" : val === "ALL" ? "Everyone" : val === "WORKERS_ONLY" ? "Workers" : val === "MEMBERS_ONLY" ? "Members" : val === "DEPARTMENT" ? "Dept" : "Individual";
+                        {(["", "ALL", "WORKERS_ONLY", "MEMBERS_ONLY", "DEPARTMENT", "INDIVIDUAL", "GROUP"] as const).map((val) => {
+                            const label = AUDIENCE_FILTER_LABELS[val];
                             return (
                                 <button key={val} type="button" onClick={() => {
                                     setAudienceFilter(val);
@@ -800,7 +1157,7 @@ export default withAuth(function AnnouncementsPage() {
                                             <div className="mt-5 pt-3 border-t border-[#121212]/5 flex flex-col space-y-1 text-[10px] text-[#8A817C] font-mono">
                                                 <div className="flex items-center">
                                                     <User className="w-3 h-3 mr-1.5 shrink-0" />
-                                                    <span>By {fullName(item.author)}</span>
+                                                    <span>By {item.author ? fullName(item.author) : "System"}</span>
                                                 </div>
                                                 <div className="flex items-center">
                                                     <Calendar className="w-3 h-3 mr-1.5 shrink-0" />

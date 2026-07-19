@@ -7,10 +7,9 @@ export interface BirthdayMember {
     lastname: string;
     email: string;
     phoneNumber: string | null;
-    dateOfBirth: string;
     birthMonth?: number | null;
     birthDay?: number | null;
-    profilePhoto?: string | null;
+    birthYear?: number | null;
 }
 
 export interface BirthdayWish {

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useCallback, useRef, useMemo } from "react";
+import React, { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { withAuth } from "@/utils/auth/with-auth";
 import { api } from "@/utils/auth/axios-client";
 import {
@@ -62,7 +63,28 @@ function MemberSearchInput({
     const [results, setResults] = useState<MemberResult[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [selectedName, setSelectedName] = useState<string | null>(null);
+    const [menuRect, setMenuRect] = useState<{ top: number; left: number; width: number } | null>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    const updateMenuRect = useCallback(() => {
+        const el = wrapperRef.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        setMenuRect({ top: r.bottom + 4, left: r.left, width: r.width });
+    }, []);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        updateMenuRect();
+        const close = () => setIsOpen(false);
+        window.addEventListener("scroll", close, true);
+        window.addEventListener("resize", close);
+        return () => {
+            window.removeEventListener("scroll", close, true);
+            window.removeEventListener("resize", close);
+        };
+    }, [isOpen, updateMenuRect]);
 
     const search = useCallback(async (term: string) => {
         if (term.trim().length < 2) { setResults([]); setIsOpen(false); return; }
@@ -96,7 +118,7 @@ function MemberSearchInput({
     const clear = () => { setQuery(""); setSelectedName(null); setResults([]); setIsOpen(false); onChange(""); };
 
     return (
-        <div className="relative">
+        <div ref={wrapperRef} className="relative">
             <div className="flex items-center gap-1">
                 <input
                     type="text"
@@ -111,8 +133,11 @@ function MemberSearchInput({
                     </button>
                 )}
             </div>
-            {isOpen && (
-                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-[#FFFFFF] border border-[#121212]/10 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+            {isOpen && menuRect && createPortal(
+                <div
+                    className="fixed z-50 bg-[#FFFFFF] border border-[#121212]/10 rounded-lg shadow-lg max-h-64 overflow-y-auto"
+                    style={{ top: menuRect.top, left: menuRect.left, width: menuRect.width }}
+                >
                     {results.map((m) => (
                         <button
                             key={m.id}
@@ -124,7 +149,8 @@ function MemberSearchInput({
                             <div className="text-xs font-mono text-[#8A817C] mt-0.5">{m.email}</div>
                         </button>
                     ))}
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
@@ -620,7 +646,7 @@ export default withAuth(function AdminManagementPage() {
 
                     {/* Right: contextual panel */}
                     {panelOpen && (
-                        <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl relative overflow-hidden">
+                        <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#121212]/10 rounded-xl relative">
 
                             {/* Panel close button */}
                             <button

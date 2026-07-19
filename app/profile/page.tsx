@@ -45,7 +45,7 @@ function avatarColor(id: string): string {
 
 function formatDate(dateStr: string | null | undefined): string | null {
     if (!dateStr) return null;
-    const d = new Date(dateStr);
+    const d = new Date(dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr);
     if (Number.isNaN(d.getTime())) return null;
     return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 }

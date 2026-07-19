@@ -946,8 +946,8 @@ function RosterTab({
     const exportCSV = () => {
         const lines = ["Meeting Date,Day,Time,Mode,Meeting Status,Selection Status,Assigned/Capacity,Assignee,Assignment Type,Entry Status"];
         for (const m of roster) {
-            const date = new Date(m.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-            const day = new Date(m.date).toLocaleDateString("en-GB", { weekday: "short" });
+            const date = new Date(m.date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+            const day = new Date(m.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short" });
             const time = `${m.dayConfig.startTime}-${m.dayConfig.endTime}`;
             const capacity = `${m.currentCapacity}/${m.dayConfig.maxCapacity}`;
             if (m.rosterEntries.length === 0) {
@@ -1195,7 +1195,7 @@ function RosterTab({
                                         return (
                                             <tr key={m.id} onClick={() => { setSelectedMeeting(isSelected ? null : m); setReschedulingEntryId(null); setRescheduleTarget(""); setShowAssignPanel(false); }}
                                                 className={`border-b border-[#121212]/5 cursor-pointer transition-colors ${isSelected ? "bg-[#F4F1EA]/60" : "hover:bg-[#F4F1EA]/30"}`}>
-                                                <td className="p-4 text-sm text-[#121212] font-light whitespace-nowrap">{new Date(m.date).toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" })}</td>
+                                                <td className="p-4 text-sm text-[#121212] font-light whitespace-nowrap">{new Date(m.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" })}</td>
                                                 <td className="p-4 text-xs text-[#8A817C] font-light font-mono whitespace-nowrap">{m.dayConfig.startTime}–{m.dayConfig.endTime}</td>
                                                 <td className="p-4">{modeBadge(m.dayConfig.mode)}</td>
                                                 <td className="p-4">
@@ -1220,7 +1220,7 @@ function RosterTab({
                             <div className="p-5 border-b border-[#121212]/5 relative">
                                 <button type="button" onClick={() => { setSelectedMeeting(null); setReschedulingEntryId(null); setShowAssignPanel(false); }} className="absolute top-4 right-4 p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/20 rounded-md transition-colors"><X className="w-4 h-4" /></button>
                                 <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1">Roster Detail</div>
-                                <p className="text-base font-light text-[#121212] pr-8">{new Date(selectedMeeting.date).toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })}</p>
+                                <p className="text-base font-light text-[#121212] pr-8">{new Date(selectedMeeting.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })}</p>
                                 <p className="text-xs text-[#8A817C] font-light mt-0.5">{selectedMeeting.dayConfig.startTime}–{selectedMeeting.dayConfig.endTime} · {selectedMeeting.currentCapacity}/{selectedMeeting.dayConfig.maxCapacity} assigned</p>
                                 <div className="flex gap-2 mt-2">{modeBadge(selectedMeeting.dayConfig.mode)}{meetingStatusBadge(selectedMeeting.status)}{selectionStatusBadge(selectedMeeting.selectionStatus)}</div>
 
@@ -1287,7 +1287,7 @@ function RosterTab({
                                                     <select value={rescheduleTarget} onChange={(e) => setRescheduleTarget(e.target.value)} className="flex-1 h-8 px-2 bg-[#F4F1EA]/40 border border-[#121212]/10 text-xs text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none">
                                                         <option value="">Move to meeting…</option>
                                                         {roster.filter((m) => m.id !== selectedMeeting.id).map((m) => (
-                                                            <option key={m.id} value={m.id}>{new Date(m.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })} · {m.dayConfig.startTime}</option>
+                                                            <option key={m.id} value={m.id}>{new Date(m.date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" })} · {m.dayConfig.startTime}</option>
                                                         ))}
                                                     </select>
                                                     <button type="button" onClick={() => handleReschedule(entry.id, rescheduleTarget)} disabled={!rescheduleTarget || isSubmitting}

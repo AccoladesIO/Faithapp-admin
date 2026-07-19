@@ -16,15 +16,24 @@ export type ServiceSlotType =
 
 export type ServiceProgrammeStatus = "DRAFT" | "LIVE" | "COMPLETED";
 
+export interface SlotAssignee {
+    id: string;
+    firstname: string;
+    lastname: string;
+}
+
 export interface ServiceProgrammeSlot {
     id: string;
     position: number;
     type: ServiceSlotType;
     topic: string | null;
     allocatedMinutes: number;
-    memberId: string | null;
+    member: SlotAssignee | null;
     guestName: string | null;
+    backupMember: SlotAssignee | null;
+    backupGuestName: string | null;
     memberName?: string | null;
+    backupMemberName?: string | null;
 }
 
 export interface ServiceProgramme {
@@ -34,8 +43,11 @@ export interface ServiceProgramme {
     status: ServiceProgrammeStatus;
     saveAsTemplate: boolean;
     slots: ServiceProgrammeSlot[];
+    slotCount?: number;
     createdAt: string;
     updatedAt: string;
+    event?: { id: string; name: string; eventDate: string } | null;
+    serviceSlotDetail?: { id: string; name: string; startTime: string; endTime: string } | null;
 }
 
 export interface ServiceProgrammeTemplate {
@@ -51,6 +63,9 @@ export interface ServiceSlotOption {
     name: string;
     eventId: string;
     eventName: string;
+    startTime: string;
+    endTime: string;
+    hasProgramme: boolean;
 }
 
 export interface ProgrammePagination {
@@ -60,8 +75,28 @@ export interface ProgrammePagination {
     totalPages: number;
 }
 
-export interface CreateProgrammeDto {
+export interface ProgrammeSessionSummary {
+    id: string;
+    sessionCode: string;
+    status: "LIVE" | "COMPLETED";
+    startedAt: string;
+    endedAt: string | null;
+}
+
+export interface CreateProgrammeItemDto {
     serviceSlotId: string;
+    // Full order-of-service for this specific slot, provided up front so the
+    // programme is created already populated instead of empty and built up
+    // one addSlot call at a time. Independent per slot — sibling slots in
+    // the same event are not required to have the same items.
+    slots?: AddSlotDto[];
+}
+
+export interface CreateProgrammeDto {
+    // One entry per service slot being programmed in this call — a
+    // multi-service Sunday (First/Second Service) is built once per slot in
+    // the same request instead of one round trip per slot.
+    programmes: CreateProgrammeItemDto[];
     saveAsTemplate: boolean;
 }
 
@@ -70,6 +105,8 @@ export interface AddSlotDto {
     topic?: string;
     memberId?: string;
     guestName?: string;
+    backupMemberId?: string;
+    backupGuestName?: string;
     allocatedMinutes: number;
 }
 
@@ -78,6 +115,8 @@ export interface UpdateSlotDto {
     topic?: string;
     memberId?: string | null;
     guestName?: string | null;
+    backupMemberId?: string | null;
+    backupGuestName?: string | null;
     allocatedMinutes?: number;
 }
 
@@ -120,13 +159,14 @@ export function useServiceProgramme(defaultLimit = 10) {
         return res.data?.data;
     }, []);
 
-    const createProgramme = useCallback(async (dto: CreateProgrammeDto): Promise<ServiceProgramme> => {
+    const createProgramme = useCallback(async (dto: CreateProgrammeDto): Promise<ServiceProgramme[]> => {
         setIsSubmitting(true);
         setError(null);
         try {
             const res = await api.post("/service-programme", dto);
-            const created: ServiceProgramme = res.data?.data;
-            setProgrammes((prev) => [created, ...prev]);
+            const data = res.data?.data;
+            const created: ServiceProgramme[] = Array.isArray(data) ? data : [data];
+            setProgrammes((prev) => [...created, ...prev]);
             return created;
         } catch (err: unknown) {
             const e = err as ApiError;
@@ -160,15 +200,49 @@ export function useServiceProgramme(defaultLimit = 10) {
         }
     }, []);
 
+    const updateProgramme = useCallback(async (id: string, dto: { saveAsTemplate?: boolean }): Promise<ServiceProgramme> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            const res = await api.patch(`/service-programme/${id}`, dto);
+            return res.data?.data;
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message =
+                e?.response?.data?.message ||
+                e?.message ||
+                "Failed to update programme.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
+    const fetchProgrammeSessions = useCallback(async (programmeId: string, page = 1, limit = 10): Promise<{ sessions: ProgrammeSessionSummary[]; pagination: ProgrammePagination }> => {
+        const res = await api.get(`/service-programme/${programmeId}/sessions?page=${page}&limit=${limit}`);
+        const outer = res.data?.data;
+        const sessions: ProgrammeSessionSummary[] = Array.isArray(outer?.data) ? outer.data : [];
+        return {
+            sessions,
+            pagination: {
+                page: outer?.page ?? page,
+                limit: outer?.limit ?? limit,
+                totalCount: outer?.totalCount ?? sessions.length,
+                totalPages: outer?.totalPages ?? 1,
+            },
+        };
+    }, []);
+
     const addSlot = useCallback(async (
         programmeId: string,
         dto: AddSlotDto
-    ): Promise<ServiceProgrammeSlot[]> => {
+    ): Promise<ServiceProgrammeSlot & { conflictWarning?: string }> => {
         setIsSubmitting(true);
         setError(null);
         try {
             const res = await api.post(`/service-programme/${programmeId}/slots`, dto);
-            return res.data?.data ?? [];
+            return res.data?.data;
         } catch (err: unknown) {
             const e = err as ApiError;
             const message =
@@ -186,7 +260,7 @@ export function useServiceProgramme(defaultLimit = 10) {
         programmeId: string,
         slotId: string,
         dto: UpdateSlotDto
-    ): Promise<ServiceProgrammeSlot> => {
+    ): Promise<ServiceProgrammeSlot & { conflictWarning?: string }> => {
         setIsSubmitting(true);
         setError(null);
         try {
@@ -309,20 +383,28 @@ export function useServiceProgramme(defaultLimit = 10) {
 
     const fetchServiceSlots = useCallback(async (): Promise<ServiceSlotOption[]> => {
         try {
-            const res = await api.get("/events?page=1&limit=100");
-            const events: { id: string; name: string; endDate?: string; eventDate?: string; serviceSlots?: { id: string; name: string }[] }[] = res.data?.data?.data ?? res.data?.data ?? [];
+            const [eventsRes, programmesRes] = await Promise.all([
+                api.get("/events?page=1&limit=100"),
+                api.get("/service-programme?page=1&limit=200"),
+            ]);
+            const events: { id: string; name: string; endDate?: string; eventDate?: string; serviceSlots?: { id: string; name: string; startTime: string; endTime: string }[] }[] = eventsRes.data?.data?.data ?? eventsRes.data?.data ?? [];
+            const existingProgrammes: { serviceSlotId?: string }[] = programmesRes.data?.data?.data ?? programmesRes.data?.data ?? [];
+            const usedSlotIds = new Set(existingProgrammes.map((p) => p.serviceSlotId).filter(Boolean));
             const today = toLocalDate();
             const options: ServiceSlotOption[] = [];
             for (const event of events) {
                 const eventEnd: string = event.endDate ?? event.eventDate ?? "";
                 if (eventEnd && eventEnd < today) continue;
-                const slots: { id: string; name: string }[] = Array.isArray(event.serviceSlots) ? event.serviceSlots : [];
+                const slots: { id: string; name: string; startTime: string; endTime: string }[] = Array.isArray(event.serviceSlots) ? event.serviceSlots : [];
                 for (const slot of slots) {
                     options.push({
                         id: slot.id,
                         name: slot.name,
                         eventId: event.id,
                         eventName: event.name,
+                        startTime: slot.startTime,
+                        endTime: slot.endTime,
+                        hasProgramme: usedSlotIds.has(slot.id),
                     });
                 }
             }
@@ -350,6 +432,8 @@ export function useServiceProgramme(defaultLimit = 10) {
         fetchProgramme,
         createProgramme,
         deleteProgramme,
+        updateProgramme,
+        fetchProgrammeSessions,
         addSlot,
         updateSlot,
         deleteSlot,
