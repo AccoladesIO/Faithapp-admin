@@ -307,6 +307,7 @@ const HELP: Record<string, PageHelp> = {
             "Group audience reaches everyone in that group, including phone-only entries (e.g. imported first-timers) alongside real members — see the Groups page.",
             "Your SMS balance is shown at the top whenever you have SMS permissions — top up before it runs low, since a broadcast can't send without balance.",
             "Use 'View Logs' next to the SMS balance to check delivery status for any SMS you've sent — it's a live read from the SMS provider, not a local record.",
+            "Each announcement shows emoji reaction counts (👍 ❤️ 🙏 🎉 👏) below its metadata once members start reacting — a quick read on engagement, though it's not shown live, just on refresh.",
         ],
         tasks: [
             { label: "Broadcast to all members", how: "Audience → All Members → write message → Send" },
@@ -669,17 +670,19 @@ const HELP: Record<string, PageHelp> = {
     },
     "/system-settings": {
         title: "Module Settings",
-        summary: "Enable or disable individual modules across the portal. Turning a module off hides it from the sidebar and removes its routes — useful for churches that don't use every feature. Required modules cannot be disabled.",
+        summary: "Enable or disable individual modules across the portal. Turning a module off hides it from the sidebar, removes it from role management's permission picker, and blocks its API routes — useful for churches that don't use every feature. Required modules cannot be disabled. You can also rename a module's display label without any code change.",
         tips: [
-            "Disabling a module only hides the UI — it does not delete existing data. Re-enabling it restores full access.",
+            "Disabling a module only hides the UI and blocks access — it does not delete existing data. Re-enabling it restores full access instantly.",
             "Required modules (marked with a lock icon) cannot be toggled — they are essential for the portal to function correctly.",
-            "Changes take effect immediately for all admins without a page refresh.",
+            "Disabling a module also removes its permission group from the role-permission picker in Admin Management, so you can't grant access to a feature that's turned off.",
+            "Renaming a module (pencil icon) only changes its display label everywhere in both the portal and the mobile app — it does not affect the underlying feature or data.",
             "Only admins with Admin Write permission can change module settings.",
         ],
         tasks: [
             { label: "Disable a module", how: "Toggle the switch on the module row to Off — confirms immediately" },
             { label: "Re-enable a module", how: "Toggle the switch back to On — the module reappears in the sidebar" },
             { label: "Check if a module is required", how: "Required modules show a lock icon and their toggle is disabled" },
+            { label: "Rename a module", how: "Click the pencil icon on the module row, type the new label, then confirm with the check icon" },
         ],
     },
 

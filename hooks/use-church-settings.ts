@@ -8,6 +8,7 @@ export interface ChurchSetting {
     moduleName: string;
     enabled: boolean;
     required: boolean;
+    displayName?: string;
 }
 
 export function useChurchSettings() {
@@ -35,11 +36,11 @@ export function useChurchSettings() {
         }
     }, []);
 
-    const updateSetting = useCallback(async (key: string, enabled: boolean): Promise<ChurchSetting> => {
+    const updateSetting = useCallback(async (key: string, enabled: boolean, displayName?: string): Promise<ChurchSetting> => {
         setIsSubmitting(true);
         setError(null);
         try {
-            const res = await api.patch(`/admin/settings/${key}`, { enabled });
+            const res = await api.patch(`/admin/settings/${key}`, { enabled, displayName });
             const updated: ChurchSetting = res.data?.data ?? res.data;
             setSettings((prev) =>
                 prev.map((s) => (s.key === key ? { ...s, ...updated } : s))

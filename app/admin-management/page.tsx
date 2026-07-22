@@ -14,6 +14,7 @@ import {
     CreateRolePayload,
     UpdateRolePayload,
 } from "@/hooks/use-admin-management";
+import { useModuleState } from "@/hooks/use-module-state";
 import {
     ShieldCheck, RefreshCw, Plus, X, Trash2, Eye,
     Pencil, Check, ShieldAlert, CheckCircle2, ChevronLeft, ChevronRight,
@@ -162,9 +163,14 @@ function PermissionPicker({
     selected,
     onChange,
 }: Readonly<{ selected: AdminPermission[]; onChange: (p: AdminPermission[]) => void }>) {
+    const { isModuleEnabled } = useModuleState();
+    const visibleGroups = useMemo(
+        () => PERMISSION_GROUPS.filter((g) => isModuleEnabled(g.moduleKey)),
+        [isModuleEnabled]
+    );
     const allPerms = useMemo(
-        () => PERMISSION_GROUPS.flatMap((g) => g.permissions.map((p) => p.value)),
-        []
+        () => visibleGroups.flatMap((g) => g.permissions.map((p) => p.value)),
+        [visibleGroups]
     );
     const allSelected = allPerms.length > 0 && allPerms.every((p) => selected.includes(p));
 
@@ -192,7 +198,7 @@ function PermissionPicker({
                 </button>
             </div>
             <div className="space-y-4 max-h-64 overflow-y-auto pr-1">
-                {PERMISSION_GROUPS.map((group) => {
+                {visibleGroups.map((group) => {
                     const groupPerms = group.permissions.map((p) => p.value);
                     const allOn = groupPerms.every((p) => selected.includes(p));
                     return (
