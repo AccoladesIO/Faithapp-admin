@@ -30,7 +30,8 @@ export type AdminPermission =
     | "prayer:read" | "prayer:write"
     | "facility_rental:read" | "facility_rental:write"
     | "pastor_feedback:read" | "pastor_feedback:write"
-    | "evangelism:read" | "evangelism:write";
+    | "evangelism:read" | "evangelism:write"
+    | "sermon:read" | "sermon:write";
 
 export interface PermissionGroupItem {
     value: AdminPermission;
@@ -137,6 +138,10 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
         { value: "pastor_feedback:read", label: "View Pastor Feedback" },
         { value: "pastor_feedback:write", label: "Manage Pastor Feedback" },
     ]},
+    { group: "Sermon Archive", moduleKey: "sermons", permissions: [
+        { value: "sermon:read", label: "View Sermon Archive" },
+        { value: "sermon:write", label: "Manage Sermon Archive" },
+    ] },
     { group: "Evangelism", moduleKey: "evangelism", permissions: [
         { value: "evangelism:read", label: "View Evangelism Converts" },
         { value: "evangelism:write", label: "Manage Evangelism Converts" },

@@ -188,6 +188,7 @@ export default function Sidebar() {
             subItems: [
                 { name: "Broadcasts", href: "/announcements", permission: "announcements:read", moduleKey: "announcements" },
                 { name: "Groups",     href: "/groups",         permission: "groups:read", moduleKey: "announcements" },
+                { name: "Sermons",    href: "/sermons",        permission: "sermon:read", moduleKey: "sermons" },
             ],
         },
         {

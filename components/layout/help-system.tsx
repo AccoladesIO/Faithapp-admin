@@ -337,6 +337,22 @@ const HELP: Record<string, PageHelp> = {
             { label: "Send a message to a group", how: "Go to Announcements → set Audience to Group → pick the group → write → Send" },
         ],
     },
+    "/sermons": {
+        title: "Sermon Archive",
+        summary: "A link-based library of past sermons — no file uploads. Each entry links out to where the recording actually lives (YouTube, Mixlr) and appears in the member app's Sermons tab. Also home to the 'Announce Live' trigger for letting everyone know a service just went live.",
+        tips: [
+            "At least one of YouTube or Mixlr link is required per sermon — you can add both if the same message is on each platform.",
+            "'Series' is a free-text tag, not a fixed list — use a consistent name across parts of the same series so members can filter by it.",
+            "'Announce Live' sends an instant push notification and in-app announcement to every member — use it the moment a livestream actually starts, not in advance.",
+            "There's no separate approval step — sermons appear in the member app the moment you save them.",
+        ],
+        tasks: [
+            { label: "Add a sermon", how: "'New Sermon' → fill in title, speaker, date, and at least one link → Save" },
+            { label: "Edit or remove a link", how: "Click a sermon row → edit the YouTube/Mixlr field → Save" },
+            { label: "Delete a sermon", how: "Click a sermon row → Delete → confirm" },
+            { label: "Announce that a service just went live", how: "'Announce Live' → choose YouTube or Mixlr → paste the livestream link → Send Announcement" },
+        ],
+    },
     "/inventories": {
         title: "Inventories",
         summary: "Track the church's physical assets and equipment — furniture, electronics, instruments, vehicles and any other items. Each record stores condition, location and assignment so auditing is straightforward.",
