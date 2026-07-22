@@ -223,10 +223,12 @@ const HELP: Record<string, PageHelp> = {
             "Workers can only belong to one department at a time; to move them, update their worker profile.",
             "Department names appear in filter dropdowns across the Workers, Prayer Schedule and other modules.",
             "Deleting a department is blocked if any workers are still assigned to it.",
+            "The 'Key' field links a department to a feature's access rules (e.g. Sunday School, Evangelism) — pick a suggested key from the dropdown or type a brand-new one to create a custom access category.",
         ],
         tasks: [
             { label: "Add a new department", how: "'New Department' → enter name and optional description" },
             { label: "Edit a department name", how: "Click the department row → edit in the panel → Save" },
+            { label: "Link a department to a feature's access rules", how: "Set its Key — pick a suggestion or type a custom one" },
         ],
     },
     "/classes": {
