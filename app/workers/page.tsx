@@ -163,6 +163,7 @@ function ProfileEditForm({
             : "",
         completedSOD: worker.workerProfile?.completedSOD ?? false,
         completedBibleCollege: worker.workerProfile?.completedBibleCollege ?? false,
+        isTrainee: worker.workerProfile?.isTrainee ?? false,
         secondaryDepartmentId: worker.workerProfile?.secondaryDepartment?.id ?? null,
     });
 
@@ -284,6 +285,17 @@ function ProfileEditForm({
                         Completed Bible College
                     </span>
                 </label>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                        type="checkbox"
+                        checked={form.isTrainee ?? false}
+                        onChange={(e) => setForm((p) => ({ ...p, isTrainee: e.target.checked }))}
+                        className="w-4 h-4 rounded border-[#121212]/10 focus:ring-0"
+                    />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[#121212]">
+                        Trainee
+                    </span>
+                </label>
             </div>
 
             {/* Actions */}
@@ -331,6 +343,7 @@ export default withAuth(function WorkersPage() {
         refetch,
         updateWorkerProfile,
         revokeWorker,
+        demoteTraineeToMember,
     } = useWorkers(10);
 
     const { departments } = useDepartments();
@@ -339,6 +352,7 @@ export default withAuth(function WorkersPage() {
     const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [confirmRevoke, setConfirmRevoke] = useState(false);
+    const [confirmDemote, setConfirmDemote] = useState(false);
     const [actionSuccess, setActionSuccess] = useState<string | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
 
@@ -356,6 +370,7 @@ export default withAuth(function WorkersPage() {
         setSelectedWorker(w);
         setIsEditing(false);
         setConfirmRevoke(false);
+        setConfirmDemote(false);
         setActionSuccess(null);
         setActionError(null);
     };
@@ -411,6 +426,21 @@ export default withAuth(function WorkersPage() {
             const e = err as ApiError;
             setActionError(e?.message ?? "Failed to revoke worker role.");
             setConfirmRevoke(false);
+        }
+    };
+
+    const handleDemoteTrainee = async () => {
+        if (!selectedWorker) return;
+        setActionError(null);
+        setActionSuccess(null);
+        try {
+            await demoteTraineeToMember(selectedWorker.id);
+            setSelectedWorker(null);
+            setConfirmDemote(false);
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setActionError(e?.message ?? "Failed to demote trainee.");
+            setConfirmDemote(false);
         }
     };
 
@@ -627,6 +657,11 @@ export default withAuth(function WorkersPage() {
                                     {selectedWorker.workerProfile?.completedBibleCollege && (
                                         <BoolBadge value={true} label="Bible College" />
                                     )}
+                                    {selectedWorker.workerProfile?.isTrainee && (
+                                        <span className="inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border bg-amber-50 border-amber-100 text-amber-700">
+                                            Trainee
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
@@ -732,8 +767,20 @@ export default withAuth(function WorkersPage() {
                                 />
                             )}
 
+                            {/* Demote trainee confirm */}
+                            {confirmDemote && (
+                                <ConfirmBanner
+                                    message={`Demote ${fullName(selectedWorker)} from trainee back to a standard member? Their worker profile is kept (marked inactive) for training history, but worker access is removed immediately.`}
+                                    onConfirm={handleDemoteTrainee}
+                                    onCancel={() => setConfirmDemote(false)}
+                                    isLoading={isSubmitting}
+                                    confirmLabel="Demote to Member"
+                                    danger
+                                />
+                            )}
+
                             {/* Action buttons */}
-                            {!isEditing && !confirmRevoke && (
+                            {!isEditing && !confirmRevoke && !confirmDemote && (
                                 <div className="space-y-3 pt-2">
                                     <button
                                         onClick={() => setIsEditing(true)}
@@ -743,6 +790,17 @@ export default withAuth(function WorkersPage() {
                                         <Pencil className="w-3.5 h-3.5" />
                                         <span>Edit Worker Profile</span>
                                     </button>
+
+                                    {selectedWorker.workerProfile?.isTrainee && (
+                                        <button
+                                            onClick={() => setConfirmDemote(true)}
+                                            disabled={isSubmitting}
+                                            className="w-full h-11 border border-amber-200 text-amber-700 text-xs font-semibold uppercase tracking-widest hover:bg-amber-50 transition-colors flex items-center justify-center space-x-2 rounded-xl disabled:opacity-50"
+                                        >
+                                            <UserMinus className="w-3.5 h-3.5" />
+                                            <span>Demote Trainee to Member</span>
+                                        </button>
+                                    )}
 
                                     <button
                                         onClick={() => setConfirmRevoke(true)}

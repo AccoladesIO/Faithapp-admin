@@ -23,6 +23,7 @@ export interface Member {
     email: string;
     phoneNumber: string | null;
     changedPassword: boolean;
+    photoUrl: string | null;
     role: "MEMBER" | "WORKER";
     status: "ACTIVE" | "INACTIVE";
     gender: string | null;
@@ -78,6 +79,14 @@ export interface BulkPromoteResult {
     skipped: number;
     failures: BulkPromoteFailure[];
 }
+
+export interface CreateMemberPayload {
+    firstname: string;
+    lastname: string;
+    email: string;
+    phoneNumber?: string;
+}
+
 export function useMembers(defaultLimit = 10, roleFilter?: "MEMBER" | "WORKER") {
     const [members, setMembers] = useState<Member[]>([]);
     const [pagination, setPagination] = useState<MemberPagination | null>(null);
@@ -278,6 +287,29 @@ export function useMembers(defaultLimit = 10, roleFilter?: "MEMBER" | "WORKER") 
         }
     }, []);
 
+    const removePhoto = useCallback(async (memberId: string): Promise<Member> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            const res = await api.delete(`/members/${memberId}/photo`);
+            const updated: Member = res.data?.data;
+            setMembers((prev) =>
+                prev.map((m) => (m.id === memberId ? { ...m, ...updated } : m))
+            );
+            return updated;
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message =
+                e?.response?.data?.message ||
+                e?.message ||
+                "Failed to remove member photo.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
     const resetPassword = useCallback(async (memberId: string): Promise<void> => {
         setIsSubmitting(true);
         setError(null);
@@ -318,5 +350,34 @@ export function useMembers(defaultLimit = 10, roleFilter?: "MEMBER" | "WORKER") 
         assignPastor,
         updatePastorType,
         removePastor,
+        removePhoto,
     };
+}
+
+export function useCreateMember() {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const createMember = useCallback(async (
+        payload: CreateMemberPayload
+    ): Promise<Member> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            const res = await api.post("/members", payload);
+            return res.data?.data as Member;
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message =
+                e?.response?.data?.message ||
+                e?.message ||
+                "Failed to create member.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
+    return { createMember, isSubmitting, error };
 }

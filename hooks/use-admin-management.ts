@@ -28,7 +28,8 @@ export type AdminPermission =
     | "incident_report:read" | "incident_report:write"
     | "asset_management:read" | "asset_management:write" | "asset_management:alert"
     | "prayer:read" | "prayer:write"
-    | "facility_rental:read" | "facility_rental:write";
+    | "facility_rental:read" | "facility_rental:write"
+    | "pastor_feedback:read" | "pastor_feedback:write";
 
 export interface PermissionGroupItem {
     value: AdminPermission;
@@ -126,6 +127,10 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     { group: "SMS Messaging", permissions: [
         { value: "sms:read", label: "View SMS Logs" },
         { value: "sms:send", label: "Send SMS Broadcasts" },
+    ]},
+    { group: "Pastor Feedback", permissions: [
+        { value: "pastor_feedback:read", label: "View Pastor Feedback" },
+        { value: "pastor_feedback:write", label: "Manage Pastor Feedback" },
     ]},
     { group: "Administration", permissions: [
         { value: "dashboard:read", label: "View Dashboard" },

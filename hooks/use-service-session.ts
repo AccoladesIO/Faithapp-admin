@@ -148,15 +148,15 @@ export function useServiceSession() {
         }
     }, []);
 
-    const startEventSessions = useCallback(async (eventId: string): Promise<LiveSession[]> => {
+    const startEventSessions = useCallback(async (eventId: string): Promise<LiveSession> => {
         setIsSubmitting(true);
         setError(null);
         try {
             const res = await api.post(`/service-session/event/${eventId}/start`);
-            const sessions: LiveSession[] = res.data?.data ?? [];
-            return sessions;
+            const session: LiveSession = res.data?.data ?? res.data;
+            return session;
         } catch (err: unknown) {
-            const msg = extractError(err, "Failed to start service.");
+            const msg = extractError(err, "Failed to start the next service slot.");
             setError(msg);
             throw new Error(msg);
         } finally {

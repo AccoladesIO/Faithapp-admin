@@ -16,6 +16,7 @@ import { useDepartments } from "@/hooks/use-departments";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
 import { DismissibleError } from "@/components/ui/dismissible-error";
+import { Avatar } from "@/components/ui/avatar";
 
 type ApiError = { response?: { data?: { message?: string } }; message?: string };
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -141,6 +142,7 @@ type ConfirmAction =
     | "assign-pastor"
     | "edit-pastor"
     | "remove-pastor"
+    | "remove-photo"
     | null;
 
 // ─── Main page ────────────────────────────────────────────────────────────────
@@ -161,6 +163,7 @@ export default withAuth(function MembersPage() {
         assignPastor,
         updatePastorType,
         removePastor,
+        removePhoto,
         search: searchQuery,
         onSearchChange,
     } = useMembers(10);
@@ -230,6 +233,7 @@ export default withAuth(function MembersPage() {
         "assign-pastor": `Designate ${selectedMember ? fullName(selectedMember) : "this member"} as a pastor?`,
         "edit-pastor": `Update the pastor type for ${selectedMember ? fullName(selectedMember) : "this member"}?`,
         "remove-pastor": `Remove the pastor designation from ${selectedMember ? fullName(selectedMember) : "this member"}? This is purely informational and does not affect their login or worker access.`,
+        "remove-photo": `Remove the profile photo for ${selectedMember ? fullName(selectedMember) : "this member"}? They can upload a new one at any time.`,
     };
 
     const handleConfirm = async () => {
@@ -264,6 +268,10 @@ export default withAuth(function MembersPage() {
                 await removePastor(selectedMember.id);
                 setSelectedMember((prev) => prev ? { ...prev, pastorType: null } : prev);
                 setActionSuccess("Pastor designation removed.");
+            } else if (confirmAction === "remove-photo") {
+                const updated = await removePhoto(selectedMember.id);
+                setSelectedMember((prev) => prev ? { ...prev, ...updated } : prev);
+                setActionSuccess("Profile photo removed.");
             }
             setConfirmAction(null);
         } catch (err: unknown) {
@@ -294,6 +302,13 @@ export default withAuth(function MembersPage() {
                             {pagination.totalCount} members
                         </span>
                     )}
+                    <button
+                        onClick={() => router.push("/members/new")}
+                        className="flex items-center gap-1.5 h-9 px-4 border border-[#121212]/10 text-[#121212] text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#F4F1EA] transition-colors"
+                    >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        New Member
+                    </button>
                     <button
                         onClick={() => router.push("/members/bulk-import")}
                         className="flex items-center gap-1.5 h-9 px-4 border border-[#121212]/10 text-[#121212] text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#F4F1EA] transition-colors"
@@ -438,11 +453,16 @@ export default withAuth(function MembersPage() {
                                                 }`}
                                         >
                                             <td className="p-4">
-                                                <div className="text-sm font-medium text-[#121212]">
-                                                    {fullName(member)}
-                                                </div>
-                                                <div className="text-xs text-[#8A817C] font-mono mt-0.5 truncate max-w-[200px]">
-                                                    {member.email}
+                                                <div className="flex items-center gap-2.5">
+                                                    <Avatar photoUrl={member.photoUrl} name={fullName(member)} size={30} textSize="text-[9px]" />
+                                                    <div>
+                                                        <div className="text-sm font-medium text-[#121212]">
+                                                            {fullName(member)}
+                                                        </div>
+                                                        <div className="text-xs text-[#8A817C] font-mono mt-0.5 truncate max-w-[200px]">
+                                                            {member.email}
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="p-4">
@@ -493,13 +513,26 @@ export default withAuth(function MembersPage() {
                                 <div className="text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1">
                                     Member Profile
                                 </div>
-                                <h2 className="text-xl font-light tracking-tight text-[#121212] pr-8">
-                                    {fullName(selectedMember)}
-                                </h2>
+                                <div className="flex items-center gap-3">
+                                    <Avatar photoUrl={selectedMember.photoUrl} name={fullName(selectedMember)} size={44} textSize="text-sm" />
+                                    <div className="min-w-0 pr-8">
+                                        <h2 className="text-xl font-light tracking-tight text-[#121212] truncate">
+                                            {fullName(selectedMember)}
+                                        </h2>
+                                        {selectedMember.photoUrl && (
+                                            <button
+                                                onClick={() => setConfirmAction("remove-photo")}
+                                                className="text-[10px] uppercase tracking-widest font-semibold text-[#8A817C] hover:text-red-600 transition-colors"
+                                            >
+                                                Remove Photo
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
                                 <div className="flex flex-wrap gap-2 mt-2">
                                     <RoleBadge role={selectedMember.role} />
                                     <StatusBadge status={selectedMember.status} />
-                                    {selectedMember.workerProfile && (
+                                    {selectedMember.role === "WORKER" && (
                                         <span className="inline-block px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 text-[9px] font-bold uppercase tracking-wider rounded">
                                             Worker Profile Active
                                         </span>

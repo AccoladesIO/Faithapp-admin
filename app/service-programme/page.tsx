@@ -1482,6 +1482,16 @@ function groupProgrammesByEvent(programmes: ServiceProgramme[]): EventGroup[] {
     return Array.from(groups.values());
 }
 
+function getNextDraftProgramme(programmes: ServiceProgramme[]): ServiceProgramme | null {
+    const draft = programmes.filter((p) => p.status === "DRAFT");
+    if (draft.length === 0) return null;
+    return [...draft].sort((a, b) => {
+        const aTime = a.serviceSlotDetail?.startTime ? new Date(a.serviceSlotDetail.startTime).getTime() : 0;
+        const bTime = b.serviceSlotDetail?.startTime ? new Date(b.serviceSlotDetail.startTime).getTime() : 0;
+        return aTime - bTime;
+    })[0];
+}
+
 function EventCalendarChip({ eventDate }: { eventDate: string | null }) {
     if (!eventDate) {
         return (
@@ -1585,15 +1595,15 @@ function ProgrammesTab({ hook }: { hook: ReturnType<typeof useServiceProgramme> 
         }
     };
 
-    const handleStartEvent = async (eventId: string, eventName: string) => {
+    const handleStartEvent = async (eventId: string, slotName: string) => {
         setStartingEventId(eventId);
         try {
-            const sessions = await startEventSessions(eventId);
-            success(`Started ${sessions.length} service${sessions.length !== 1 ? "s" : ""} for ${eventName}.`);
+            await startEventSessions(eventId);
+            success(`Started ${slotName}.`);
             fetchProgrammes(pagination?.page ?? 1);
         } catch (err: unknown) {
             const e = err as ApiError;
-            toastError(e?.message ?? "Failed to start service.");
+            toastError(e?.message ?? "Failed to start the next service slot.");
         } finally {
             setStartingEventId(null);
         }
@@ -1701,17 +1711,24 @@ function ProgrammesTab({ hook }: { hook: ReturnType<typeof useServiceProgramme> 
                                             </span>
                                             {group.eventId && (
                                                 <>
-                                                    {group.programmes.some((p) => p.status === "DRAFT") && (
-                                                        <button
-                                                            onClick={() => handleStartEvent(group.eventId!, group.eventName)}
-                                                            disabled={startingEventId === group.eventId}
-                                                            title="Start every not-yet-started service in this event at once"
-                                                            className="flex items-center gap-1 h-6 px-2 text-[10px] font-semibold uppercase tracking-wider text-white bg-red-600 hover:bg-red-700 rounded-full transition-colors disabled:opacity-40"
-                                                        >
-                                                            <Play className="w-2.5 h-2.5" />
-                                                            {startingEventId === group.eventId ? "Starting…" : "Start Service"}
-                                                        </button>
-                                                    )}
+                                                    {(() => {
+                                                        const nextProgramme = getNextDraftProgramme(group.programmes);
+                                                        if (!nextProgramme) return null;
+                                                        const nextName = nextProgramme.serviceSlotDetail?.name ?? nextProgramme.serviceSlotName ?? "next service";
+                                                        const isEventLive = group.programmes.some((p) => p.status === "LIVE");
+                                                        const isDisabled = startingEventId === group.eventId || isEventLive;
+                                                        return (
+                                                            <button
+                                                                onClick={() => handleStartEvent(group.eventId!, nextName)}
+                                                                disabled={isDisabled}
+                                                                title={isEventLive ? "End the live service before starting the next slot" : `Start ${nextName}`}
+                                                                className="flex items-center gap-1 h-6 px-2 text-[10px] font-semibold uppercase tracking-wider text-white bg-red-600 hover:bg-red-700 rounded-full transition-colors disabled:opacity-40"
+                                                            >
+                                                                <Play className="w-2.5 h-2.5" />
+                                                                {startingEventId === group.eventId ? "Starting…" : `Start ${nextName}`}
+                                                            </button>
+                                                        );
+                                                    })()}
                                                     <button
                                                         onClick={() => handleDownloadEventPdf(group.eventId!, group.eventName)}
                                                         disabled={downloadingKey === `order-${group.eventId}`}

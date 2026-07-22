@@ -5,15 +5,25 @@ import { withAuth } from "@/utils/auth/with-auth";
 import {
     Search, SlidersHorizontal,
     RefreshCw, MapPin, Clock, X, Trophy, History,
+    UserPlus, CheckCircle2, Loader2,
 } from "lucide-react";
 import {
     useAttendanceHistory,
     useAttendanceLeaderboard,
+    useAttendanceAdmin,
     AttendanceRecord,
     AttendanceHistoryFilters,
+    AttendanceStatusEnum,
 } from "@/hooks/use-attendance";
+import { useMembers } from "@/hooks/use-member";
+import { useEvents, ServiceSlot } from "@/hooks/use-events";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { DismissibleError } from "@/components/ui/dismissible-error";
+
+// The create/update event payload's ServiceSlot type has no `id` — the read
+// path (GET /events) returns real persisted slots that do. Widen locally
+// rather than touching the shared type, which is tailored for event editing.
+type SlotWithId = ServiceSlot & { id: string };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -158,6 +168,151 @@ function RecordDetail({
     );
 }
 
+// ─── Mark Attendance modal ────────────────────────────────────────────────────
+// Covers two cases with one action: checking someone in who has no phone, and
+// "restoring a streak" by fixing a record that was auto-marked ABSENT — the
+// backend resolves which case it is (create vs update) from whether a row
+// already exists for that member+event.
+
+const MARK_STATUS_OPTIONS: AttendanceStatusEnum[] = ["PRESENT", "LATE", "ON_LEAVE", "ABSENT", "ATTENDED_ONLINE"];
+
+function MarkAttendanceModal({ onClose, onMarked }: { onClose: () => void; onMarked: () => void }) {
+    const { members, isLoading: membersLoading, onSearchChange } = useMembers(8);
+    const { events, isLoading: eventsLoading } = useEvents(20);
+    const { adminMarkAttendance, isSubmitting, error } = useAttendanceAdmin();
+
+    const [selectedMemberId, setSelectedMemberId] = useState("");
+    const [selectedMemberLabel, setSelectedMemberLabel] = useState("");
+    const [selectedEventId, setSelectedEventId] = useState("");
+    const [selectedSlotId, setSelectedSlotId] = useState("");
+    const [status, setStatus] = useState<AttendanceStatusEnum>("PRESENT");
+    const [success, setSuccess] = useState(false);
+
+    const selectedEvent = events.find((e) => e.id === selectedEventId);
+    const slots = (selectedEvent?.serviceSlots ?? []) as SlotWithId[];
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedMemberId || !selectedSlotId) return;
+        try {
+            await adminMarkAttendance(selectedMemberId, selectedSlotId, status);
+            setSuccess(true);
+            onMarked();
+            setTimeout(onClose, 1200);
+        } catch { /* error shown below */ }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px] p-4" onClick={onClose}>
+            <div className="bg-white rounded-xl shadow-xl border border-[#121212]/10 w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-[#121212]">Mark Attendance</h3>
+                    <button type="button" onClick={onClose} className="p-1 text-[#8A817C] hover:text-[#121212] transition-colors">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+                <p className="text-xs font-light text-[#8A817C] leading-relaxed">
+                    For a member/worker without a phone, or to fix a missed check-in and restore their streak.
+                </p>
+
+                {success ? (
+                    <div className="flex items-center gap-2 bg-green-50 border border-green-100 text-green-700 px-4 py-3 rounded-xl text-xs font-medium">
+                        <CheckCircle2 className="w-4 h-4" /> Attendance marked.
+                    </div>
+                ) : (
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1.5">Member</label>
+                            <input
+                                type="text"
+                                placeholder="Search by name or email…"
+                                onChange={(e) => onSearchChange(e.target.value)}
+                                className="w-full px-3 py-2 border border-[#121212]/10 rounded-lg text-sm outline-none focus:border-[#121212]/30"
+                            />
+                            {membersLoading ? (
+                                <p className="text-xs text-[#8A817C] mt-2">Searching…</p>
+                            ) : (
+                                <div className="mt-2 max-h-32 overflow-y-auto space-y-1">
+                                    {members.map((m) => (
+                                        <button
+                                            type="button"
+                                            key={m.id}
+                                            onClick={() => { setSelectedMemberId(m.id); setSelectedMemberLabel(`${m.firstname} ${m.lastname}`); }}
+                                            className={`w-full text-left px-3 py-2 rounded-lg text-xs border transition-colors ${selectedMemberId === m.id ? "bg-[#121212] text-white border-[#121212]" : "border-[#121212]/5 hover:bg-[#F4F1EA]"}`}
+                                        >
+                                            {m.firstname} {m.lastname} <span className="opacity-60">— {m.email}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {selectedMemberId && (
+                                <p className="text-xs text-[#121212] mt-1.5">Selected: <span className="font-medium">{selectedMemberLabel}</span></p>
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1.5">Event</label>
+                            <select
+                                value={selectedEventId}
+                                onChange={(e) => { setSelectedEventId(e.target.value); setSelectedSlotId(""); }}
+                                disabled={eventsLoading}
+                                className="w-full px-3 py-2 border border-[#121212]/10 rounded-lg text-sm outline-none focus:border-[#121212]/30 bg-white"
+                            >
+                                <option value="">Select an event…</option>
+                                {events.map((ev) => (
+                                    <option key={ev.id} value={ev.id}>{ev.name} — {new Date(ev.eventDate).toLocaleDateString("en-GB")}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {selectedEventId && (
+                            <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1.5">Service Slot</label>
+                                <select
+                                    value={selectedSlotId}
+                                    onChange={(e) => setSelectedSlotId(e.target.value)}
+                                    className="w-full px-3 py-2 border border-[#121212]/10 rounded-lg text-sm outline-none focus:border-[#121212]/30 bg-white"
+                                >
+                                    <option value="">Select a slot…</option>
+                                    {slots.map((s) => (
+                                        <option key={s.id} value={s.id}>{s.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1.5">Status</label>
+                            <select
+                                value={status}
+                                onChange={(e) => setStatus(e.target.value as AttendanceStatusEnum)}
+                                className="w-full px-3 py-2 border border-[#121212]/10 rounded-lg text-sm outline-none focus:border-[#121212]/30 bg-white"
+                            >
+                                {MARK_STATUS_OPTIONS.map((s) => (
+                                    <option key={s} value={s}>{s}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {error && (
+                            <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={isSubmitting || !selectedMemberId || !selectedSlotId}
+                            className="w-full flex items-center justify-center gap-2 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest py-3 rounded-lg hover:bg-[#121212]/90 transition-colors disabled:opacity-40"
+                        >
+                            {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                            Mark Attendance
+                        </button>
+                    </form>
+                )}
+            </div>
+        </div>
+    );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 type ActiveTab = "history" | "leaderboard";
@@ -184,6 +339,7 @@ export default withAuth(function AttendancePage() {
     } = useAttendanceLeaderboard(30, 10);
 
     const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
+    const [showMarkModal, setShowMarkModal] = useState(false);
 
     // Local form state for history filters
     const [searchQuery, setSearchQuery] = useState("");
@@ -226,7 +382,20 @@ export default withAuth(function AttendancePage() {
                     </p>
                 </div>
 
+                <button
+                    onClick={() => setShowMarkModal(true)}
+                    className="flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors w-fit"
+                >
+                    <UserPlus className="w-3.5 h-3.5" /> Mark Attendance
+                </button>
             </div>
+
+            {showMarkModal && (
+                <MarkAttendanceModal
+                    onClose={() => setShowMarkModal(false)}
+                    onMarked={refetch}
+                />
+            )}
 
             {/* Tabs */}
             <div className="flex bg-[#F4F1EA] p-1 border border-[#121212]/5 rounded-xl w-fit">

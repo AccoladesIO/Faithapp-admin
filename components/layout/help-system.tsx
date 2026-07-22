@@ -37,9 +37,10 @@ const HELP: Record<string, PageHelp> = {
             "Members cannot be deleted — use 'Inactive' status to remove their access. This preserves their full history (attendance, giving, etc.).",
             "A member must be Active before they can be promoted to a worker.",
             "The 'Promote to Worker' action creates a worker profile linked to this member and asks you to assign a department.",
+            "'New Member' creates a plain member account for someone who can't self-register (no phone/email habit) — it's the same temp-password flow as self-signup. Promoting them to a worker afterwards is a separate step.",
         ],
         tasks: [
-            { label: "Add a new member", how: "'Add Member' button → fill in name, contact details and date of birth → Save" },
+            { label: "Add a new member", how: "'New Member' button → fill in first/last name, email and optional phone → Create. A temporary password is emailed automatically." },
             { label: "Edit member details", how: "Click the member row → edit in the right panel" },
             { label: "Promote to worker", how: "Open member detail → 'Promote to Worker' → select department" },
             { label: "Deactivate a member", how: "Open member detail → Status → set to Inactive" },
@@ -71,11 +72,13 @@ const HELP: Record<string, PageHelp> = {
             "Past attendance records cannot be deleted — corrections are handled by updating the status.",
             "Attendance data feeds the Dashboard headcount trend chart.",
             "Export the list to CSV to share with leadership or archive offline.",
+            "'Mark Attendance' handles two cases with one action: checking in a member with no phone, and fixing/backfilling a missed check-in. A streak is calculated live from attendance history, so marking a previously-missed service present restores the streak automatically — there's no separate streak tool.",
         ],
         tasks: [
             { label: "Record attendance for a service", how: "Select the event and slot → search or tick members → Save" },
             { label: "Check a member's attendance history", how: "Members page → open member → Attendance tab in the panel" },
             { label: "Export attendance report", how: "Top-right Export button above the attendance list" },
+            { label: "Manually check in a member (no phone) or restore their streak", how: "'Mark Attendance' button (top right) → search the member → pick event, slot and status → Save" },
         ],
     },
     "/birthday": {
@@ -227,17 +230,19 @@ const HELP: Record<string, PageHelp> = {
         ],
     },
     "/classes": {
-        title: "Bible Classes",
-        summary: "Manage discipleship and Bible study classes — create classes, enrol members, assign a worker as class leader, and track attendance per session. Classes are independent from Sunday services.",
+        title: "Training Classes",
+        summary: "Manage discipleship and Bible study classes — create classes, enrol members, assign a worker as class leader, and issue a certificate once a member completes a class. A class type can point to a 'next level' so completed members can be promoted straight into the follow-on class.",
         tips: [
             "Assign a worker as the class leader before enrolling students — the leader appears on class communications.",
             "Track attendance per class session from the class detail view.",
             "A member can be enrolled in multiple classes simultaneously.",
+            "Issue Certificate only appears once an enrolment is marked Completed — the certificate number is optional.",
         ],
         tasks: [
             { label: "Create a new class", how: "'New Class' → name, description, assign leader" },
             { label: "Enrol a member", how: "Open the class → 'Enrol Member' → search and add" },
             { label: "Record class attendance", how: "Open the class → select session → mark attendees" },
+            { label: "Issue a certificate", how: "Open the class → find a Completed enrolment → 'Issue Certificate' → optional certificate number → Confirm" },
         ],
     },
     "/childrens-church": {
@@ -806,6 +811,61 @@ const HELP: Record<string, PageHelp> = {
             { label: "Check who is on leave for a date", how: "Date filter → enter the date range → filter Status to Approved" },
         ],
     },
+
+    // ── Pastor Feedback & Prayer Requests ──────────────────────────────────────
+
+    "/pastor-feedback": {
+        title: "Pastor Feedback",
+        summary: "Weekly structured submissions from each department's HOD or Assistant HOD, with responses from a pastor. Read cross-department, filter by department and week, edit a submission on the HOD's behalf, or respond as pastor directly from this page.",
+        tips: [
+            "Filter by Department and Week Of together to find a specific submission quickly — Week Of matches the exact Monday the feedback was submitted for.",
+            "Responding here as pastor only works if your own admin account is linked to a member with a Pastor record — otherwise 'Respond' will fail.",
+            "Editing a submission on the HOD's behalf changes the record directly; there's no separate revision history shown here.",
+            "Deleting a submission is permanent — use it only for genuine mistakes, not to hide feedback you disagree with.",
+        ],
+        tasks: [
+            { label: "Find a specific submission", how: "Department dropdown + Week Of date filter above the table" },
+            { label: "Respond as pastor", how: "Click a submission row → write a response in the Pastor Response panel → Send Response" },
+            { label: "Edit a submission", how: "Click a submission row → 'Edit Submission' → update fields → Save" },
+            { label: "Delete a submission", how: "Click a submission row → 'Delete Submission' → Confirm" },
+        ],
+    },
+    "/prayer-requests": {
+        title: "Prayer Requests",
+        summary: "Private prayer requests submitted by members and workers, plus opt-in-public testimonies and pregnancy prayer case tracking. Requests are visible only to the Prayer team, pastors and admins with this permission — never a public wall. Testimonies default to private; the submitter alone decides whether theirs appears on the public feed.",
+        tips: [
+            "Requests, Testimonies and Pregnancy are separate tabs — a testimony can optionally link back to one of the submitter's own requests, or stand alone as a general testimony.",
+            "Updating a request's status (Open / Prayed For / Answered) here uses the same PRAYER_WRITE permission as the Prayer Roster module — no separate permission exists for this.",
+            "The Testimonies tab here shows every testimony submitted, not just the ones marked public — use it to see the full picture, including private ones.",
+            "This is a different module from Prayer Schedule — that one manages the prayer *meeting* roster; this one is member-submitted requests with no meeting attached.",
+            "Pregnancy cases are created by the Prayer team on mobile, not here — this tab is read + status-only oversight (e.g. marking a case Delivered or Discontinued).",
+            "Click the History icon on a pregnancy case row to see every logged visit — who prayed with her and when, not just the single 'last prayed' date.",
+        ],
+        tasks: [
+            { label: "Review open prayer requests", how: "Requests tab → filter Status to Open → click a row to see the full request" },
+            { label: "Update a request's status", how: "Click a request row → choose Open / Prayed For / Answered in the detail panel" },
+            { label: "See all testimonies (including private)", how: "Switch to the Testimonies tab" },
+            { label: "Update a pregnancy case's status", how: "Pregnancy tab → change the status dropdown on the case row" },
+            { label: "View a pregnancy case's full visit history", how: "Pregnancy tab → History icon on the case row" },
+        ],
+    },
+    "/evangelism": {
+        title: "Evangelism",
+        summary: "Cross-member view of every convert captured through outreach — who onboarded them, who is currently following up, and their journey from Unsaved to Saved to Undergoing Discipleship. Converts are uploaded by any worker on the mobile app; this page is for oversight, reassignment, and linking a convert to their new Member record once they join.",
+        tips: [
+            "A convert isn't necessarily an existing Member — they may just be a name and phone number captured in the field until they join.",
+            "Reassign only accepts workers in the Evangelism department (primary or secondary) — the picker is pre-filtered to that department.",
+            "Link to Member is only available once — it disappears from the detail panel after a convert is linked, since linking is one-directional.",
+            "The mobile 'needs follow-up' flag (overdue after 7 days with no contact) is computed live and not shown here — this admin view is oversight/reassignment, not the day-to-day follow-up inbox.",
+            "The Follow-Up History section in the detail panel lists every contact logged on mobile, newest first — useful for checking a worker actually followed up before reassigning.",
+        ],
+        tasks: [
+            { label: "Reassign a convert's follow-up", how: "Click a convert row → 'Reassign Follow-Up' → pick an Evangelism worker → Reassign" },
+            { label: "Link a convert to a member", how: "Click a convert row → 'Link to Member' → search and select → click the result" },
+            { label: "Filter converts by status", how: "Use the status filter pills above the table" },
+            { label: "Review a convert's full follow-up history", how: "Click a convert row → 'Follow-Up History' in the detail panel" },
+        ],
+    },
 };
 
 const DEFAULT_HELP: PageHelp = {
@@ -842,12 +902,17 @@ const TOUR_MODULES = [
     {
         emoji: "👥",
         name: "People",
-        desc: "Manage the congregation — members, workers, attendance records and birthdays.",
+        desc: "Core congregation records — members, workers, attendance, leave requests and birthdays.",
+    },
+    {
+        emoji: "🤝",
+        name: "Care & Outreach",
+        desc: "First-timer follow-up, evangelism converts, private prayer requests and weekly pastor feedback — the modules for reaching and caring for people.",
     },
     {
         emoji: "🎤",
         name: "Ministry",
-        desc: "Departments, Bible classes, Children's Church, Sunday School and member follow-up.",
+        desc: "Departments, Training Classes, Children's Church and Sunday School.",
     },
     {
         emoji: "📢",

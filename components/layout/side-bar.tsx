@@ -19,6 +19,7 @@ import {
     Building2,
     UserCircle,
     Settings2,
+    HeartHandshake,
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 
@@ -156,7 +157,16 @@ export default function Sidebar() {
                 { name: "Attendance",     href: "/attendance",       permission: "attendance:read" },
                 { name: "Leave Requests", href: "/leave",            permission: "leave:read" },
                 { name: "Birthdays",      href: "/birthday",         permission: "members:read" },
-                { name: "Admin Users",    href: "/admin-management", permission: "admin:read" },
+            ],
+        },
+        {
+            name: "Care & Outreach",
+            icon: HeartHandshake,
+            subItems: [
+                { name: "Follow Up",        href: "/follow-up",       permission: "follow_up:read" },
+                { name: "Evangelism",       href: "/evangelism",      permission: "evangelism:read" },
+                { name: "Prayer Requests",  href: "/prayer-requests", permission: "prayer:read" },
+                { name: "Pastor Feedback",  href: "/pastor-feedback", permission: "pastor_feedback:read" },
             ],
         },
         {
@@ -164,10 +174,9 @@ export default function Sidebar() {
             icon: MicVocalIcon,
             subItems: [
                 { name: "Departments",      href: "/departments",    permission: "departments:read" },
-                { name: "Classes",          href: "/classes",        permission: "classes:read" },
+                { name: "Training Classes", href: "/classes",        permission: "classes:read" },
                 { name: "Children's Church",href: "/childrens-church", permission: "children_church:read" },
                 { name: "Sunday School",    href: "/sunday-school",  permission: "sunday_school:read" },
-                { name: "Follow Up",        href: "/follow-up",      permission: "follow_up:read" },
             ],
         },
         {
@@ -182,6 +191,7 @@ export default function Sidebar() {
             name: "System",
             icon: Settings2,
             subItems: [
+                { name: "Admin Users",       href: "/admin-management",  permission: "admin:read" },
                 { name: "Audit Trail",       href: "/audit-logs",        permission: "audit:read" },
                 { name: "Email Logs",        href: "/email-logs",         permission: "email_logs:read" },
                 { name: "SMS Logs",          href: "/sms-logs",           permission: "sms:read" },

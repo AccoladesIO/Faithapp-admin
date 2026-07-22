@@ -3,7 +3,6 @@ import { api } from "@/utils/auth/axios-client";
 
 type ApiError = { response?: { data?: { message?: string } }; message?: string };
 
-export type ClassType = "BELIEVERS" | "BAPTISMAL" | "WORKERS_IN_TRAINING" | "BIBLE_COLLEGE" | "SCHOOL_OF_DISCIPLESHIP";
 export type ClassStatus = "ACTIVE" | "CLOSED";
 export type EnrollmentStatus = "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 
@@ -15,10 +14,16 @@ export interface ClassFacilitator {
     phoneNumber: string | null;
 }
 
+export interface ClassTypeRef {
+    id: string;
+    name: string;
+    nextClassType?: { id: string; name: string } | null;
+}
+
 export interface ChurchClass {
     id: string;
     name: string;
-    type: ClassType;
+    classType: ClassTypeRef;
     status: ClassStatus;
     description: string;
     startDate: string;
@@ -37,14 +42,16 @@ export interface ClassPagination {
 
 export interface CreateClassPayload {
     name: string;
-    type: ClassType;
+    classTypeId: string;
     description: string;
     facilitatorId: string;
     startDate: string;
     endDate: string;
 }
 
-export type UpdateClassPayload = Partial<Omit<CreateClassPayload, "type">>;
+export type UpdateClassPayload = Partial<Omit<CreateClassPayload, "classTypeId">> & {
+    classTypeId?: string;
+};
 
 export interface Enrollment {
     id: string;
@@ -53,6 +60,9 @@ export interface Enrollment {
     completedAt: string | null;
     cancelledAt: string | null;
     member: ClassFacilitator;
+    certificateIssued: boolean;
+    certificateIssuedAt: string | null;
+    certificateNumber: string | null;
 }
 
 export interface EnrollPayload {
@@ -60,24 +70,30 @@ export interface EnrollPayload {
     classId: string;
 }
 
-export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) {
+export interface PromotionCandidate {
+    eligible: boolean;
+    nextClassType: ClassTypeRef | null;
+    openClasses: ChurchClass[];
+}
+
+export function useClasses(initialClassTypeId = "", defaultLimit = 10) {
     const [classes, setClasses] = useState<ChurchClass[]>([]);
     const [pagination, setPagination] = useState<ClassPagination | null>(null);
     const [page, setPage] = useState(1);
-    const [typeFilter, setTypeFilter] = useState<ClassType | "">(initialType);
+    const [classTypeIdFilter, setClassTypeIdFilter] = useState(initialClassTypeId);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const fetchClasses = useCallback(async (
         targetPage = 1,
-        type: ClassType | "" = typeFilter
+        classTypeId = classTypeIdFilter
     ) => {
         setIsLoading(true);
         setClasses([]);
         setError(null);
         try {
-            const typeParam = type ? `&type=${type}` : "";
+            const typeParam = classTypeId ? `&classTypeId=${classTypeId}` : "";
             const res = await api.get(
                 `/classes?page=${targetPage}&limit=${defaultLimit}${typeParam}`
             );
@@ -85,7 +101,7 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
             const list: ChurchClass[] = Array.isArray(outer?.data) ? outer.data : [];
             setClasses(list);
             setPage(targetPage);
-            setTypeFilter(type);
+            setClassTypeIdFilter(classTypeId);
             setPagination({
                 page: outer?.page ?? targetPage,
                 limit: outer?.limit ?? defaultLimit,
@@ -106,11 +122,11 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
     }, [defaultLimit]);
 
     const goToPage = useCallback((targetPage: number) => {
-        fetchClasses(targetPage, typeFilter);
-    }, [fetchClasses, typeFilter]);
+        fetchClasses(targetPage, classTypeIdFilter);
+    }, [fetchClasses, classTypeIdFilter]);
 
-    const applyTypeFilter = useCallback((type: ClassType | "") => {
-        fetchClasses(1, type);
+    const applyClassTypeFilter = useCallback((classTypeId: string) => {
+        fetchClasses(1, classTypeId);
     }, [fetchClasses]);
 
     const createClass = useCallback(async (
@@ -251,6 +267,65 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
         }
     }, []);
 
+    const getPromotionCandidate = useCallback(async (
+        enrollmentId: string
+    ): Promise<PromotionCandidate> => {
+        const res = await api.get(
+            `/classes/enrollments/${enrollmentId}/promotion-candidate`
+        );
+        return res.data?.data;
+    }, []);
+
+    const promoteEnrollment = useCallback(async (
+        enrollmentId: string,
+        targetClassId: string
+    ): Promise<Enrollment> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            const res = await api.post(
+                `/classes/enrollments/${enrollmentId}/promote`,
+                { targetClassId }
+            );
+            return res.data?.data;
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message =
+                e?.response?.data?.message ||
+                e?.message ||
+                "Failed to promote member.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
+    const issueCertificate = useCallback(async (
+        enrollmentId: string,
+        certificateNumber?: string
+    ): Promise<Enrollment> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            const res = await api.patch(
+                `/classes/enrollments/${enrollmentId}/certificate`,
+                { certificateNumber }
+            );
+            return res.data?.data;
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message =
+                e?.response?.data?.message ||
+                e?.message ||
+                "Failed to issue certificate.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
     const bulkEnroll = useCallback(async (
         classId: string,
         memberIds: string[]
@@ -298,7 +373,7 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
     }, []);
 
     useEffect(() => {
-        fetchClasses(1, initialType);
+        fetchClasses(1, initialClassTypeId);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -306,13 +381,13 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
         classes,
         pagination,
         page,
-        typeFilter,
+        classTypeIdFilter,
         isLoading,
         isSubmitting,
         error,
         goToPage,
-        applyTypeFilter,
-        refetch: () => fetchClasses(page, typeFilter),
+        applyClassTypeFilter,
+        refetch: () => fetchClasses(page, classTypeIdFilter),
         createClass,
         updateClass,
         deleteClass,
@@ -320,6 +395,9 @@ export function useClasses(initialType: ClassType | "" = "", defaultLimit = 10) 
         bulkEnroll,
         fetchEnrollments,
         updateEnrollmentStatus,
+        issueCertificate,
+        getPromotionCandidate,
+        promoteEnrollment,
         closeClass,
     };
 }
