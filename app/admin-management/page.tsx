@@ -1,9 +1,7 @@
 "use client";
 
-import React, { useState, useCallback, useRef, useMemo, useEffect } from "react";
-import { createPortal } from "react-dom";
+import React, { useState, useMemo } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
-import { api } from "@/utils/auth/axios-client";
 import {
     useAdminRoles,
     useAdminUsers,
@@ -22,6 +20,7 @@ import {
 } from "lucide-react";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { DismissibleError } from "@/components/ui/dismissible-error";
+import { MemberSearchSelect } from "@/components/ui/member-search-select";
 
 type ApiError = { response?: { data?: { message?: string } }; message?: string };
 
@@ -44,116 +43,6 @@ function SkeletonRow({ cols }: Readonly<{ cols: number }>) {
                 </td>
             ))}
         </tr>
-    );
-}
-
-// ─── member search ─────────────────────────────────────────────────────────
-
-interface MemberResult {
-    id: string;
-    firstname: string;
-    lastname: string;
-    email: string;
-}
-
-function MemberSearchInput({
-    value,
-    onChange,
-}: Readonly<{ value: string; onChange: (id: string) => void }>) {
-    const [query, setQuery] = useState("");
-    const [results, setResults] = useState<MemberResult[]>([]);
-    const [isOpen, setIsOpen] = useState(false);
-    const [selectedName, setSelectedName] = useState<string | null>(null);
-    const [menuRect, setMenuRect] = useState<{ top: number; left: number; width: number } | null>(null);
-    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const wrapperRef = useRef<HTMLDivElement>(null);
-
-    const updateMenuRect = useCallback(() => {
-        const el = wrapperRef.current;
-        if (!el) return;
-        const r = el.getBoundingClientRect();
-        setMenuRect({ top: r.bottom + 4, left: r.left, width: r.width });
-    }, []);
-
-    useEffect(() => {
-        if (!isOpen) return;
-        updateMenuRect();
-        const close = () => setIsOpen(false);
-        window.addEventListener("scroll", close, true);
-        window.addEventListener("resize", close);
-        return () => {
-            window.removeEventListener("scroll", close, true);
-            window.removeEventListener("resize", close);
-        };
-    }, [isOpen, updateMenuRect]);
-
-    const search = useCallback(async (term: string) => {
-        if (term.trim().length < 2) { setResults([]); setIsOpen(false); return; }
-        try {
-            const res = await api.get(`/members?search=${encodeURIComponent(term)}&limit=10`);
-            const list: MemberResult[] = Array.isArray(res.data?.data?.data) ? res.data.data.data : [];
-            setResults(list);
-            setIsOpen(list.length > 0);
-        } catch {
-            setResults([]);
-            setIsOpen(false);
-        }
-    }, []);
-
-    const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value;
-        setQuery(val);
-        if (selectedName) { setSelectedName(null); onChange(""); }
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => search(val), 300);
-    };
-
-    const pick = (m: MemberResult) => {
-        const name = `${m.firstname} ${m.lastname}`;
-        setSelectedName(name);
-        setQuery(name);
-        setIsOpen(false);
-        onChange(m.id);
-    };
-
-    const clear = () => { setQuery(""); setSelectedName(null); setResults([]); setIsOpen(false); onChange(""); };
-
-    return (
-        <div ref={wrapperRef} className="relative">
-            <div className="flex items-center gap-1">
-                <input
-                    type="text"
-                    value={query}
-                    onChange={handleInput}
-                    placeholder="Type member name to search..."
-                    className="w-full h-11 px-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
-                />
-                {value && (
-                    <button type="button" onClick={clear} className="p-2 text-[#8A817C] hover:text-[#121212]">
-                        <X className="w-4 h-4" />
-                    </button>
-                )}
-            </div>
-            {isOpen && menuRect && createPortal(
-                <div
-                    className="fixed z-50 bg-[#FFFFFF] border border-[#121212]/10 rounded-lg shadow-lg max-h-64 overflow-y-auto"
-                    style={{ top: menuRect.top, left: menuRect.left, width: menuRect.width }}
-                >
-                    {results.map((m) => (
-                        <button
-                            key={m.id}
-                            type="button"
-                            onClick={() => pick(m)}
-                            className="w-full text-left px-4 py-2.5 hover:bg-[#F4F1EA]/60 transition-colors border-b border-[#121212]/5 last:border-0"
-                        >
-                            <div className="text-sm font-medium text-[#121212]">{m.firstname} {m.lastname}</div>
-                            <div className="text-xs font-mono text-[#8A817C] mt-0.5">{m.email}</div>
-                        </button>
-                    ))}
-                </div>,
-                document.body
-            )}
-        </div>
     );
 }
 
@@ -280,6 +169,9 @@ export default withAuth(function AdminManagementPage() {
     const openGrantForm = () => {
         setShowGrantForm(true);
         setSelectedAdmin(null);
+        setGrantMemberId("");
+        setGrantMemberLabel("");
+        setGrantRoleId("");
         setGrantError(null);
         setGrantSuccess(null);
     };
@@ -300,6 +192,7 @@ export default withAuth(function AdminManagementPage() {
 
     // ── grant form ─────────────────────────────────────────────────────────
     const [grantMemberId, setGrantMemberId] = useState("");
+    const [grantMemberLabel, setGrantMemberLabel] = useState("");
     const [grantRoleId, setGrantRoleId] = useState("");
     const [grantError, setGrantError] = useState<string | null>(null);
     const [grantSuccess, setGrantSuccess] = useState<string | null>(null);
@@ -356,6 +249,7 @@ export default withAuth(function AdminManagementPage() {
         try {
             await grantAdmin({ memberId: grantMemberId, adminRoleId: grantRoleId });
             setGrantMemberId("");
+            setGrantMemberLabel("");
             setGrantRoleId("");
             setGrantSuccess("Admin access granted successfully.");
             setTimeout(() => {
@@ -688,7 +582,11 @@ export default withAuth(function AdminManagementPage() {
                                             <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
                                                 Member
                                             </label>
-                                            <MemberSearchInput value={grantMemberId} onChange={setGrantMemberId} />
+                                            <MemberSearchSelect
+                                                value={grantMemberId}
+                                                label={grantMemberLabel}
+                                                onChange={(id, label) => { setGrantMemberId(id); setGrantMemberLabel(label); }}
+                                            />
                                         </div>
                                         <div>
                                             <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">

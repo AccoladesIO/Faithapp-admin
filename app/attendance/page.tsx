@@ -5,8 +5,9 @@ import { withAuth } from "@/utils/auth/with-auth";
 import {
     Search, SlidersHorizontal,
     RefreshCw, MapPin, Clock, X, Trophy, History,
-    UserPlus, CheckCircle2, Loader2,
+    UserPlus, CheckCircle2, Loader2, BarChart2, List,
 } from "lucide-react";
+import { BarChart } from "@/components/charts/bar-chart";
 import {
     useAttendanceHistory,
     useAttendanceLeaderboard,
@@ -15,10 +16,12 @@ import {
     AttendanceHistoryFilters,
     AttendanceStatusEnum,
 } from "@/hooks/use-attendance";
-import { useMembers } from "@/hooks/use-member";
 import { useEvents, ServiceSlot } from "@/hooks/use-events";
 import { PaginationBar } from "@/components/ui/pagination-bar";
+import { EmailReportButton } from "@/components/reports/email-report-button";
+import { api } from "@/utils/auth/axios-client";
 import { DismissibleError } from "@/components/ui/dismissible-error";
+import { MemberSearchSelect } from "@/components/ui/member-search-select";
 
 // The create/update event payload's ServiceSlot type has no `id` — the read
 // path (GET /events) returns real persisted slots that do. Widen locally
@@ -177,7 +180,6 @@ function RecordDetail({
 const MARK_STATUS_OPTIONS: AttendanceStatusEnum[] = ["PRESENT", "LATE", "ON_LEAVE", "ABSENT", "ATTENDED_ONLINE"];
 
 function MarkAttendanceModal({ onClose, onMarked }: { onClose: () => void; onMarked: () => void }) {
-    const { members, isLoading: membersLoading, onSearchChange } = useMembers(8);
     const { events, isLoading: eventsLoading } = useEvents(20);
     const { adminMarkAttendance, isSubmitting, error } = useAttendanceAdmin();
 
@@ -223,31 +225,11 @@ function MarkAttendanceModal({ onClose, onMarked }: { onClose: () => void; onMar
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8A817C] mb-1.5">Member</label>
-                            <input
-                                type="text"
-                                placeholder="Search by name or email…"
-                                onChange={(e) => onSearchChange(e.target.value)}
-                                className="w-full px-3 py-2 border border-[#121212]/10 rounded-lg text-sm outline-none focus:border-[#121212]/30"
+                            <MemberSearchSelect
+                                value={selectedMemberId}
+                                label={selectedMemberLabel}
+                                onChange={(id, label) => { setSelectedMemberId(id); setSelectedMemberLabel(label); }}
                             />
-                            {membersLoading ? (
-                                <p className="text-xs text-[#8A817C] mt-2">Searching…</p>
-                            ) : (
-                                <div className="mt-2 max-h-32 overflow-y-auto space-y-1">
-                                    {members.map((m) => (
-                                        <button
-                                            type="button"
-                                            key={m.id}
-                                            onClick={() => { setSelectedMemberId(m.id); setSelectedMemberLabel(`${m.firstname} ${m.lastname}`); }}
-                                            className={`w-full text-left px-3 py-2 rounded-lg text-xs border transition-colors ${selectedMemberId === m.id ? "bg-[#121212] text-white border-[#121212]" : "border-[#121212]/5 hover:bg-[#F4F1EA]"}`}
-                                        >
-                                            {m.firstname} {m.lastname} <span className="opacity-60">— {m.email}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                            {selectedMemberId && (
-                                <p className="text-xs text-[#121212] mt-1.5">Selected: <span className="font-medium">{selectedMemberLabel}</span></p>
-                            )}
                         </div>
 
                         <div>
@@ -336,10 +318,12 @@ export default withAuth(function AttendancePage() {
         isLoading: leaderboardLoading,
         error: leaderboardError,
         changeDaysAgo,
+        refetch: refetchLeaderboard,
     } = useAttendanceLeaderboard(30, 10);
 
     const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
     const [showMarkModal, setShowMarkModal] = useState(false);
+    const [leaderboardView, setLeaderboardView] = useState<"cards" | "chart">("cards");
 
     // Local form state for history filters
     const [searchQuery, setSearchQuery] = useState("");
@@ -357,6 +341,16 @@ export default withAuth(function AttendancePage() {
         });
     };
 
+    const emailExport = async (recipientEmail?: string) => {
+        await api.post("/attendances/export-email", {
+            recipientEmail,
+            status: statusFilter || undefined,
+            dateFrom: dateFrom || undefined,
+            dateTo: dateTo || undefined,
+            search: searchQuery.trim() || undefined,
+        });
+    };
+
     const handleResetFilters = () => {
         setSearchQuery("");
         setStatusFilter("");
@@ -367,6 +361,7 @@ export default withAuth(function AttendancePage() {
 
     const medals = ["🥇", "🥈", "🥉"];
     const borders = ["border-yellow-500", "border-slate-400", "border-amber-700"];
+    const activeTabIsLoading = activeTab === "history" ? isLoading : leaderboardLoading;
 
     return (
         <div className="space-y-10 font-sans">
@@ -382,12 +377,22 @@ export default withAuth(function AttendancePage() {
                     </p>
                 </div>
 
-                <button
-                    onClick={() => setShowMarkModal(true)}
-                    className="flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors w-fit"
-                >
-                    <UserPlus className="w-3.5 h-3.5" /> Mark Attendance
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setShowMarkModal(true)}
+                        className="flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors w-fit"
+                    >
+                        <UserPlus className="w-3.5 h-3.5" /> Mark Attendance
+                    </button>
+                    <button
+                        onClick={() => (activeTab === "history" ? refetch() : refetchLeaderboard())}
+                        disabled={activeTabIsLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${activeTabIsLoading ? "animate-spin" : ""}`} />
+                    </button>
+                </div>
             </div>
 
             {showMarkModal && (
@@ -423,7 +428,7 @@ export default withAuth(function AttendancePage() {
                         <h2 className="text-sm font-semibold uppercase tracking-wider text-[#121212]">
                             Top Performers
                         </h2>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3 flex-wrap">
                             <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8A817C]">
                                 Period:
                             </span>
@@ -442,8 +447,53 @@ export default withAuth(function AttendancePage() {
                                     </button>
                                 ))}
                             </div>
+                            <div className="flex gap-1">
+                                <button
+                                    onClick={() => setLeaderboardView("cards")}
+                                    className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-widest rounded-lg transition-colors ${
+                                        leaderboardView === "cards" ? "bg-[#121212] text-white" : "text-[#8A817C] hover:text-[#121212]"
+                                    }`}
+                                >
+                                    <List className="w-3.5 h-3.5" />
+                                    Table
+                                </button>
+                                <button
+                                    onClick={() => setLeaderboardView("chart")}
+                                    className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-widest rounded-lg transition-colors ${
+                                        leaderboardView === "chart" ? "bg-[#121212] text-white" : "text-[#8A817C] hover:text-[#121212]"
+                                    }`}
+                                >
+                                    <BarChart2 className="w-3.5 h-3.5" />
+                                    Chart
+                                </button>
+                            </div>
                         </div>
                     </div>
+
+                    {leaderboardView === "chart" && leaderboardLoading && (
+                        <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl p-6 animate-pulse">
+                            <div className="h-48 bg-[#F4F1EA] rounded-lg" />
+                        </div>
+                    )}
+                    {leaderboardView === "chart" && !leaderboardLoading && leaderboard.length === 0 && (
+                        <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl p-8 text-center text-xs text-[#8A817C]">
+                            No leaderboard data for this period.
+                        </div>
+                    )}
+                    {leaderboardView === "chart" && !leaderboardLoading && leaderboard.length > 0 && (
+                        <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl p-6">
+                            <BarChart
+                                layout="vertical"
+                                data={leaderboard.map((item) => ({ name: item.name, presentCount: item.presentCount, absentCount: item.absentCount }))}
+                                xKey="name"
+                                series={[
+                                    { key: "presentCount", label: "Present", color: "#121212" },
+                                    { key: "absentCount", label: "Absent", color: "#EADCC9" },
+                                ]}
+                                height={Math.max(200, leaderboard.length * 36)}
+                            />
+                        </div>
+                    )}
 
                     {leaderboardError && (
                         <div className="bg-red-50 border border-red-200 p-4 rounded-lg text-xs text-red-700">
@@ -451,7 +501,7 @@ export default withAuth(function AttendancePage() {
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {leaderboardView === "cards" && <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {leaderboardLoading ? (
                             Array.from({ length: 3 }).map((_, i) => <SkeletonLeaderCard key={i} />)
                         ) : leaderboard.length === 0 ? (
@@ -494,9 +544,9 @@ export default withAuth(function AttendancePage() {
                                 );
                             })
                         )}
-                    </div>
+                    </div>}
 
-                    {!leaderboardLoading && leaderboard.length > 3 && (
+                    {leaderboardView === "cards" && !leaderboardLoading && leaderboard.length > 3 && (
                         <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden">
                             <table className="w-full text-left border-collapse">
                                 <tbody className="divide-y divide-[#121212]/5 text-xs">
@@ -601,6 +651,7 @@ export default withAuth(function AttendancePage() {
                             >
                                 <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
                             </button>
+                            <EmailReportButton onExport={emailExport} />
                         </div>
                     </form>
 

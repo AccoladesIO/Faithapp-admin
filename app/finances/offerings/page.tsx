@@ -317,7 +317,7 @@ function DetailPanel({
 }
 
 export default withAuth(function OfferingsPage() {
-    const { offerings, pagination, isLoading, isSubmitting, error, goToPage, applyFilters, createOffering, reconcileOffering } = useOfferings();
+    const { offerings, pagination, isLoading, isSubmitting, error, goToPage, applyFilters, createOffering, reconcileOffering, refetch } = useOfferings();
     const { funds } = useFunds();
 
     const [selected, setSelected] = useState<Offering | null>(null);
@@ -378,14 +378,24 @@ export default withAuth(function OfferingsPage() {
                         Record and reconcile all giving (tithes, offerings, pledges, seeds) by fund
                     </p>
                 </div>
-                <button
-                    type="button"
-                    onClick={openCreate}
-                    className="flex items-center space-x-2 h-10 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors rounded-xl"
-                >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Record Giving</span>
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={openCreate}
+                        className="flex items-center space-x-2 h-10 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors rounded-xl"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Record Giving</span>
+                    </button>
+                    <button
+                        onClick={() => refetch()}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
+                </div>
             </div>
 
             {/* Stats */}

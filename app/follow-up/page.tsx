@@ -701,6 +701,24 @@ const FollowUpPage = () => {
                         Manage first timers, follow-up tasks, and outreach reports
                     </p>
                 </div>
+                {(activeTab === "first-timers" || activeTab === "tasks") && (
+                    <button
+                        onClick={() => {
+                            if (activeTab === "first-timers") {
+                                applyFtFilters({});
+                            } else if (taskViewMode === "STALE") {
+                                fetchStaleTasks({ daysInactive: staleDays, page: 1 });
+                            } else {
+                                fetchTasks({ page: 1, status: taskViewMode || undefined, search: taskSearch || undefined });
+                            }
+                        }}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40 self-start sm:self-auto"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
+                )}
             </div>
 
             <DismissibleError message={error} />

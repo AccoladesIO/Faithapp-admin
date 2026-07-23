@@ -190,6 +190,9 @@ export default function Sidebar() {
                 { name: "Groups",     href: "/groups",         permission: "groups:read", moduleKey: "announcements" },
                 { name: "Sermons",    href: "/sermons",        permission: "sermon:read", moduleKey: "sermons" },
                 { name: "Games",      href: "/games",          permission: "games:read", moduleKey: "games" },
+                { name: "Service Ratings", href: "/service-ratings", permission: "service_rating:read", moduleKey: "service_ratings" },
+                { name: "Volunteering", href: "/volunteering", permission: "volunteer:read", moduleKey: "volunteering" },
+                { name: "Fellowships", href: "/small-groups", permission: "small_group:read", moduleKey: "small_groups" },
             ],
         },
         {

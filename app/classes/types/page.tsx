@@ -28,6 +28,7 @@ export default withAuth(function ClassTypesPage() {
         isLoading,
         isSubmitting,
         error,
+        fetchClassTypes,
         createClassType,
         updateClassType,
         deleteClassType,
@@ -146,13 +147,23 @@ export default withAuth(function ClassTypesPage() {
                         Define class types and the level each one promotes into
                     </p>
                 </div>
-                <button
-                    onClick={openCreateForm}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors rounded-lg self-start sm:self-auto"
-                >
-                    <Plus className="w-3.5 h-3.5" />
-                    New Class Type
-                </button>
+                <div className="flex items-center gap-3 self-start sm:self-auto">
+                    <button
+                        onClick={openCreateForm}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#121212] text-[#FFFFFF] text-xs font-semibold uppercase tracking-widest hover:bg-[#121212]/90 transition-colors rounded-lg"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        New Class Type
+                    </button>
+                    <button
+                        onClick={() => fetchClassTypes()}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
+                </div>
             </div>
 
             <DismissibleError message={error} />

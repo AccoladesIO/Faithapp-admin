@@ -5,7 +5,7 @@ import { withAuth } from "@/utils/auth/with-auth";
 import {
     Search, Plus, X,
     Package, AlertTriangle, Wrench, XCircle, Eye, Pencil,
-    RotateCcw, LogOut, CheckCircle2,
+    RotateCcw, LogOut, CheckCircle2, RefreshCw,
 } from "lucide-react";
 import { api } from "@/utils/auth/axios-client";
 import { useAssets, Asset, AssetStatus, CreateAssetDto, AssetCheckout } from "@/hooks/use-assets";
@@ -398,6 +398,14 @@ export default withAuth(function InventoryPage() {
                         className="flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors"
                     >
                         <Plus className="w-3.5 h-3.5" /> New Asset
+                    </button>
+                    <button
+                        onClick={() => fetchAssets()}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
                     </button>
                 </div>
             </div>

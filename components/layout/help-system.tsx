@@ -373,6 +373,50 @@ const HELP: Record<string, PageHelp> = {
             { label: "Advance or end a session", how: "From the presenter view — 'Next Question' or 'End Session'" },
         ],
     },
+    "/service-ratings": {
+        title: "Service Ratings",
+        summary: "Member feedback on services — a quick star rating plus optional comment, submitted from the mobile app after a service. Gives leadership a pulse on how the congregation is experiencing services without anyone having to ask in person.",
+        tips: [
+            "Comments are shown anonymized by default — identity is only revealed to admins with the Moderate permission, so a member's honest feedback isn't tied to their name for most viewers.",
+            "Filter by event and date range to compare how a specific service or period is trending, not just the all-time average.",
+            "The 'Hide' action on a comment permanently removes it — use it for spam or abuse, not just disagreement.",
+        ],
+        tasks: [
+            { label: "See how a specific service is trending", how: "Search for the event in the filter bar → Apply" },
+            { label: "Reveal who left a comment", how: "Requires the Moderate permission — the member's name appears automatically under comments once you have it" },
+            { label: "Remove an inappropriate comment", how: "Click the trash icon on the comment row → confirm (requires Moderate permission)" },
+        ],
+    },
+    "/volunteering": {
+        title: "Volunteering",
+        summary: "Open serving opportunities members can browse and sign up for directly from the mobile app — a self-serve alternative to manually assigning workers to a roster. Capacity is optional; leave it blank for unlimited sign-ups.",
+        tips: [
+            "Department here is for your own filtering/reporting only — it does not restrict who can sign up.",
+            "Setting a capacity closes sign-up automatically once it's reached; members will see the opportunity as full.",
+            "'Cancel' on an opportunity stops new sign-ups but keeps the existing roster and history intact — there's no hard delete.",
+        ],
+        tasks: [
+            { label: "Create an opportunity", how: "'New Opportunity' → title, date, optional description/capacity/department → Create Opportunity" },
+            { label: "See who signed up", how: "Click the roster icon on an opportunity's row" },
+            { label: "Close an opportunity to new sign-ups", how: "Click the cancel icon on an opportunity's row" },
+        ],
+    },
+    "/small-groups": {
+        title: "Fellowships",
+        summary: "Cells and home fellowships members can browse and join directly from the mobile app. Each fellowship can have a leader — any member, not necessarily a worker — who can record attendance for their own fellowship's meetings from the app.",
+        tips: [
+            "Leaders don't need to be workers or admins — any member can lead a fellowship and record its attendance.",
+            "Members join and leave fellowships themselves; you don't need to add them manually unless removing someone (e.g. moderation).",
+            "Deleting a fellowship removes its membership and attendance history — there's no separate archive/cancel state like Volunteering.",
+        ],
+        tasks: [
+            { label: "Create a fellowship", how: "'New Fellowship' → name, optional description/leader/meeting day/location → Create Fellowship" },
+            { label: "See who's in a fellowship", how: "Click the roster icon on a fellowship's row → Roster tab" },
+            { label: "See a fellowship's attendance history", how: "Click the roster icon on a fellowship's row → Attendance tab" },
+            { label: "Remove a member from a fellowship", how: "Open the fellowship's roster → click the trash icon next to their name" },
+            { label: "Change or remove a fellowship's leader", how: "Click the edit (pencil) icon on a fellowship's row → update Leader → Save Changes" },
+        ],
+    },
     "/inventories": {
         title: "Inventories",
         summary: "Track the church's physical assets and equipment — furniture, electronics, instruments, vehicles and any other items. Each record stores condition, location and assignment so auditing is straightforward.",

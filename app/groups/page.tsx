@@ -545,7 +545,7 @@ function GroupDetailPanel({
 function GroupsPage() {
     const { hasPermission } = useAuth();
     const canWrite = hasPermission("groups:write");
-    const { groups, isLoading, isSubmitting, error, createGroup } = useGroups();
+    const { groups, isLoading, isSubmitting, error, fetchGroups, createGroup } = useGroups();
 
     const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
@@ -580,14 +580,24 @@ function GroupsPage() {
                         Reusable rosters of members &amp; workers for targeted announcements
                     </p>
                 </div>
-                {canWrite && (
+                <div className="flex items-center gap-3 self-start sm:self-auto">
+                    {canWrite && (
+                        <button
+                            onClick={() => setCreating((c) => !c)}
+                            className="h-10 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest rounded-lg flex items-center gap-2 hover:bg-[#121212]/90 transition-colors"
+                        >
+                            <Plus className="w-3.5 h-3.5" /> New Group
+                        </button>
+                    )}
                     <button
-                        onClick={() => setCreating((c) => !c)}
-                        className="h-10 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest rounded-lg flex items-center gap-2 hover:bg-[#121212]/90 transition-colors self-start sm:self-auto"
+                        onClick={() => fetchGroups()}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
                     >
-                        <Plus className="w-3.5 h-3.5" /> New Group
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
                     </button>
-                )}
+                </div>
             </div>
 
             <DismissibleError message={error} />

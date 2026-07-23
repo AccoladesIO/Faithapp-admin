@@ -1673,10 +1673,20 @@ function ProgrammesTab({ hook }: { hook: ReturnType<typeof useServiceProgramme> 
                 <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C]">
                     {eventGroups.length} event{eventGroups.length !== 1 ? "s" : ""} · {programmes.length} service slot{programmes.length !== 1 ? "s" : ""}
                 </span>
-                <button onClick={handleOpenCreate}
-                    className="flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors">
-                    <Plus className="w-3.5 h-3.5" /> New Programme
-                </button>
+                <div className="flex items-center gap-2">
+                    <button onClick={handleOpenCreate}
+                        className="flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors">
+                        <Plus className="w-3.5 h-3.5" /> New Programme
+                    </button>
+                    <button
+                        onClick={() => fetchProgrammes(pagination?.page ?? 1)}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
+                </div>
             </div>
 
             <DismissibleError message={error} />
@@ -1905,9 +1915,19 @@ function TemplatesTab({ hook }: { hook: ReturnType<typeof useServiceProgramme> }
 
     return (
         <div className="space-y-5">
-            <p className="text-xs text-[#8A817C] font-light">
-                Templates are auto-saved when a programme with &quot;Save as Template&quot; enabled completes its session.
-            </p>
+            <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-[#8A817C] font-light">
+                    Templates are auto-saved when a programme with &quot;Save as Template&quot; enabled completes its session.
+                </p>
+                <button
+                    onClick={() => fetchTemplates()}
+                    disabled={isLoading}
+                    className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40 shrink-0"
+                    title="Refresh"
+                >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                </button>
+            </div>
             <DismissibleError message={error} />
             <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">

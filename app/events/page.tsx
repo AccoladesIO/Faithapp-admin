@@ -186,7 +186,7 @@ export default withAuth(function AdminEventsPage() {
 
     const { events, pagination: eventPagination, isLoading: eventsLoading, isSubmitting: eventSubmitting, error: eventError, fetchEvents, createEvent, updateEvent, deleteEvent } = useEvents();
     const [upcomingOnly, setUpcomingOnly] = useState(false);
-    const { eventConfigs, isLoading: configsLoading, isSubmitting: configSubmitting, error: configError, createEventConfig, updateEventConfig, deleteEventConfig } = useEventConfigs();
+    const { eventConfigs, isLoading: configsLoading, isSubmitting: configSubmitting, error: configError, fetchEventConfigs, createEventConfig, updateEventConfig, deleteEventConfig } = useEventConfigs();
     const { venues } = useVenues();
 
     const [eventForm, setEventForm] = useState(defaultEventForm);
@@ -410,6 +410,7 @@ export default withAuth(function AdminEventsPage() {
 
     const isEventBusy = eventSubmitting || eventsLoading;
     const isConfigBusy = configSubmitting || configsLoading;
+    const activeTabRefreshing = activeTab === "events" ? eventsLoading : configsLoading;
 
     return (
         <div className="space-y-10 font-sans">
@@ -453,6 +454,14 @@ export default withAuth(function AdminEventsPage() {
                             New Config
                         </button>
                     )}
+                    <button
+                        onClick={() => (activeTab === "events" ? fetchEvents({ upcoming: upcomingOnly || undefined, page: eventPagination?.page ?? 1 }) : fetchEventConfigs())}
+                        disabled={isEventBusy || isConfigBusy}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${activeTabRefreshing ? "animate-spin" : ""}`} />
+                    </button>
                 </div>
             </div>
 

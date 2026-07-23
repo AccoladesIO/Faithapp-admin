@@ -32,7 +32,10 @@ export type AdminPermission =
     | "pastor_feedback:read" | "pastor_feedback:write"
     | "evangelism:read" | "evangelism:write"
     | "sermon:read" | "sermon:write"
-    | "games:read" | "games:write";
+    | "games:read" | "games:write"
+    | "service_rating:read" | "service_rating:moderate"
+    | "volunteer:read" | "volunteer:write"
+    | "small_group:read" | "small_group:write";
 
 export interface PermissionGroupItem {
     value: AdminPermission;
@@ -146,6 +149,18 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     { group: "Games", moduleKey: "games", permissions: [
         { value: "games:read", label: "View Games" },
         { value: "games:write", label: "Manage Games" },
+    ] },
+    { group: "Service Ratings", moduleKey: "service_ratings", permissions: [
+        { value: "service_rating:read", label: "View Service Ratings" },
+        { value: "service_rating:moderate", label: "Moderate Service Ratings" },
+    ] },
+    { group: "Volunteering", moduleKey: "volunteering", permissions: [
+        { value: "volunteer:read", label: "View Volunteer Opportunities" },
+        { value: "volunteer:write", label: "Manage Volunteer Opportunities" },
+    ] },
+    { group: "Fellowships", moduleKey: "small_groups", permissions: [
+        { value: "small_group:read", label: "View Fellowships" },
+        { value: "small_group:write", label: "Manage Fellowships" },
     ] },
     { group: "Evangelism", moduleKey: "evangelism", permissions: [
         { value: "evangelism:read", label: "View Evangelism Converts" },
