@@ -355,6 +355,24 @@ const HELP: Record<string, PageHelp> = {
             { label: "Announce that a service just went live", how: "'Announce Live' → choose YouTube or Mixlr → paste the livestream link → Send Announcement" },
         ],
     },
+    "/games": {
+        title: "Games",
+        summary: "Kahoot-style live quizzes for member engagement — build a game with multiple-choice questions, then start a live session and present it from this screen. Anyone with the join code can play from their phone, no sign-up beyond being logged in.",
+        tips: [
+            "Add at least one question before you can start a live session.",
+            "Faster correct answers score more — full points for an instant answer, down to half the question's points right at the deadline.",
+            "The join code (e.g. GAME-X7K2P9) is shown at the top of the presenter view — share it verbally or on screen for players to enter in their app.",
+            "Department/Class on a game are for your own filtering and reporting only — they don't restrict who can join with the code.",
+            "'End Session' is final for that run, but the game itself is reusable — start a new session any time to play it again.",
+        ],
+        tasks: [
+            { label: "Create a game", how: "'New Game' → title and optional description → Create & Add Questions" },
+            { label: "Add a question", how: "On the game's question list → 'Add Question' → text, options, mark the correct one, points, time limit → Add Question" },
+            { label: "Reorder questions", how: "Use the up/down arrows on each question row" },
+            { label: "Start a live session", how: "'Start Live Session' on the question list — opens the presenter view with the join code" },
+            { label: "Advance or end a session", how: "From the presenter view — 'Next Question' or 'End Session'" },
+        ],
+    },
     "/inventories": {
         title: "Inventories",
         summary: "Track the church's physical assets and equipment — furniture, electronics, instruments, vehicles and any other items. Each record stores condition, location and assignment so auditing is straightforward.",

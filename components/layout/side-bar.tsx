@@ -183,12 +183,13 @@ export default function Sidebar() {
             ],
         },
         {
-            name: "Announcements",
+            name: "Engagement",
             icon: Megaphone,
             subItems: [
                 { name: "Broadcasts", href: "/announcements", permission: "announcements:read", moduleKey: "announcements" },
                 { name: "Groups",     href: "/groups",         permission: "groups:read", moduleKey: "announcements" },
                 { name: "Sermons",    href: "/sermons",        permission: "sermon:read", moduleKey: "sermons" },
+                { name: "Games",      href: "/games",          permission: "games:read", moduleKey: "games" },
             ],
         },
         {
