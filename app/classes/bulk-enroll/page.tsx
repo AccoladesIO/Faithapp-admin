@@ -7,7 +7,7 @@ import {
     ArrowLeft, Search, UserRoundPlus, RefreshCw, CheckCircle2,
     ShieldAlert, X, ChevronLeft, ChevronRight, Users,
 } from "lucide-react";
-import { useClasses, ChurchClass, ClassType } from "@/hooks/use-classes";
+import { useClasses, ChurchClass } from "@/hooks/use-classes";
 import { useMembers, Member } from "@/hooks/use-member";
 import { api } from "@/utils/auth/axios-client";
 
@@ -17,14 +17,6 @@ type ApiError = { response?: { data?: { message?: string } }; message?: string }
 
 const fullName = (m: { firstname: string; lastname: string }) =>
     [m.firstname, m.lastname].filter(Boolean).join(" ");
-
-const CLASS_TYPE_LABELS: Record<ClassType, string> = {
-    BELIEVERS: "Believers",
-    BAPTISMAL: "Baptismal",
-    WORKERS_IN_TRAINING: "Workers in Training",
-    BIBLE_COLLEGE: "Bible College",
-    SCHOOL_OF_DISCIPLESHIP: "School of Discipleship",
-};
 
 // ─── Class selector combobox ──────────────────────────────────────────────────
 
@@ -74,7 +66,7 @@ function ClassCombobox({
                     <>
                         <span className="flex-1 text-sm text-[#121212] font-light truncate">{selected.name}</span>
                         <span className="text-[10px] text-[#8A817C] font-semibold uppercase tracking-wider shrink-0">
-                            {CLASS_TYPE_LABELS[selected.type]}
+                            {selected.classType.name}
                         </span>
                         <button type="button" onClick={clear} className="shrink-0 text-[#8A817C] hover:text-[#121212] ml-1">
                             <X className="w-3.5 h-3.5" />
@@ -107,7 +99,7 @@ function ClassCombobox({
                             >
                                 <span className="text-sm text-[#121212] font-light">{c.name}</span>
                                 <span className="text-[10px] text-[#8A817C] font-semibold uppercase tracking-wider shrink-0">
-                                    {CLASS_TYPE_LABELS[c.type]}
+                                    {c.classType.name}
                                 </span>
                             </button>
                         ))

@@ -37,9 +37,10 @@ const HELP: Record<string, PageHelp> = {
             "Members cannot be deleted — use 'Inactive' status to remove their access. This preserves their full history (attendance, giving, etc.).",
             "A member must be Active before they can be promoted to a worker.",
             "The 'Promote to Worker' action creates a worker profile linked to this member and asks you to assign a department.",
+            "'New Member' creates a plain member account for someone who can't self-register (no phone/email habit) — it's the same temp-password flow as self-signup. Promoting them to a worker afterwards is a separate step.",
         ],
         tasks: [
-            { label: "Add a new member", how: "'Add Member' button → fill in name, contact details and date of birth → Save" },
+            { label: "Add a new member", how: "'New Member' button → fill in first/last name, email and optional phone → Create. A temporary password is emailed automatically." },
             { label: "Edit member details", how: "Click the member row → edit in the right panel" },
             { label: "Promote to worker", how: "Open member detail → 'Promote to Worker' → select department" },
             { label: "Deactivate a member", how: "Open member detail → Status → set to Inactive" },
@@ -71,11 +72,13 @@ const HELP: Record<string, PageHelp> = {
             "Past attendance records cannot be deleted — corrections are handled by updating the status.",
             "Attendance data feeds the Dashboard headcount trend chart.",
             "Export the list to CSV to share with leadership or archive offline.",
+            "'Mark Attendance' handles two cases with one action: checking in a member with no phone, and fixing/backfilling a missed check-in. A streak is calculated live from attendance history, so marking a previously-missed service present restores the streak automatically — there's no separate streak tool.",
         ],
         tasks: [
             { label: "Record attendance for a service", how: "Select the event and slot → search or tick members → Save" },
             { label: "Check a member's attendance history", how: "Members page → open member → Attendance tab in the panel" },
             { label: "Export attendance report", how: "Top-right Export button above the attendance list" },
+            { label: "Manually check in a member (no phone) or restore their streak", how: "'Mark Attendance' button (top right) → search the member → pick event, slot and status → Save" },
         ],
     },
     "/birthday": {
@@ -220,24 +223,28 @@ const HELP: Record<string, PageHelp> = {
             "Workers can only belong to one department at a time; to move them, update their worker profile.",
             "Department names appear in filter dropdowns across the Workers, Prayer Schedule and other modules.",
             "Deleting a department is blocked if any workers are still assigned to it.",
+            "The 'Key' field links a department to a feature's access rules (e.g. Sunday School, Evangelism) — pick a suggested key from the dropdown or type a brand-new one to create a custom access category.",
         ],
         tasks: [
             { label: "Add a new department", how: "'New Department' → enter name and optional description" },
             { label: "Edit a department name", how: "Click the department row → edit in the panel → Save" },
+            { label: "Link a department to a feature's access rules", how: "Set its Key — pick a suggestion or type a custom one" },
         ],
     },
     "/classes": {
-        title: "Bible Classes",
-        summary: "Manage discipleship and Bible study classes — create classes, enrol members, assign a worker as class leader, and track attendance per session. Classes are independent from Sunday services.",
+        title: "Training Classes",
+        summary: "Manage discipleship and Bible study classes — create classes, enrol members, assign a worker as class leader, and issue a certificate once a member completes a class. A class type can point to a 'next level' so completed members can be promoted straight into the follow-on class.",
         tips: [
             "Assign a worker as the class leader before enrolling students — the leader appears on class communications.",
             "Track attendance per class session from the class detail view.",
             "A member can be enrolled in multiple classes simultaneously.",
+            "Issue Certificate only appears once an enrolment is marked Completed — the certificate number is optional.",
         ],
         tasks: [
             { label: "Create a new class", how: "'New Class' → name, description, assign leader" },
             { label: "Enrol a member", how: "Open the class → 'Enrol Member' → search and add" },
             { label: "Record class attendance", how: "Open the class → select session → mark attendees" },
+            { label: "Issue a certificate", how: "Open the class → find a Completed enrolment → 'Issue Certificate' → optional certificate number → Confirm" },
         ],
     },
     "/childrens-church": {
@@ -302,6 +309,7 @@ const HELP: Record<string, PageHelp> = {
             "Group audience reaches everyone in that group, including phone-only entries (e.g. imported first-timers) alongside real members — see the Groups page.",
             "Your SMS balance is shown at the top whenever you have SMS permissions — top up before it runs low, since a broadcast can't send without balance.",
             "Use 'View Logs' next to the SMS balance to check delivery status for any SMS you've sent — it's a live read from the SMS provider, not a local record.",
+            "Each announcement shows emoji reaction counts (👍 ❤️ 🙏 🎉 👏) below its metadata once members start reacting — a quick read on engagement, though it's not shown live, just on refresh.",
         ],
         tasks: [
             { label: "Broadcast to all members", how: "Audience → All Members → write message → Send" },
@@ -329,6 +337,84 @@ const HELP: Record<string, PageHelp> = {
             { label: "Import first-timers from a date range", how: "Select a group → 'Add from First-Timers' → pick a date range → Import First-Timers" },
             { label: "Remove someone from a group", how: "Select the group → click the X on their roster row (works for members and phone-only entries alike)" },
             { label: "Send a message to a group", how: "Go to Announcements → set Audience to Group → pick the group → write → Send" },
+        ],
+    },
+    "/sermons": {
+        title: "Sermon Archive",
+        summary: "A link-based library of past sermons — no file uploads. Each entry links out to where the recording actually lives (YouTube, Mixlr) and appears in the member app's Sermons tab. Also home to the 'Announce Live' trigger for letting everyone know a service just went live.",
+        tips: [
+            "At least one of YouTube or Mixlr link is required per sermon — you can add both if the same message is on each platform.",
+            "'Series' is a free-text tag, not a fixed list — use a consistent name across parts of the same series so members can filter by it.",
+            "'Announce Live' sends an instant push notification and in-app announcement to every member — use it the moment a livestream actually starts, not in advance.",
+            "There's no separate approval step — sermons appear in the member app the moment you save them.",
+        ],
+        tasks: [
+            { label: "Add a sermon", how: "'New Sermon' → fill in title, speaker, date, and at least one link → Save" },
+            { label: "Edit or remove a link", how: "Click a sermon row → edit the YouTube/Mixlr field → Save" },
+            { label: "Delete a sermon", how: "Click a sermon row → Delete → confirm" },
+            { label: "Announce that a service just went live", how: "'Announce Live' → choose YouTube or Mixlr → paste the livestream link → Send Announcement" },
+        ],
+    },
+    "/games": {
+        title: "Games",
+        summary: "Kahoot-style live quizzes for member engagement — build a game with multiple-choice questions, then start a live session and present it from this screen. Anyone with the join code can play from their phone, no sign-up beyond being logged in.",
+        tips: [
+            "Add at least one question before you can start a live session.",
+            "Faster correct answers score more — full points for an instant answer, down to half the question's points right at the deadline.",
+            "The join code (e.g. GAME-X7K2P9) is shown at the top of the presenter view — share it verbally or on screen for players to enter in their app.",
+            "Department/Class on a game are for your own filtering and reporting only — they don't restrict who can join with the code.",
+            "'End Session' is final for that run, but the game itself is reusable — start a new session any time to play it again.",
+        ],
+        tasks: [
+            { label: "Create a game", how: "'New Game' → title and optional description → Create & Add Questions" },
+            { label: "Add a question", how: "On the game's question list → 'Add Question' → text, options, mark the correct one, points, time limit → Add Question" },
+            { label: "Reorder questions", how: "Use the up/down arrows on each question row" },
+            { label: "Start a live session", how: "'Start Live Session' on the question list — opens the presenter view with the join code" },
+            { label: "Advance or end a session", how: "From the presenter view — 'Next Question' or 'End Session'" },
+        ],
+    },
+    "/service-ratings": {
+        title: "Service Ratings",
+        summary: "Member feedback on services — a quick star rating plus optional comment, submitted from the mobile app after a service. Gives leadership a pulse on how the congregation is experiencing services without anyone having to ask in person.",
+        tips: [
+            "Comments are shown anonymized by default — identity is only revealed to admins with the Moderate permission, so a member's honest feedback isn't tied to their name for most viewers.",
+            "Filter by event and date range to compare how a specific service or period is trending, not just the all-time average.",
+            "The 'Hide' action on a comment permanently removes it — use it for spam or abuse, not just disagreement.",
+        ],
+        tasks: [
+            { label: "See how a specific service is trending", how: "Search for the event in the filter bar → Apply" },
+            { label: "Reveal who left a comment", how: "Requires the Moderate permission — the member's name appears automatically under comments once you have it" },
+            { label: "Remove an inappropriate comment", how: "Click the trash icon on the comment row → confirm (requires Moderate permission)" },
+        ],
+    },
+    "/volunteering": {
+        title: "Volunteering",
+        summary: "Open serving opportunities members can browse and sign up for directly from the mobile app — a self-serve alternative to manually assigning workers to a roster. Capacity is optional; leave it blank for unlimited sign-ups.",
+        tips: [
+            "Department here is for your own filtering/reporting only — it does not restrict who can sign up.",
+            "Setting a capacity closes sign-up automatically once it's reached; members will see the opportunity as full.",
+            "'Cancel' on an opportunity stops new sign-ups but keeps the existing roster and history intact — there's no hard delete.",
+        ],
+        tasks: [
+            { label: "Create an opportunity", how: "'New Opportunity' → title, date, optional description/capacity/department → Create Opportunity" },
+            { label: "See who signed up", how: "Click the roster icon on an opportunity's row" },
+            { label: "Close an opportunity to new sign-ups", how: "Click the cancel icon on an opportunity's row" },
+        ],
+    },
+    "/small-groups": {
+        title: "Fellowships",
+        summary: "Cells and home fellowships members can browse and join directly from the mobile app. Each fellowship can have a leader — any member, not necessarily a worker — who can record attendance for their own fellowship's meetings from the app.",
+        tips: [
+            "Leaders don't need to be workers or admins — any member can lead a fellowship and record its attendance.",
+            "Members join and leave fellowships themselves; you don't need to add them manually unless removing someone (e.g. moderation).",
+            "Deleting a fellowship removes its membership and attendance history — there's no separate archive/cancel state like Volunteering.",
+        ],
+        tasks: [
+            { label: "Create a fellowship", how: "'New Fellowship' → name, optional description/leader/meeting day/location → Create Fellowship" },
+            { label: "See who's in a fellowship", how: "Click the roster icon on a fellowship's row → Roster tab" },
+            { label: "See a fellowship's attendance history", how: "Click the roster icon on a fellowship's row → Attendance tab" },
+            { label: "Remove a member from a fellowship", how: "Open the fellowship's roster → click the trash icon next to their name" },
+            { label: "Change or remove a fellowship's leader", how: "Click the edit (pencil) icon on a fellowship's row → update Leader → Save Changes" },
         ],
     },
     "/inventories": {
@@ -664,17 +750,19 @@ const HELP: Record<string, PageHelp> = {
     },
     "/system-settings": {
         title: "Module Settings",
-        summary: "Enable or disable individual modules across the portal. Turning a module off hides it from the sidebar and removes its routes — useful for churches that don't use every feature. Required modules cannot be disabled.",
+        summary: "Enable or disable individual modules across the portal. Turning a module off hides it from the sidebar, removes it from role management's permission picker, and blocks its API routes — useful for churches that don't use every feature. Required modules cannot be disabled. You can also rename a module's display label without any code change.",
         tips: [
-            "Disabling a module only hides the UI — it does not delete existing data. Re-enabling it restores full access.",
+            "Disabling a module only hides the UI and blocks access — it does not delete existing data. Re-enabling it restores full access instantly.",
             "Required modules (marked with a lock icon) cannot be toggled — they are essential for the portal to function correctly.",
-            "Changes take effect immediately for all admins without a page refresh.",
+            "Disabling a module also removes its permission group from the role-permission picker in Admin Management, so you can't grant access to a feature that's turned off.",
+            "Renaming a module (pencil icon) only changes its display label everywhere in both the portal and the mobile app — it does not affect the underlying feature or data.",
             "Only admins with Admin Write permission can change module settings.",
         ],
         tasks: [
             { label: "Disable a module", how: "Toggle the switch on the module row to Off — confirms immediately" },
             { label: "Re-enable a module", how: "Toggle the switch back to On — the module reappears in the sidebar" },
             { label: "Check if a module is required", how: "Required modules show a lock icon and their toggle is disabled" },
+            { label: "Rename a module", how: "Click the pencil icon on the module row, type the new label, then confirm with the check icon" },
         ],
     },
 
@@ -806,6 +894,61 @@ const HELP: Record<string, PageHelp> = {
             { label: "Check who is on leave for a date", how: "Date filter → enter the date range → filter Status to Approved" },
         ],
     },
+
+    // ── Pastor Feedback & Prayer Requests ──────────────────────────────────────
+
+    "/pastor-feedback": {
+        title: "Pastor Feedback",
+        summary: "Weekly structured submissions from each department's HOD or Assistant HOD, with responses from a pastor. Read cross-department, filter by department and week, edit a submission on the HOD's behalf, or respond as pastor directly from this page.",
+        tips: [
+            "Filter by Department and Week Of together to find a specific submission quickly — Week Of matches the exact Monday the feedback was submitted for.",
+            "Responding here as pastor only works if your own admin account is linked to a member with a Pastor record — otherwise 'Respond' will fail.",
+            "Editing a submission on the HOD's behalf changes the record directly; there's no separate revision history shown here.",
+            "Deleting a submission is permanent — use it only for genuine mistakes, not to hide feedback you disagree with.",
+        ],
+        tasks: [
+            { label: "Find a specific submission", how: "Department dropdown + Week Of date filter above the table" },
+            { label: "Respond as pastor", how: "Click a submission row → write a response in the Pastor Response panel → Send Response" },
+            { label: "Edit a submission", how: "Click a submission row → 'Edit Submission' → update fields → Save" },
+            { label: "Delete a submission", how: "Click a submission row → 'Delete Submission' → Confirm" },
+        ],
+    },
+    "/prayer-requests": {
+        title: "Prayer Requests",
+        summary: "Private prayer requests submitted by members and workers, plus opt-in-public testimonies and pregnancy prayer case tracking. Requests are visible only to the Prayer team, pastors and admins with this permission — never a public wall. Testimonies default to private; the submitter alone decides whether theirs appears on the public feed.",
+        tips: [
+            "Requests, Testimonies and Pregnancy are separate tabs — a testimony can optionally link back to one of the submitter's own requests, or stand alone as a general testimony.",
+            "Updating a request's status (Open / Prayed For / Answered) here uses the same PRAYER_WRITE permission as the Prayer Roster module — no separate permission exists for this.",
+            "The Testimonies tab here shows every testimony submitted, not just the ones marked public — use it to see the full picture, including private ones.",
+            "This is a different module from Prayer Schedule — that one manages the prayer *meeting* roster; this one is member-submitted requests with no meeting attached.",
+            "Pregnancy cases are created by the Prayer team on mobile, not here — this tab is read + status-only oversight (e.g. marking a case Delivered or Discontinued).",
+            "Click the History icon on a pregnancy case row to see every logged visit — who prayed with her and when, not just the single 'last prayed' date.",
+        ],
+        tasks: [
+            { label: "Review open prayer requests", how: "Requests tab → filter Status to Open → click a row to see the full request" },
+            { label: "Update a request's status", how: "Click a request row → choose Open / Prayed For / Answered in the detail panel" },
+            { label: "See all testimonies (including private)", how: "Switch to the Testimonies tab" },
+            { label: "Update a pregnancy case's status", how: "Pregnancy tab → change the status dropdown on the case row" },
+            { label: "View a pregnancy case's full visit history", how: "Pregnancy tab → History icon on the case row" },
+        ],
+    },
+    "/evangelism": {
+        title: "Evangelism",
+        summary: "Cross-member view of every convert captured through outreach — who onboarded them, who is currently following up, and their journey from Unsaved to Saved to Undergoing Discipleship. Converts are uploaded by any worker on the mobile app; this page is for oversight, reassignment, and linking a convert to their new Member record once they join.",
+        tips: [
+            "A convert isn't necessarily an existing Member — they may just be a name and phone number captured in the field until they join.",
+            "Reassign only accepts workers in the Evangelism department (primary or secondary) — the picker is pre-filtered to that department.",
+            "Link to Member is only available once — it disappears from the detail panel after a convert is linked, since linking is one-directional.",
+            "The mobile 'needs follow-up' flag (overdue after 7 days with no contact) is computed live and not shown here — this admin view is oversight/reassignment, not the day-to-day follow-up inbox.",
+            "The Follow-Up History section in the detail panel lists every contact logged on mobile, newest first — useful for checking a worker actually followed up before reassigning.",
+        ],
+        tasks: [
+            { label: "Reassign a convert's follow-up", how: "Click a convert row → 'Reassign Follow-Up' → pick an Evangelism worker → Reassign" },
+            { label: "Link a convert to a member", how: "Click a convert row → 'Link to Member' → search and select → click the result" },
+            { label: "Filter converts by status", how: "Use the status filter pills above the table" },
+            { label: "Review a convert's full follow-up history", how: "Click a convert row → 'Follow-Up History' in the detail panel" },
+        ],
+    },
 };
 
 const DEFAULT_HELP: PageHelp = {
@@ -842,12 +985,17 @@ const TOUR_MODULES = [
     {
         emoji: "👥",
         name: "People",
-        desc: "Manage the congregation — members, workers, attendance records and birthdays.",
+        desc: "Core congregation records — members, workers, attendance, leave requests and birthdays.",
+    },
+    {
+        emoji: "🤝",
+        name: "Care & Outreach",
+        desc: "First-timer follow-up, evangelism converts, private prayer requests and weekly pastor feedback — the modules for reaching and caring for people.",
     },
     {
         emoji: "🎤",
         name: "Ministry",
-        desc: "Departments, Bible classes, Children's Church, Sunday School and member follow-up.",
+        desc: "Departments, Training Classes, Children's Church and Sunday School.",
     },
     {
         emoji: "📢",

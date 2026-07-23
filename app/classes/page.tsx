@@ -12,11 +12,13 @@ import { PaginationBar } from "@/components/ui/pagination-bar";
 import {
     useClasses,
     ChurchClass,
-    ClassType,
+    ClassTypeRef,
     EnrollmentStatus,
     Enrollment,
     CreateClassPayload,
+    PromotionCandidate,
 } from "@/hooks/use-classes";
+import { useClassTypes } from "@/hooks/use-class-types";
 import { toLocalDate } from "@/utils/parse-local-time";
 import { DismissibleError } from "@/components/ui/dismissible-error";
 import { api } from "@/utils/auth/axios-client";
@@ -35,33 +37,203 @@ const formatDate = (iso: string | null) => {
     });
 };
 
-const CLASS_TYPES: ClassType[] = ["BELIEVERS", "BAPTISMAL", "WORKERS_IN_TRAINING", "BIBLE_COLLEGE", "SCHOOL_OF_DISCIPLESHIP"];
-
-const CLASS_TYPE_LABELS: Record<ClassType, string> = {
-    BELIEVERS: "Believers",
-    BAPTISMAL: "Baptismal",
-    WORKERS_IN_TRAINING: "Workers in Training",
-    BIBLE_COLLEGE: "Bible College",
-    SCHOOL_OF_DISCIPLESHIP: "School of Discipleship",
-};
-
 // ─── Badges ───────────────────────────────────────────────────────────────────
 
-function ClassTypeBadge({ type }: { type: ClassType }) {
-    const map: Record<ClassType, string> = {
-        BELIEVERS: "bg-blue-50 border-blue-100 text-blue-700",
-        BAPTISMAL: "bg-purple-50 border-purple-100 text-purple-700",
-        WORKERS_IN_TRAINING: "bg-[#EADCC9] border-[#EADCC9] text-[#121212]",
-        BIBLE_COLLEGE: "bg-amber-50 border-amber-100 text-amber-700",
-        SCHOOL_OF_DISCIPLESHIP: "bg-green-50 border-green-100 text-green-700",
-    };
+// Class types are now admin-defined (no longer a fixed set), so a per-type
+// color map isn't possible — one consistent style covers all of them.
+function ClassTypeBadge({ classType }: { classType: ClassTypeRef | null | undefined }) {
+    if (!classType) return null;
     return (
-        <span className={`inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border ${map[type]}`}>
-            {CLASS_TYPE_LABELS[type]}
+        <span className="inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border bg-blue-50 border-blue-100 text-blue-700">
+            {classType.name}
         </span>
     );
 }
 
+
+// ─── Promotion ────────────────────────────────────────────────────────────────
+
+// Checks eligibility on mount for each COMPLETED enrollment row — pages are
+// small (10/page) so the extra per-row lookup is cheap and keeps the
+// "next level" decision explicit/admin-confirmed rather than auto-surfaced.
+function PromoteButton({
+    enrollmentId,
+    getPromotionCandidate,
+    promoteEnrollment,
+    onPromoted,
+}: Readonly<{
+    enrollmentId: string;
+    getPromotionCandidate: (id: string) => Promise<PromotionCandidate>;
+    promoteEnrollment: (id: string, targetClassId: string) => Promise<Enrollment>;
+    onPromoted: () => void;
+}>) {
+    const [candidate, setCandidate] = useState<PromotionCandidate | null>(null);
+    const [checked, setChecked] = useState(false);
+    const [open, setOpen] = useState(false);
+    const [targetClassId, setTargetClassId] = useState("");
+    const [busy, setBusy] = useState(false);
+    const [promoteError, setPromoteError] = useState<string | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        getPromotionCandidate(enrollmentId)
+            .then((c) => { if (!cancelled) setCandidate(c); })
+            .finally(() => { if (!cancelled) setChecked(true); });
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [enrollmentId]);
+
+    if (!checked || !candidate?.eligible) return null;
+
+    if (!open) {
+        return (
+            <button
+                type="button"
+                onClick={() => setOpen(true)}
+                className="mt-1 block text-[9px] font-bold uppercase tracking-wider text-green-700 hover:text-green-800 underline"
+            >
+                Promote to {candidate.nextClassType?.name}
+            </button>
+        );
+    }
+
+    const handleConfirm = async () => {
+        if (!targetClassId) return;
+        setBusy(true);
+        setPromoteError(null);
+        try {
+            await promoteEnrollment(enrollmentId, targetClassId);
+            onPromoted();
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setPromoteError(e?.message ?? "Failed to promote member.");
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <div className="mt-1.5 space-y-1">
+            {candidate.openClasses.length === 0 ? (
+                <p className="text-[9px] text-[#8A817C]">
+                    No open {candidate.nextClassType?.name} class yet.
+                </p>
+            ) : (
+                <>
+                    <select
+                        value={targetClassId}
+                        onChange={(e) => setTargetClassId(e.target.value)}
+                        className="w-full h-6 px-1.5 bg-white border border-[#121212]/10 text-[9px] rounded"
+                    >
+                        <option value="">Select class…</option>
+                        {candidate.openClasses.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                    </select>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={handleConfirm}
+                            disabled={busy || !targetClassId}
+                            className="text-[9px] font-bold uppercase text-green-700 hover:text-green-800 disabled:opacity-40"
+                        >
+                            Confirm
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setOpen(false)}
+                            className="text-[9px] font-bold uppercase text-[#8A817C] hover:text-[#121212]"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                    {promoteError && <p className="text-[9px] text-red-700">{promoteError}</p>}
+                </>
+            )}
+        </div>
+    );
+}
+
+// ─── Certificates ─────────────────────────────────────────────────────────────
+
+function CertificateControl({
+    enrollment,
+    issueCertificate,
+    onIssued,
+}: Readonly<{
+    enrollment: Enrollment;
+    issueCertificate: (id: string, certificateNumber?: string) => Promise<Enrollment>;
+    onIssued: () => void;
+}>) {
+    const [open, setOpen] = useState(false);
+    const [certificateNumber, setCertificateNumber] = useState("");
+    const [busy, setBusy] = useState(false);
+    const [issueError, setIssueError] = useState<string | null>(null);
+
+    if (enrollment.certificateIssued) {
+        return (
+            <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-blue-700">
+                ✓ Certificate{enrollment.certificateNumber ? ` #${enrollment.certificateNumber}` : ""}
+            </p>
+        );
+    }
+
+    if (!open) {
+        return (
+            <button
+                type="button"
+                onClick={() => setOpen(true)}
+                className="mt-1 block text-[9px] font-bold uppercase tracking-wider text-blue-700 hover:text-blue-800 underline"
+            >
+                Issue Certificate
+            </button>
+        );
+    }
+
+    const handleConfirm = async () => {
+        setBusy(true);
+        setIssueError(null);
+        try {
+            await issueCertificate(enrollment.id, certificateNumber || undefined);
+            onIssued();
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setIssueError(e?.message ?? "Failed to issue certificate.");
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <div className="mt-1.5 space-y-1">
+            <input
+                type="text"
+                value={certificateNumber}
+                onChange={(e) => setCertificateNumber(e.target.value)}
+                placeholder="Certificate # (optional)"
+                className="w-full h-6 px-1.5 bg-white border border-[#121212]/10 text-[9px] rounded"
+            />
+            <div className="flex items-center gap-2">
+                <button
+                    type="button"
+                    onClick={handleConfirm}
+                    disabled={busy}
+                    className="text-[9px] font-bold uppercase text-blue-700 hover:text-blue-800 disabled:opacity-40"
+                >
+                    Confirm
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    className="text-[9px] font-bold uppercase text-[#8A817C] hover:text-[#121212]"
+                >
+                    Cancel
+                </button>
+            </div>
+            {issueError && <p className="text-[9px] text-red-700">{issueError}</p>}
+        </div>
+    );
+}
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -217,7 +389,7 @@ function PersonCombobox({
 
 const defaultForm: CreateClassPayload = {
     name: "",
-    type: "BELIEVERS",
+    classTypeId: "",
     description: "",
     facilitatorId: "",
     startDate: "",
@@ -234,12 +406,12 @@ const ClassesPage = () => {
     const {
         classes,
         pagination,
-        typeFilter,
+        classTypeIdFilter,
         isLoading,
         isSubmitting,
         error,
         goToPage,
-        applyTypeFilter,
+        applyClassTypeFilter,
         refetch,
         createClass,
         updateClass,
@@ -247,8 +419,13 @@ const ClassesPage = () => {
         enrollMember,
         fetchEnrollments,
         updateEnrollmentStatus,
+        getPromotionCandidate,
+        promoteEnrollment,
+        issueCertificate,
         closeClass,
     } = useClasses("", 10);
+
+    const { classTypes } = useClassTypes();
 
     // Panel state
     const [showCreateForm, setShowCreateForm] = useState(false);
@@ -459,7 +636,7 @@ const ClassesPage = () => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-light tracking-tight text-[#121212]">
-                        Discipleship Classes
+                        Training Classes
                     </h1>
                     <p className="text-xs uppercase tracking-widest font-semibold text-[#8A817C] mt-1">
                         Manage believers, baptismal, and workers-in-training class tracks
@@ -528,24 +705,32 @@ const ClassesPage = () => {
             )}
 
             {/* Type filter */}
-            <div className="flex bg-[#F4F1EA] p-1 border border-[#121212]/5 rounded-xl w-fit flex-wrap gap-0.5">
-                <button
-                    onClick={() => applyTypeFilter("")}
-                    disabled={isLoading}
-                    className={`px-4 py-2 text-[10px] font-semibold uppercase tracking-wider rounded-lg transition-colors disabled:opacity-40 ${typeFilter === "" ? "bg-[#121212] text-white" : "text-[#8A817C] hover:text-[#121212]"}`}
-                >
-                    All
-                </button>
-                {CLASS_TYPES.map((t) => (
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex bg-[#F4F1EA] p-1 border border-[#121212]/5 rounded-xl w-fit flex-wrap gap-0.5">
                     <button
-                        key={t}
-                        onClick={() => applyTypeFilter(t)}
+                        onClick={() => applyClassTypeFilter("")}
                         disabled={isLoading}
-                        className={`px-4 py-2 text-[10px] font-semibold uppercase tracking-wider rounded-lg transition-colors disabled:opacity-40 ${typeFilter === t ? "bg-[#121212] text-white" : "text-[#8A817C] hover:text-[#121212]"}`}
+                        className={`px-4 py-2 text-[10px] font-semibold uppercase tracking-wider rounded-lg transition-colors disabled:opacity-40 ${classTypeIdFilter === "" ? "bg-[#121212] text-white" : "text-[#8A817C] hover:text-[#121212]"}`}
                     >
-                        {CLASS_TYPE_LABELS[t]}
+                        All
                     </button>
-                ))}
+                    {classTypes.map((t) => (
+                        <button
+                            key={t.id}
+                            onClick={() => applyClassTypeFilter(t.id)}
+                            disabled={isLoading}
+                            className={`px-4 py-2 text-[10px] font-semibold uppercase tracking-wider rounded-lg transition-colors disabled:opacity-40 ${classTypeIdFilter === t.id ? "bg-[#121212] text-white" : "text-[#8A817C] hover:text-[#121212]"}`}
+                        >
+                            {t.name}
+                        </button>
+                    ))}
+                </div>
+                <button
+                    onClick={() => router.push("/classes/types")}
+                    className="text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] hover:text-[#121212] transition-colors underline"
+                >
+                    Manage Class Types
+                </button>
             </div>
 
             {/* Table + Right Panel */}
@@ -591,7 +776,7 @@ const ClassesPage = () => {
                                                     <>
                                                         <div className="text-sm font-medium text-[#121212]">{c.name}</div>
                                                         <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                                                            <ClassTypeBadge type={c.type} />
+                                                            <ClassTypeBadge classType={c.classType} />
                                                             {c.status === "CLOSED" && (
                                                                 <span className="inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border bg-[#F4F1EA] border-[#121212]/10 text-[#8A817C]">
                                                                     Closed
@@ -716,7 +901,7 @@ const ClassesPage = () => {
                                             {selectedClass.name}
                                         </h2>
                                         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                            <ClassTypeBadge type={selectedClass.type} />
+                                            <ClassTypeBadge classType={selectedClass.classType} />
                                             {selectedClass.status === "CLOSED" ? (
                                                 <span className="inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border bg-[#F4F1EA] border-[#121212]/10 text-[#8A817C]">Closed</span>
                                             ) : (
@@ -773,12 +958,14 @@ const ClassesPage = () => {
                                             Class Type
                                         </label>
                                         <select
-                                            value={createForm.type}
-                                            onChange={(e) => setCreateForm((p) => ({ ...p, type: e.target.value as ClassType }))}
+                                            required
+                                            value={createForm.classTypeId}
+                                            onChange={(e) => setCreateForm((p) => ({ ...p, classTypeId: e.target.value }))}
                                             className="w-full h-10 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
                                         >
-                                            {CLASS_TYPES.map((t) => (
-                                                <option key={t} value={t}>{CLASS_TYPE_LABELS[t]}</option>
+                                            <option value="" disabled>Select a class type…</option>
+                                            {classTypes.filter((t) => t.isActive).map((t) => (
+                                                <option key={t.id} value={t.id}>{t.name}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -1055,6 +1242,21 @@ const ClassesPage = () => {
                                                                         <option value="COMPLETED">Completed</option>
                                                                         <option value="CANCELLED">Cancelled</option>
                                                                     </select>
+                                                                    {enr.status === "COMPLETED" && (
+                                                                        <>
+                                                                            <PromoteButton
+                                                                                enrollmentId={enr.id}
+                                                                                getPromotionCandidate={getPromotionCandidate}
+                                                                                promoteEnrollment={promoteEnrollment}
+                                                                                onPromoted={() => loadEnrollments(selectedClass!.id, enrollmentsPage)}
+                                                                            />
+                                                                            <CertificateControl
+                                                                                enrollment={enr}
+                                                                                issueCertificate={issueCertificate}
+                                                                                onIssued={() => loadEnrollments(selectedClass!.id, enrollmentsPage)}
+                                                                            />
+                                                                        </>
+                                                                    )}
                                                                 </td>
                                                             </tr>
                                                         ))

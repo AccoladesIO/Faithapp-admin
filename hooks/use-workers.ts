@@ -16,6 +16,7 @@ export interface WorkerProfile {
     yearJoinedWorkforce: string | null;
     completedSOD: boolean;
     completedBibleCollege: boolean;
+    isTrainee: boolean;
     department: WorkerDepartment | Record<string, never>;
     secondaryDepartment?: WorkerDepartment | null;
     createdAt: string;
@@ -59,6 +60,7 @@ export interface UpdateWorkerProfilePayload {
     yearJoinedWorkforce?: string;
     completedSOD?: boolean;
     completedBibleCollege?: boolean;
+    isTrainee?: boolean;
     secondaryDepartmentId?: string | null;
 }
 
@@ -162,6 +164,25 @@ export function useWorkers(defaultLimit = 10) {
         }
     }, []);
 
+    const demoteTraineeToMember = useCallback(async (memberId: string): Promise<void> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            await api.post(`/members/${memberId}/demote-trainee`);
+            setWorkers((prev) => prev.filter((w) => w.id !== memberId));
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message =
+                e?.response?.data?.message ||
+                e?.message ||
+                "Failed to demote trainee.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
     const purgeDevice = useCallback(async (memberId: string): Promise<void> => {
         setIsSubmitting(true);
         setError(null);
@@ -197,6 +218,7 @@ export function useWorkers(defaultLimit = 10) {
         refetch: () => fetchWorkers(page, statusFilter),
         updateWorkerProfile,
         revokeWorker,
+        demoteTraineeToMember,
         purgeDevice,
     };
 }

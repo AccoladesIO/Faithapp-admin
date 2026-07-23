@@ -28,7 +28,14 @@ export type AdminPermission =
     | "incident_report:read" | "incident_report:write"
     | "asset_management:read" | "asset_management:write" | "asset_management:alert"
     | "prayer:read" | "prayer:write"
-    | "facility_rental:read" | "facility_rental:write";
+    | "facility_rental:read" | "facility_rental:write"
+    | "pastor_feedback:read" | "pastor_feedback:write"
+    | "evangelism:read" | "evangelism:write"
+    | "sermon:read" | "sermon:write"
+    | "games:read" | "games:write"
+    | "service_rating:read" | "service_rating:moderate"
+    | "volunteer:read" | "volunteer:write"
+    | "small_group:read" | "small_group:write";
 
 export interface PermissionGroupItem {
     value: AdminPermission;
@@ -37,6 +44,10 @@ export interface PermissionGroupItem {
 
 export interface PermissionGroup {
     group: string;
+    // Church-settings module key this group maps to, if any — lets the UI
+    // hide the group when the church has disabled that module. Undefined
+    // for groups spanning multiple modules or a required (non-toggleable) one.
+    moduleKey?: string;
     permissions: PermissionGroupItem[];
 }
 
@@ -67,17 +78,17 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
         { value: "headcount:read", label: "View Headcount" },
         { value: "headcount:write", label: "Record Headcount" },
     ]},
-    { group: "Sunday School", permissions: [
+    { group: "Sunday School", moduleKey: "sunday_school", permissions: [
         { value: "sunday_school:read", label: "View Sunday School" },
         { value: "sunday_school:write", label: "Manage Sunday School" },
     ]},
-    { group: "Children's Church", permissions: [
+    { group: "Children's Church", moduleKey: "children_church", permissions: [
         { value: "children_church:read", label: "View Children's Church" },
         { value: "children_church:write", label: "Manage Children's Church" },
     ]},
-    { group: "Church Classes", permissions: [
-        { value: "classes:read", label: "View Classes" },
-        { value: "classes:write", label: "Manage Classes" },
+    { group: "Training Classes", moduleKey: "classes", permissions: [
+        { value: "classes:read", label: "View Training Classes" },
+        { value: "classes:write", label: "Manage Training Classes" },
     ]},
     { group: "Leave Requests", permissions: [
         { value: "leave:read", label: "View Leave Requests" },
@@ -90,11 +101,11 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
         { value: "finance:reconcile", label: "Reconcile Bank Statements" },
         { value: "finance:report", label: "View Finance Reports" },
     ]},
-    { group: "Tithe & Giving", permissions: [
+    { group: "Tithe & Giving", moduleKey: "tithe", permissions: [
         { value: "tithe:read", label: "View Tithe Records" },
         { value: "tithe:write", label: "Manage Tithe Records" },
     ]},
-    { group: "Announcements", permissions: [
+    { group: "Announcements", moduleKey: "announcements", permissions: [
         { value: "announcements:read", label: "View Announcements" },
         { value: "announcements:write", label: "Manage Announcements" },
         { value: "groups:read", label: "View Groups" },
@@ -106,26 +117,54 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
         { value: "follow_up:read", label: "View Follow-Up" },
         { value: "follow_up:write", label: "Manage Follow-Up" },
     ]},
-    { group: "Incident Reports", permissions: [
+    { group: "Incident Reports", moduleKey: "incident_report", permissions: [
         { value: "incident_report:read", label: "View Incident Reports" },
         { value: "incident_report:write", label: "Manage Incident Reports" },
     ]},
-    { group: "Asset Management", permissions: [
+    { group: "Asset Management", moduleKey: "asset_management", permissions: [
         { value: "asset_management:read", label: "View Assets" },
         { value: "asset_management:write", label: "Manage Assets" },
         { value: "asset_management:alert", label: "Receive Maintenance Reminders" },
     ]},
-    { group: "Prayer Roster", permissions: [
+    { group: "Prayer Roster", moduleKey: "prayer", permissions: [
         { value: "prayer:read", label: "View Prayer Roster" },
         { value: "prayer:write", label: "Manage Prayer Roster" },
     ]},
-    { group: "Facility Rental", permissions: [
+    { group: "Facility Rental", moduleKey: "facility_rental", permissions: [
         { value: "facility_rental:read", label: "View Facility Bookings" },
         { value: "facility_rental:write", label: "Manage Facility Rentals" },
     ]},
     { group: "SMS Messaging", permissions: [
         { value: "sms:read", label: "View SMS Logs" },
         { value: "sms:send", label: "Send SMS Broadcasts" },
+    ]},
+    { group: "Pastor Feedback", moduleKey: "pastor_feedback", permissions: [
+        { value: "pastor_feedback:read", label: "View Pastor Feedback" },
+        { value: "pastor_feedback:write", label: "Manage Pastor Feedback" },
+    ]},
+    { group: "Sermon Archive", moduleKey: "sermons", permissions: [
+        { value: "sermon:read", label: "View Sermon Archive" },
+        { value: "sermon:write", label: "Manage Sermon Archive" },
+    ] },
+    { group: "Games", moduleKey: "games", permissions: [
+        { value: "games:read", label: "View Games" },
+        { value: "games:write", label: "Manage Games" },
+    ] },
+    { group: "Service Ratings", moduleKey: "service_ratings", permissions: [
+        { value: "service_rating:read", label: "View Service Ratings" },
+        { value: "service_rating:moderate", label: "Moderate Service Ratings" },
+    ] },
+    { group: "Volunteering", moduleKey: "volunteering", permissions: [
+        { value: "volunteer:read", label: "View Volunteer Opportunities" },
+        { value: "volunteer:write", label: "Manage Volunteer Opportunities" },
+    ] },
+    { group: "Fellowships", moduleKey: "small_groups", permissions: [
+        { value: "small_group:read", label: "View Fellowships" },
+        { value: "small_group:write", label: "Manage Fellowships" },
+    ] },
+    { group: "Evangelism", moduleKey: "evangelism", permissions: [
+        { value: "evangelism:read", label: "View Evangelism Converts" },
+        { value: "evangelism:write", label: "Manage Evangelism Converts" },
     ]},
     { group: "Administration", permissions: [
         { value: "dashboard:read", label: "View Dashboard" },

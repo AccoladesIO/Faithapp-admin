@@ -10,6 +10,10 @@ import {
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { DismissibleError } from "@/components/ui/dismissible-error";
 import { EventSearchInput } from "@/components/ui/event-search-input";
+import { EmailReportButton } from "@/components/reports/email-report-button";
+import { BarChart } from "@/components/charts/bar-chart";
+import { PieChart } from "@/components/charts/pie-chart";
+import { TrendLineChart } from "@/components/charts/trend-line-chart";
 import {
     useServiceHeadcount,
     ServiceHeadcount,
@@ -200,6 +204,102 @@ function TrendsDisplay({ trends }: { trends: HeadcountTrends | null }) {
                         ))}
                     </tbody>
                 </table>
+            </div>
+        </div>
+    );
+}
+
+const num = (row: Record<string, unknown>, key: string): number => Number(row[key] ?? 0);
+
+function TrendsChartDisplay({ trends }: Readonly<{ trends: HeadcountTrends | null }>) {
+    if (!trends) return null;
+    const rows = Array.isArray(trends.data) ? trends.data : [];
+
+    if (rows.length === 0) {
+        return (
+            <div className="text-center py-16 text-[#8A817C] text-xs font-light">
+                No trend data available for the selected period.
+            </div>
+        );
+    }
+
+    // Trend line: total attendance summed across all services within each period bucket.
+    const byPeriod = new Map<string, number>();
+    for (const r of rows) {
+        const label = String(r.periodLabel ?? "");
+        byPeriod.set(label, (byPeriod.get(label) ?? 0) + num(r, "total"));
+    }
+    const trendData = Array.from(byPeriod.entries()).map(([periodLabel, total]) => ({ periodLabel, total }));
+
+    // Per-service bars: total summed across the whole filtered range, one bar per service slot name.
+    const byService = new Map<string, number>();
+    for (const r of rows) {
+        const name = String(r.serviceSlotName ?? "");
+        byService.set(name, (byService.get(name) ?? 0) + num(r, "total"));
+    }
+    const serviceData = Array.from(byService.entries()).map(([serviceSlotName, total]) => ({ serviceSlotName, total }));
+
+    // Gender + teens/children: summed across the whole filtered range.
+    let maleAdults = 0, femaleAdults = 0, teenagers = 0, children = 0;
+    for (const r of rows) {
+        maleAdults += num(r, "maleAdults");
+        femaleAdults += num(r, "femaleAdults");
+        teenagers += num(r, "teenagers");
+        children += num(r, "children");
+    }
+
+    return (
+        <div className="space-y-4">
+            <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl p-6">
+                <h3 className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-4">
+                    Attendance Trend
+                </h3>
+                <TrendLineChart
+                    data={trendData}
+                    xKey="periodLabel"
+                    series={[{ key: "total", label: "Total Attendance", color: "#121212" }]}
+                />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl p-6">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-4">
+                        By Service
+                    </h3>
+                    <BarChart
+                        data={serviceData}
+                        xKey="serviceSlotName"
+                        series={[{ key: "total", label: "Total", color: "#8A817C" }]}
+                    />
+                </div>
+
+                <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl p-6">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-4">
+                        Gender Split
+                    </h3>
+                    <PieChart
+                        data={[
+                            { name: "Male", value: maleAdults, color: "#121212" },
+                            { name: "Female", value: femaleAdults, color: "#EADCC9" },
+                        ]}
+                    />
+                </div>
+            </div>
+
+            <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl p-6">
+                <h3 className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-4">
+                    Teens vs Children
+                </h3>
+                <BarChart
+                    layout="vertical"
+                    data={[
+                        { group: "Teenagers", count: teenagers },
+                        { group: "Children", count: children },
+                    ]}
+                    xKey="group"
+                    series={[{ key: "count", label: "Count", color: "#121212" }]}
+                    height={140}
+                />
             </div>
         </div>
     );
@@ -575,7 +675,7 @@ function EventHeadcountSection({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 type Tab = "byEvent" | "records" | "trends";
-type Period = "weekly" | "monthly" | "yearly";
+type Period = "weekly" | "monthly" | "quarterly";
 
 function ServiceHeadcountPage() {
     const {
@@ -601,6 +701,7 @@ function ServiceHeadcountPage() {
     const [period, setPeriod] = useState<Period>("weekly");
     const [trendsFrom, setTrendsFrom] = useState("");
     const [trendsTo, setTrendsTo] = useState("");
+    const [trendsView, setTrendsView] = useState<"chart" | "table">("chart");
 
     useEffect(() => {
         fetchRecords({ page: 1, limit: 10 });
@@ -629,6 +730,15 @@ function ServiceHeadcountPage() {
 
     const applyFilters = () => {
         fetchRecords({ page: 1, limit: 10, serviceSlotId: filterSlotId || undefined, from: filterFrom || undefined, to: filterTo || undefined });
+    };
+
+    const emailExport = async (recipientEmail?: string) => {
+        await api.post("/service-headcount/export-email", {
+            recipientEmail,
+            serviceSlotId: filterSlotId || undefined,
+            from: filterFrom || undefined,
+            to: filterTo || undefined,
+        });
     };
 
     const loadTrends = async () => {
@@ -680,6 +790,16 @@ function ServiceHeadcountPage() {
                         Track and analyse attendance across services
                     </p>
                 </div>
+                {activeTab === "records" && (
+                    <button
+                        onClick={() => fetchRecords({ page: 1, limit: 10, serviceSlotId: filterSlotId || undefined, from: filterFrom || undefined, to: filterTo || undefined })}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40 self-start sm:self-auto"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
+                )}
             </div>
 
             <DismissibleError message={error} />
@@ -765,6 +885,7 @@ function ServiceHeadcountPage() {
                             <RefreshCw className="w-3.5 h-3.5" />
                             Reset
                         </button>
+                        <EmailReportButton onExport={emailExport} />
                     </div>
 
                     <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden">
@@ -852,7 +973,7 @@ function ServiceHeadcountPage() {
                                 Period
                             </label>
                             <div className="flex gap-1">
-                                {(["weekly", "monthly", "yearly"] as Period[]).map((p) => (
+                                {(["weekly", "monthly", "quarterly"] as Period[]).map((p) => (
                                     <button
                                         key={p}
                                         onClick={() => setPeriod(p)}
@@ -901,6 +1022,28 @@ function ServiceHeadcountPage() {
                             )}
                             Load Trends
                         </button>
+                        {trends && (
+                            <div className="flex gap-1 ml-auto">
+                                <button
+                                    onClick={() => setTrendsView("chart")}
+                                    className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-widest rounded-lg transition-colors ${
+                                        trendsView === "chart" ? "bg-[#121212] text-white" : "text-[#8A817C] hover:text-[#121212]"
+                                    }`}
+                                >
+                                    <BarChart2 className="w-3.5 h-3.5" />
+                                    Chart
+                                </button>
+                                <button
+                                    onClick={() => setTrendsView("table")}
+                                    className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-widest rounded-lg transition-colors ${
+                                        trendsView === "table" ? "bg-[#121212] text-white" : "text-[#8A817C] hover:text-[#121212]"
+                                    }`}
+                                >
+                                    <List className="w-3.5 h-3.5" />
+                                    Table
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {trendsError && (
@@ -918,7 +1061,8 @@ function ServiceHeadcountPage() {
                         </div>
                     )}
 
-                    {!trendsLoading && trends && <TrendsDisplay trends={trends} />}
+                    {!trendsLoading && trends && trendsView === "chart" && <TrendsChartDisplay trends={trends} />}
+                    {!trendsLoading && trends && trendsView === "table" && <TrendsDisplay trends={trends} />}
 
                     {!trendsLoading && !trends && !trendsError && (
                         <div className="bg-[#FFFFFF] border border-[#121212]/10 rounded-xl flex flex-col items-center justify-center py-20 text-center">

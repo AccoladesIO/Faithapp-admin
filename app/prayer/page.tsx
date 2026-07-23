@@ -316,6 +316,14 @@ function ProgramsTab({
                     <button onClick={openCreate} className={`flex items-center gap-2 shrink-0 ${primaryCls}`}>
                         <Plus className="w-3.5 h-3.5" /> New Program
                     </button>
+                    <button
+                        onClick={() => fetchPrograms()}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40 shrink-0"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
                 </div>
             </div>
 
@@ -512,7 +520,17 @@ function DayConfigsTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C]">{dayConfigs.length} day config{dayConfigs.length !== 1 ? "s" : ""}</span>
-                <button onClick={openCreate} className={`flex items-center gap-2 ${primaryCls}`}><Plus className="w-3.5 h-3.5" /> Add Day Config</button>
+                <div className="flex items-center gap-2">
+                    <button onClick={openCreate} className={`flex items-center gap-2 ${primaryCls}`}><Plus className="w-3.5 h-3.5" /> Add Day Config</button>
+                    <button
+                        onClick={() => fetchDayConfigs(programId)}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
+                </div>
             </div>
             <DismissibleError message={error} />
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
@@ -647,7 +665,17 @@ function RulesTab({ hook, programId }: { hook: ReturnType<typeof usePrayer>; pro
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C]">{rules.length} rule{rules.length !== 1 ? "s" : ""}</span>
-                <button onClick={openCreate} className={`flex items-center gap-2 ${primaryCls}`}><Plus className="w-3.5 h-3.5" /> Add Rule</button>
+                <div className="flex items-center gap-2">
+                    <button onClick={openCreate} className={`flex items-center gap-2 ${primaryCls}`}><Plus className="w-3.5 h-3.5" /> Add Rule</button>
+                    <button
+                        onClick={() => fetchRules(programId)}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
+                </div>
             </div>
             <DismissibleError message={error} />
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
@@ -786,7 +814,17 @@ function FixedAssignmentsTab({ hook, programId }: { hook: ReturnType<typeof useP
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C]">{filtered.length}{search ? ` of ${fixedAssignments.length}` : ""} fixed assignment{fixedAssignments.length !== 1 ? "s" : ""}</span>
-                <button onClick={() => { setWorkerProfileId(""); setWorkerDisplayName(""); setDayConfigId(""); setShowPanel(true); }} className={`flex items-center gap-2 ${primaryCls}`}><Plus className="w-3.5 h-3.5" /> Add Assignment</button>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => { setWorkerProfileId(""); setWorkerDisplayName(""); setDayConfigId(""); setShowPanel(true); }} className={`flex items-center gap-2 ${primaryCls}`}><Plus className="w-3.5 h-3.5" /> Add Assignment</button>
+                    <button
+                        onClick={() => fetchFixedAssignments(programId)}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
+                </div>
             </div>
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8A817C] pointer-events-none" />
@@ -1033,6 +1071,15 @@ function RosterTab({
                     </div>
                     <div className="flex-1" />
                     {roster.length > 0 && <button type="button" onClick={exportCSV} className={secondaryCls}>Export CSV</button>}
+                    <button
+                        type="button"
+                        onClick={load}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
                 </div>
 
                 {/* Filters */}

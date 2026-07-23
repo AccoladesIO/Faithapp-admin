@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { withAuth } from "@/utils/auth/with-auth";
-import { Plus, Pencil, Trash2, X, CalendarX2, CheckCircle2, XCircle, Clock, Building2, Tag } from "lucide-react";
+import { Plus, Pencil, Trash2, X, CalendarX2, CheckCircle2, XCircle, Clock, Building2, Tag, RefreshCw } from "lucide-react";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import {
     useFacilityRental,
@@ -285,6 +285,14 @@ function FacilitiesTab() {
                 <button onClick={openCreate} className="flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors whitespace-nowrap">
                     <Plus className="w-3.5 h-3.5" /> New Facility
                 </button>
+                <button
+                    onClick={() => fetchFacilities()}
+                    disabled={isLoading}
+                    className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                    title="Refresh"
+                >
+                    <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                </button>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 <div className={`${panelOpen ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden`}>
@@ -476,13 +484,23 @@ function PricingTiersTab() {
                 <p className="text-xs text-[#8A817C] font-light">
                     Category tiers apply a discount to the facility base price for bookings made by members in that category. One tier per category, applied across all facilities.
                 </p>
-                <button
-                    onClick={openCreate}
-                    disabled={existingCategories.length >= MEMBER_CATEGORIES.length}
-                    className="flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 disabled:opacity-40 transition-colors whitespace-nowrap"
-                >
-                    <Plus className="w-3.5 h-3.5" /> Add Tier
-                </button>
+                <div className="flex items-center gap-3 shrink-0">
+                    <button
+                        onClick={openCreate}
+                        disabled={existingCategories.length >= MEMBER_CATEGORIES.length}
+                        className="flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 disabled:opacity-40 transition-colors whitespace-nowrap"
+                    >
+                        <Plus className="w-3.5 h-3.5" /> Add Tier
+                    </button>
+                    <button
+                        onClick={() => fetchPricingTiers()}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
+                </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 <div className={`${panel ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden`}>
@@ -685,9 +703,19 @@ function AddonsTab() {
                 <p className="text-xs text-[#8A817C] font-light">
                     Add-ons are optional extra services (e.g. Sound System, Projector, Chairs) that can be included in a booking at an additional cost. The refundable deposit is returned after the booking when equipment is returned in good condition.
                 </p>
-                <button onClick={openCreate} className="flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors whitespace-nowrap">
-                    <Plus className="w-3.5 h-3.5" /> New Add-on
-                </button>
+                <div className="flex items-center gap-3 shrink-0">
+                    <button onClick={openCreate} className="flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 transition-colors whitespace-nowrap">
+                        <Plus className="w-3.5 h-3.5" /> New Add-on
+                    </button>
+                    <button
+                        onClick={() => fetchAddons()}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
+                </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 <div className={`${panel ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden`}>
@@ -855,13 +883,23 @@ function CalendarBlocksTab() {
                 >
                     {facilities.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
                 </select>
-                <button
-                    onClick={() => setPanel(true)}
-                    disabled={!selectedFacilityId}
-                    className="flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 disabled:opacity-40 transition-colors"
-                >
-                    <Plus className="w-3.5 h-3.5" /> Add Block
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setPanel(true)}
+                        disabled={!selectedFacilityId}
+                        className="flex items-center gap-2 h-9 px-4 bg-[#121212] text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-[#121212]/90 disabled:opacity-40 transition-colors"
+                    >
+                        <Plus className="w-3.5 h-3.5" /> Add Block
+                    </button>
+                    <button
+                        onClick={() => selectedFacilityId && fetchCalendarBlocks(selectedFacilityId)}
+                        disabled={isLoading || !selectedFacilityId}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
+                </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 <div className={`${panel ? "lg:col-span-7" : "lg:col-span-12"} bg-[#FFFFFF] border border-[#121212]/10 rounded-xl overflow-hidden`}>
@@ -1286,16 +1324,26 @@ function BookingsTab() {
     return (
         <div className="space-y-4">
             {/* Status filter chips */}
-            <div className="flex gap-1 flex-wrap">
-                {BOOKING_STATUSES.map((s) => (
-                    <button
-                        key={s.value}
-                        onClick={() => setStatusFilter(s.value)}
-                        className={`px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest rounded-lg transition-colors ${statusFilter === s.value ? "bg-[#121212] text-white" : "text-[#8A817C] border border-[#121212]/10 hover:text-[#121212]"}`}
-                    >
-                        {s.label}
-                    </button>
-                ))}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex gap-1 flex-wrap">
+                    {BOOKING_STATUSES.map((s) => (
+                        <button
+                            key={s.value}
+                            onClick={() => setStatusFilter(s.value)}
+                            className={`px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest rounded-lg transition-colors ${statusFilter === s.value ? "bg-[#121212] text-white" : "text-[#8A817C] border border-[#121212]/10 hover:text-[#121212]"}`}
+                        >
+                            {s.label}
+                        </button>
+                    ))}
+                </div>
+                <button
+                    onClick={() => fetchBookings(statusFilter || undefined)}
+                    disabled={isLoading}
+                    className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                    title="Refresh"
+                >
+                    <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">

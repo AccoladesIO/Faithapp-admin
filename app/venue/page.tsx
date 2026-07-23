@@ -56,6 +56,7 @@ export default withAuth(function VenuesPage() {
         isLoading,
         isSubmitting,
         error,
+        fetchVenues,
         createVenue,
         updateVenue,
         deleteVenue,
@@ -188,6 +189,15 @@ export default withAuth(function VenuesPage() {
                     >
                         <Plus className="w-3.5 h-3.5" />
                         Add Venue
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => fetchVenues()}
+                        disabled={isLoading}
+                        className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
                     </button>
                 </div>
             </div>

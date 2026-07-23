@@ -19,13 +19,16 @@ import {
     Building2,
     UserCircle,
     Settings2,
+    HeartHandshake,
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
+import { useModuleState } from "@/hooks/use-module-state";
 
 interface SubNavItem {
     name: string;
     href: string;
     permission?: string;
+    moduleKey?: string;
     comingSoon?: boolean;
 }
 
@@ -127,6 +130,7 @@ export default function Sidebar() {
     const [openDropdown, setOpenDropdown] = useState<string | null>(null);
     const [isMinimized, setIsMinimized] = useState(false);
     const { logout, hasPermission, adminName, adminRoleName } = useAuth();
+    const { isModuleEnabled } = useModuleState();
 
     const navigationData: NavItem[] = useMemo(() => [
         {
@@ -144,7 +148,7 @@ export default function Sidebar() {
                 { name: "Headcount",       href: "/service-headcount",  permission: "headcount:read" },
                 { name: "Programme",       href: "/service-programme",  permission: "service_programme:read" },
                 { name: "Live Session",    href: "/service-session",    permission: "service_programme:read" },
-                { name: "Prayer Schedule", href: "/prayer",             permission: "prayer:read" },
+                { name: "Prayer Schedule", href: "/prayer",             permission: "prayer:read", moduleKey: "prayer" },
             ],
         },
         {
@@ -156,7 +160,16 @@ export default function Sidebar() {
                 { name: "Attendance",     href: "/attendance",       permission: "attendance:read" },
                 { name: "Leave Requests", href: "/leave",            permission: "leave:read" },
                 { name: "Birthdays",      href: "/birthday",         permission: "members:read" },
-                { name: "Admin Users",    href: "/admin-management", permission: "admin:read" },
+            ],
+        },
+        {
+            name: "Care & Outreach",
+            icon: HeartHandshake,
+            subItems: [
+                { name: "Follow Up",        href: "/follow-up",       permission: "follow_up:read", moduleKey: "follow_up" },
+                { name: "Evangelism",       href: "/evangelism",      permission: "evangelism:read", moduleKey: "evangelism" },
+                { name: "Prayer Requests",  href: "/prayer-requests", permission: "prayer:read", moduleKey: "prayer" },
+                { name: "Pastor Feedback",  href: "/pastor-feedback", permission: "pastor_feedback:read", moduleKey: "pastor_feedback" },
             ],
         },
         {
@@ -164,28 +177,33 @@ export default function Sidebar() {
             icon: MicVocalIcon,
             subItems: [
                 { name: "Departments",      href: "/departments",    permission: "departments:read" },
-                { name: "Classes",          href: "/classes",        permission: "classes:read" },
-                { name: "Children's Church",href: "/childrens-church", permission: "children_church:read" },
-                { name: "Sunday School",    href: "/sunday-school",  permission: "sunday_school:read" },
-                { name: "Follow Up",        href: "/follow-up",      permission: "follow_up:read" },
+                { name: "Training Classes", href: "/classes",        permission: "classes:read", moduleKey: "classes" },
+                { name: "Children's Church",href: "/childrens-church", permission: "children_church:read", moduleKey: "children_church" },
+                { name: "Sunday School",    href: "/sunday-school",  permission: "sunday_school:read", moduleKey: "sunday_school" },
             ],
         },
         {
-            name: "Announcements",
+            name: "Engagement",
             icon: Megaphone,
             subItems: [
-                { name: "Broadcasts", href: "/announcements", permission: "announcements:read" },
-                { name: "Groups",     href: "/groups",         permission: "groups:read" },
+                { name: "Broadcasts", href: "/announcements", permission: "announcements:read", moduleKey: "announcements" },
+                { name: "Groups",     href: "/groups",         permission: "groups:read", moduleKey: "announcements" },
+                { name: "Sermons",    href: "/sermons",        permission: "sermon:read", moduleKey: "sermons" },
+                { name: "Games",      href: "/games",          permission: "games:read", moduleKey: "games" },
+                { name: "Service Ratings", href: "/service-ratings", permission: "service_rating:read", moduleKey: "service_ratings" },
+                { name: "Volunteering", href: "/volunteering", permission: "volunteer:read", moduleKey: "volunteering" },
+                { name: "Fellowships", href: "/small-groups", permission: "small_group:read", moduleKey: "small_groups" },
             ],
         },
         {
             name: "System",
             icon: Settings2,
             subItems: [
+                { name: "Admin Users",       href: "/admin-management",  permission: "admin:read" },
                 { name: "Audit Trail",       href: "/audit-logs",        permission: "audit:read" },
                 { name: "Email Logs",        href: "/email-logs",         permission: "email_logs:read" },
                 { name: "SMS Logs",          href: "/sms-logs",           permission: "sms:read" },
-                { name: "Incident Reports",  href: "/incident-reports",   permission: "incident_report:read" },
+                { name: "Incident Reports",  href: "/incident-reports",   permission: "incident_report:read", moduleKey: "incident_report" },
                 { name: "Module Settings",   href: "/system-settings",    permission: "admin:read" },
             ],
         },
@@ -193,8 +211,8 @@ export default function Sidebar() {
             name: "Facility",
             icon: Building2,
             subItems: [
-                { name: "Inventories",    href: "/inventories",    permission: "asset_management:read" },
-                { name: "Facility Rental",href: "/facility-rental",permission: "facility_rental:read" },
+                { name: "Inventories",    href: "/inventories",    permission: "asset_management:read", moduleKey: "asset_management" },
+                { name: "Facility Rental",href: "/facility-rental",permission: "facility_rental:read", moduleKey: "facility_rental" },
             ],
         },
         {
@@ -203,7 +221,7 @@ export default function Sidebar() {
             subItems: [
                 { name: "Reports",            href: "/finances/reports",            permission: "finance:report" },
                 { name: "Finance Requests",   href: "/finances/requests",           permission: "finance:approve" },
-                { name: "Tithe & Giving",     href: "/finances/tithes",            permission: "tithe:read" },
+                { name: "Tithe & Giving",     href: "/finances/tithes",            permission: "tithe:read", moduleKey: "tithe" },
                 { name: "Giving Records",     href: "/finances/offerings",          permission: "finance:read" },
                 { name: "Journal Entries",    href: "/finances/journal-entries",    permission: "finance:read" },
                 { name: "Petty Cash",         href: "/finances/petty-cash",         permission: "finance:read" },
@@ -230,7 +248,8 @@ export default function Sidebar() {
     const getVisibleSubItems = (item: NavItem): SubNavItem[] => {
         if (!item.subItems) return [];
         return item.subItems.filter(sub =>
-            sub.comingSoon || !sub.permission || hasPermission(sub.permission)
+            (sub.comingSoon || !sub.permission || hasPermission(sub.permission))
+            && isModuleEnabled(sub.moduleKey)
         );
     };
 

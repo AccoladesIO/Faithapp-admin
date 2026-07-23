@@ -227,7 +227,7 @@ function MemberSearchInput({
 }
 
 function AccountsTab() {
-    const { accounts, isLoading, isSubmitting, error, createAccount, updateAccount } = useTitheAccounts();
+    const { accounts, isLoading, isSubmitting, error, createAccount, updateAccount, refetch } = useTitheAccounts();
     const [editing, setEditing] = useState<TitheAccount | null>(null);
     const [bankName, setBankName] = useState("");
     const [accountNumber, setAccountNumber] = useState("");
@@ -381,7 +381,19 @@ function AccountsTab() {
             </div>
 
             <div className="lg:col-span-8">
-                                    <DismissibleError message={error} />
+                <div className="flex items-center justify-between mb-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C]">Accounts</p>
+                    <button
+                        type="button"
+                        onClick={() => refetch()}
+                        disabled={isLoading}
+                        className="p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/20 rounded-md transition-colors disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                    </button>
+                </div>
+                <DismissibleError message={error} />
                 {isLoading ? (
                     <div className="grid gap-4">
                         {[1, 2, 3].map((k) => (
@@ -429,7 +441,7 @@ function AccountsTab() {
 }
 
 function RecordsTab() {
-    const { records, pagination, isLoading, error, filters, applyFilters, goToPage } = useTitheRecords();
+    const { records, pagination, isLoading, error, filters, applyFilters, goToPage, refetch } = useTitheRecords();
     const { accounts } = useTitheAccounts();
     const [selected, setSelected] = useState<TitheRecord | null>(null);
     const [search, setSearch] = useState("");
@@ -506,6 +518,15 @@ function RecordsTab() {
                     <button type="button" onClick={handleReset} className="h-9 px-4 border border-[#121212]/10 text-[#8A817C] text-[10px] font-semibold uppercase tracking-widest hover:text-[#121212] transition-colors rounded-lg">Reset</button>
                     <button type="button" onClick={handleDownload} disabled={downloading} className="h-9 px-4 border border-[#121212]/10 text-[#8A817C] text-[10px] font-semibold uppercase tracking-widest hover:text-[#121212] transition-colors rounded-lg flex items-center space-x-1.5 disabled:opacity-40">
                         <Download className="w-3 h-3" /><span>{downloading ? "Exporting…" : "Export"}</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => refetch()}
+                        disabled={isLoading}
+                        className="h-9 w-9 flex items-center justify-center border border-[#121212]/10 text-[#8A817C] hover:text-[#121212] transition-colors rounded-lg disabled:opacity-40"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
                     </button>
                 </div>
             </div>
@@ -600,7 +621,7 @@ function RecordsTab() {
 }
 
 function UploadTab() {
-    const { batches, pagination, isLoading, isSubmitting, error, statusFilter, applyStatusFilter, goToPage, uploadBatch, requeueBatch } = useTitheBatches();
+    const { batches, pagination, isLoading, isSubmitting, error, statusFilter, applyStatusFilter, goToPage, uploadBatch, requeueBatch, refetch } = useTitheBatches();
     const { accounts } = useTitheAccounts();
     const [titheAccountId, setTitheAccountId] = useState("");
     const [file, setFile] = useState<File | null>(null);
@@ -707,16 +728,27 @@ function UploadTab() {
 
             <div className="lg:col-span-8 space-y-4">
                 <div className="bg-white border border-[#121212]/10 rounded-xl overflow-hidden">
-                    <div className="p-4 border-b border-[#121212]/5 flex flex-wrap items-center gap-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] shrink-0">Upload Batches</p>
-                        <div className="flex flex-wrap gap-1.5">
-                            {(["", "PENDING", "PROCESSING", "COMPLETED", "FAILED"] as const).map((s) => (
-                                <button key={s} type="button" onClick={() => { applyStatusFilter(s); setSelectedBatch(null); }}
-                                    className={`h-7 px-3 text-[9px] font-semibold uppercase tracking-wider rounded-lg transition-colors ${statusFilter === s ? "bg-[#121212] text-white" : "bg-[#F4F1EA] text-[#8A817C] hover:text-[#121212]"}`}>
-                                    {s === "" ? "All" : s}
-                                </button>
-                            ))}
+                    <div className="p-4 border-b border-[#121212]/5 flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] shrink-0">Upload Batches</p>
+                            <div className="flex flex-wrap gap-1.5">
+                                {(["", "PENDING", "PROCESSING", "COMPLETED", "FAILED"] as const).map((s) => (
+                                    <button key={s} type="button" onClick={() => { applyStatusFilter(s); setSelectedBatch(null); }}
+                                        className={`h-7 px-3 text-[9px] font-semibold uppercase tracking-wider rounded-lg transition-colors ${statusFilter === s ? "bg-[#121212] text-white" : "bg-[#F4F1EA] text-[#8A817C] hover:text-[#121212]"}`}>
+                                        {s === "" ? "All" : s}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => refetch()}
+                            disabled={isLoading}
+                            className="p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/20 rounded-md transition-colors disabled:opacity-40"
+                            title="Refresh"
+                        >
+                            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                        </button>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
@@ -808,7 +840,7 @@ function UploadTab() {
 }
 
 function UnmatchedTab() {
-    const { records, pagination, statusFilter, search, isLoading, isSubmitting, error, applyStatusFilter, applySearch, goToPage, matchUnmatched, dismissUnmatched } = useTitheUnmatched();
+    const { records, pagination, statusFilter, search, isLoading, isSubmitting, error, applyStatusFilter, applySearch, goToPage, matchUnmatched, dismissUnmatched, refetch } = useTitheUnmatched();
     const [selected, setSelected] = useState<TitheUnmatchedRecord | null>(null);
     const [selectedMemberId, setSelectedMemberId] = useState("");
     const [actionError, setActionError] = useState<string | null>(null);
@@ -874,6 +906,15 @@ function UnmatchedTab() {
                         </button>
                     ))}
                 </div>
+                <button
+                    type="button"
+                    onClick={() => refetch()}
+                    disabled={isLoading}
+                    className="h-8 w-8 flex items-center justify-center border border-[#121212]/10 text-[#8A817C] hover:text-[#121212] transition-colors rounded-lg disabled:opacity-40 ml-auto"
+                    title="Refresh"
+                >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -1017,7 +1058,7 @@ function UnmatchedTab() {
 }
 
 function DisputesTab() {
-    const { disputes, pagination, statusFilter, search, isLoading, isSubmitting, error, applyStatusFilter, applySearch, goToPage, approveDispute, rejectDispute } = useTitheDisputes();
+    const { disputes, pagination, statusFilter, search, isLoading, isSubmitting, error, applyStatusFilter, applySearch, goToPage, approveDispute, rejectDispute, refetch } = useTitheDisputes();
     const [selected, setSelected] = useState<TitheDisputeRecord | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
     const [searchInput, setSearchInput] = useState("");
@@ -1081,6 +1122,15 @@ function DisputesTab() {
                         </button>
                     ))}
                 </div>
+                <button
+                    type="button"
+                    onClick={() => refetch()}
+                    disabled={isLoading}
+                    className="h-8 w-8 flex items-center justify-center border border-[#121212]/10 text-[#8A817C] hover:text-[#121212] transition-colors rounded-lg disabled:opacity-40 ml-auto"
+                    title="Refresh"
+                >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -1201,7 +1251,7 @@ function DisputesTab() {
 }
 
 function ProofsTab() {
-    const { proofs, pagination, statusFilter, search, isLoading, isSubmitting, error, applyStatusFilter, applySearch, goToPage, confirmProof, declineProof } = useTitheProofs();
+    const { proofs, pagination, statusFilter, search, isLoading, isSubmitting, error, applyStatusFilter, applySearch, goToPage, confirmProof, declineProof, refetch } = useTitheProofs();
     const [selected, setSelected] = useState<TithePaymentProof | null>(null);
     const [financeNote, setFinanceNote] = useState("");
     const [actionError, setActionError] = useState<string | null>(null);
@@ -1271,6 +1321,15 @@ function ProofsTab() {
                         </button>
                     ))}
                 </div>
+                <button
+                    type="button"
+                    onClick={() => refetch()}
+                    disabled={isLoading}
+                    className="h-8 w-8 flex items-center justify-center border border-[#121212]/10 text-[#8A817C] hover:text-[#121212] transition-colors rounded-lg disabled:opacity-40 ml-auto"
+                    title="Refresh"
+                >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

@@ -335,6 +335,28 @@ export function useAttendanceAdmin() {
         }
     }, []);
 
+    // Covers both "no phone, check them in live" and "restore their streak"
+    // (fixing a previously auto-marked ABSENT row) — same backend action
+    // either way, since the streak is computed live from these records.
+    const adminMarkAttendance = useCallback(async (
+        memberId: string,
+        serviceSlotId: string,
+        status: AttendanceStatusEnum,
+    ): Promise<void> => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            await api.post("/attendances/admin/mark", { memberId, serviceSlotId, status });
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            const message = e?.response?.data?.message || e?.message || "Failed to mark attendance.";
+            setError(message);
+            throw new Error(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, []);
+
     return {
         atRiskMembers,
         atRiskPagination,
@@ -344,5 +366,6 @@ export function useAttendanceAdmin() {
         getAtRiskMembers,
         getSlotSummary,
         correctAttendance,
+        adminMarkAttendance,
     };
 }

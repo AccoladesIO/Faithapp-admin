@@ -400,6 +400,16 @@ function FinanceRequestsPage() {
                         Review and manage fund requests from departments
                     </p>
                 </div>
+                <button
+                    onClick={() => (activeTab === "requests"
+                        ? fetchRequests({ status: statusFilter || undefined, categoryId: categoryFilter || undefined, search: search.trim() || undefined })
+                        : fetchCategories())}
+                    disabled={isLoading}
+                    className="p-2 border border-[#121212]/10 rounded-lg text-[#8A817C] hover:text-[#121212] hover:bg-[#F4F1EA] transition-colors disabled:opacity-40"
+                    title="Refresh"
+                >
+                    <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                </button>
             </div>
 
             <div className="flex gap-1">

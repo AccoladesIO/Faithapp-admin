@@ -414,16 +414,13 @@ fetchDepartments,
                                             </td>
                                             <td className="p-4">
                                                 {editingId === dept.id ? (
-                                                    <select
+                                                    <input
+                                                        list="dept-key-presets"
                                                         value={editForm.key}
                                                         onClick={(e) => e.stopPropagation()}
-                                                        onChange={(e) => setEditForm((p) => ({ ...p, key: e.target.value }))}
-                                                        className="h-8 px-2 bg-[#F4F1EA]/60 border border-[#121212]/20 text-xs text-[#121212] focus:outline-none rounded appearance-none"
-                                                    >
-                                                        {departmentKeys.map((k) => (
-                                                            <option key={k} value={k}>{formatKey(k)}</option>
-                                                        ))}
-                                                    </select>
+                                                        onChange={(e) => setEditForm((p) => ({ ...p, key: e.target.value.toUpperCase() }))}
+                                                        className="h-8 px-2 bg-[#F4F1EA]/60 border border-[#121212]/20 text-xs text-[#121212] focus:outline-none rounded w-32"
+                                                    />
                                                 ) : (
                                                     <span className="inline-block px-2 py-0.5 bg-[#F4F1EA] border border-[#121212]/5 text-[#121212] text-[9px] font-bold uppercase tracking-wider rounded">
                                                         {formatKey(dept.key)}
@@ -594,17 +591,22 @@ fetchDepartments,
                                     <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
                                         Department Key
                                     </label>
-                                    <select
+                                    <input
                                         required
+                                        list="dept-key-presets"
                                         value={createForm.key}
-                                        onChange={(e) => setCreateForm((p) => ({ ...p, key: e.target.value }))}
-                                        className="w-full h-11 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg appearance-none"
-                                    >
-                                        <option value="">-- Select a key --</option>
+                                        onChange={(e) => setCreateForm((p) => ({ ...p, key: e.target.value.toUpperCase() }))}
+                                        placeholder="Pick a preset or type a custom key…"
+                                        className="w-full h-11 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                                    />
+                                    <datalist id="dept-key-presets">
                                         {departmentKeys.map((k) => (
                                             <option key={k} value={k}>{formatKey(k)}</option>
                                         ))}
-                                    </select>
+                                    </datalist>
+                                    <p className="text-[10px] text-[#8A817C] mt-1">
+                                        Not tied to a fixed list — type any key to create a new access category, or pick an existing one.
+                                    </p>
                                 </div>
 
                                 <button

@@ -106,6 +106,36 @@ function AudienceBadge({ announcement }: { announcement: Announcement }) {
     );
 }
 
+// ─── Reaction summary ──────────────────────────────────────────────────────────
+
+function ReactionSummaryBadges({ announcementId }: { announcementId: string }) {
+    const [summary, setSummary] = useState<{ emoji: string; count: number }[]>([]);
+
+    useEffect(() => {
+        let cancelled = false;
+        api.get(`/announcements/${announcementId}/reactions`)
+            .then((res) => { if (!cancelled) setSummary(res.data?.data?.summary ?? []); })
+            .catch(() => { if (!cancelled) setSummary([]); });
+        return () => { cancelled = true; };
+    }, [announcementId]);
+
+    if (summary.length === 0) return null;
+
+    return (
+        <div className="flex flex-wrap gap-1.5 mt-3">
+            {summary.map((s) => (
+                <span
+                    key={s.emoji}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#F4F1EA] border border-[#121212]/5 text-[#121212] text-[10px] font-semibold rounded-full"
+                >
+                    <span>{s.emoji}</span>
+                    <span>{s.count}</span>
+                </span>
+            ))}
+        </div>
+    );
+}
+
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function SkeletonCard() {
@@ -1170,6 +1200,8 @@ export default withAuth(function AnnouncementsPage() {
                                                     </div>
                                                 )}
                                             </div>
+
+                                            <ReactionSummaryBadges announcementId={item.id} />
                                         </div>
                                     );
                                 })}

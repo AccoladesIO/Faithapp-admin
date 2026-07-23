@@ -4,11 +4,12 @@ import { useAttendanceAdmin } from "../use-attendance";
 import { api } from "@/utils/auth/axios-client";
 
 jest.mock("@/utils/auth/axios-client", () => ({
-    api: { get: jest.fn(), patch: jest.fn() },
+    api: { get: jest.fn(), patch: jest.fn(), post: jest.fn() },
 }));
 
 const mockGet = api.get as jest.MockedFunction<typeof api.get>;
 const mockPatch = api.patch as jest.MockedFunction<typeof api.patch>;
+const mockPost = api.post as jest.MockedFunction<typeof api.post>;
 
 const atRiskMember = {
     id: "m1", firstname: "John", lastname: "Doe",
@@ -115,5 +116,35 @@ describe("useAttendanceAdmin — correctAttendance", () => {
 
         expect(caught?.message).toBe("Record not found");
         expect(result.current.error).toBe("Record not found");
+    });
+});
+
+describe("useAttendanceAdmin — adminMarkAttendance", () => {
+    it("POSTs memberId, serviceSlotId, and status to the admin mark endpoint", async () => {
+        mockPost.mockResolvedValueOnce({ data: {} });
+
+        const { result } = renderHook(() => useAttendanceAdmin());
+
+        await act(async () => {
+            await result.current.adminMarkAttendance("member-1", "slot-1", "PRESENT");
+        });
+
+        expect(mockPost).toHaveBeenCalledWith("/attendances/admin/mark", {
+            memberId: "member-1", serviceSlotId: "slot-1", status: "PRESENT",
+        });
+    });
+
+    it("sets error and throws on failure", async () => {
+        mockPost.mockRejectedValueOnce({ response: { data: { message: "Service slot not found" } } });
+
+        const { result } = renderHook(() => useAttendanceAdmin());
+
+        let caught: Error | undefined;
+        await act(async () => {
+            try { await result.current.adminMarkAttendance("member-1", "bad-slot", "PRESENT"); } catch (e: unknown) { caught = e as Error; }
+        });
+
+        expect(caught?.message).toBe("Service slot not found");
+        expect(result.current.error).toBe("Service slot not found");
     });
 });

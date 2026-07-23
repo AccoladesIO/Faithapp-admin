@@ -19,6 +19,7 @@ import {
 import { withAuth } from "@/utils/auth/with-auth";
 import { useAdminProfile } from "@/hooks/use-admin-profile";
 import { PERMISSION_GROUPS } from "@/hooks/use-admin-management";
+import { useModuleState } from "@/hooks/use-module-state";
 import { DismissibleError } from "@/components/ui/dismissible-error";
 
 const MONTHS = [
@@ -96,6 +97,8 @@ function ProfilePage() {
         : "?";
 
     const permissionSet = new Set(role?.permissions ?? []);
+    const { isModuleEnabled } = useModuleState();
+    const visiblePermissionGroups = PERMISSION_GROUPS.filter((g) => isModuleEnabled(g.moduleKey));
 
     let dob: string | null = null;
     if (member?.birthDay && member?.birthMonth) {
@@ -269,7 +272,7 @@ function ProfilePage() {
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
-                                {PERMISSION_GROUPS.map((group) => {
+                                {visiblePermissionGroups.map((group) => {
                                     if (group.permissions.length === 0) return null;
                                     return (
                                         <div key={group.group} className="space-y-1.5">

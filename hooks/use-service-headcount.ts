@@ -161,7 +161,7 @@ export function useServiceHeadcount(defaultLimit = 10) {
     }, []);
 
     const fetchTrends = useCallback(async (
-        period: "weekly" | "monthly" | "yearly",
+        period: "weekly" | "monthly" | "quarterly",
         from?: string,
         to?: string
     ): Promise<HeadcountTrends> => {

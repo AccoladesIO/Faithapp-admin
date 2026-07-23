@@ -5,7 +5,7 @@ import { withAuth } from "@/utils/auth/with-auth";
 import { useChurchSettings, ChurchSetting } from "@/hooks/use-church-settings";
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/context/toast-context";
-import { Settings2, RefreshCw, Lock } from "lucide-react";
+import { Settings2, RefreshCw, Lock, Pencil, Check, X } from "lucide-react";
 import { DismissibleError } from "@/components/ui/dismissible-error";
 
 type ApiError = { response?: { data?: { message?: string } }; message?: string };
@@ -15,13 +15,17 @@ function ModuleRow({
     canWrite,
     isSubmitting,
     onToggle,
+    onRename,
 }: {
     setting: ChurchSetting;
     canWrite: boolean;
     isSubmitting: boolean;
     onToggle: (key: string, enabled: boolean) => void;
+    onRename: (key: string, displayName: string) => void;
 }) {
     const [pending, setPending] = useState(false);
+    const [renaming, setRenaming] = useState(false);
+    const [nameDraft, setNameDraft] = useState(setting.displayName ?? setting.moduleName);
 
     const handleToggle = async () => {
         if (!canWrite || setting.required || isSubmitting || pending) return;
@@ -33,15 +37,50 @@ function ModuleRow({
         }
     };
 
+    const handleSaveRename = async () => {
+        if (!nameDraft.trim()) return;
+        setPending(true);
+        try {
+            await onRename(setting.key, nameDraft.trim());
+            setRenaming(false);
+        } finally {
+            setPending(false);
+        }
+    };
+
     const toggling = pending || isSubmitting;
 
     return (
         <div className="flex items-center justify-between py-5 border-b border-[#121212]/8 last:border-0">
             <div className="flex-1 min-w-0 pr-6">
                 <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-[#121212]">
-                        {setting.moduleName}
-                    </span>
+                    {renaming ? (
+                        <>
+                            <input
+                                autoFocus
+                                value={nameDraft}
+                                onChange={(e) => setNameDraft(e.target.value)}
+                                className="h-7 px-2 text-sm border border-[#121212]/20 focus:outline-none focus:border-[#121212]"
+                            />
+                            <button onClick={handleSaveRename} disabled={toggling} className="text-emerald-600 hover:text-emerald-700 disabled:opacity-40">
+                                <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={() => { setRenaming(false); setNameDraft(setting.displayName ?? setting.moduleName); }} className="text-[#8A817C] hover:text-[#121212]">
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <span className="text-sm font-medium text-[#121212]">
+                                {setting.displayName ?? setting.moduleName}
+                            </span>
+                            {canWrite && (
+                                <button onClick={() => setRenaming(true)} className="text-[#8A817C] hover:text-[#121212]" title="Rename">
+                                    <Pencil className="w-3 h-3" />
+                                </button>
+                            )}
+                        </>
+                    )}
                     {setting.required && (
                         <span className="inline-flex items-center gap-1 h-5 px-2 text-[10px] font-semibold uppercase tracking-wider bg-[#F4F1EA] text-[#8A817C] border border-[#121212]/10">
                             <Lock className="w-2.5 h-2.5" />
@@ -112,6 +151,18 @@ const SystemSettingsPage = withAuth(
             }
         };
 
+        const handleRename = async (key: string, displayName: string) => {
+            const current = settings.find((s) => s.key === key);
+            if (!current) return;
+            try {
+                await updateSetting(key, current.enabled, displayName);
+                success("Module renamed successfully.");
+            } catch (err: unknown) {
+                const e = err as ApiError;
+                toastError(e?.message || "Failed to rename module.");
+            }
+        };
+
         return (
             <div className="max-w-2xl mx-auto space-y-6">
                 <div className="flex items-center justify-between">
@@ -175,6 +226,7 @@ const SystemSettingsPage = withAuth(
                                 canWrite={canWrite}
                                 isSubmitting={isSubmitting}
                                 onToggle={handleToggle}
+                                onRename={handleRename}
                             />
                         ))
                     )}

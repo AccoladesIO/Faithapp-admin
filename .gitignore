@@ -10,6 +10,10 @@
 !.yarn/releases
 !.yarn/versions
 
+# this project uses pnpm — npm's lockfile must never be committed, it
+# silently drifts from pnpm-lock.yaml and breaks `pnpm install --frozen-lockfile` in CI
+package-lock.json
+
 # testing
 /coverage
 
