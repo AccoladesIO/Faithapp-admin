@@ -38,7 +38,7 @@ export interface Department {
     id: string;
     name: string;
     description: string | null;
-    key: string;
+    capabilities: string[];
     createdAt: string;
     updatedAt: string;
     leads?: DepartmentLead[];
@@ -48,7 +48,7 @@ export interface Department {
 export interface CreateDepartmentPayload {
     name: string;
     description: string;
-    key: string;
+    capabilities: string[];
 }
 
 export type UpdateDepartmentPayload = Partial<CreateDepartmentPayload>;
@@ -80,9 +80,25 @@ export interface DepartmentPagination {
     totalPages: number;
 }
 
+const normalizeCapabilities = (value: unknown): string[] => {
+    if (Array.isArray(value)) {
+        return value.filter((item): item is string => typeof item === "string");
+    }
+    if (value && typeof value === "object") {
+        const candidate = value as { data?: unknown; capabilities?: unknown };
+        if (Array.isArray(candidate.capabilities)) {
+            return candidate.capabilities.filter((item): item is string => typeof item === "string");
+        }
+        if (Array.isArray(candidate.data)) {
+            return candidate.data.filter((item): item is string => typeof item === "string");
+        }
+    }
+    return [];
+};
+
 export function useDepartments() {
     const [departments, setDepartments] = useState<Department[]>([]);
-    const [departmentKeys, setDepartmentKeys] = useState<string[]>([]);
+    const [departmentCapabilities, setDepartmentCapabilities] = useState<string[]>([]);
     const [pagination, setPagination] = useState<DepartmentPagination | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,11 +110,15 @@ export function useDepartments() {
         try {
             const res = await api.get("/departments");
             const outer = res.data?.data;
-            const list: Department[] = Array.isArray(outer?.data)
+            const rawList: Department[] = Array.isArray(outer?.data)
                 ? outer.data
                 : Array.isArray(outer)
                     ? outer
                     : [];
+            const list = rawList.map((department) => ({
+                ...department,
+                capabilities: normalizeCapabilities(department.capabilities),
+            }));
             setDepartments(list);
             if (outer?.page !== undefined) {
                 setPagination({
@@ -120,13 +140,18 @@ export function useDepartments() {
         }
     }, []);
 
-    const fetchDepartmentKeys = useCallback(async () => {
+    const fetchDepartmentCapabilities = useCallback(async () => {
         try {
-            const res = await api.get("/departments/keys");
-            const keys = res.data?.data;
-            setDepartmentKeys(Array.isArray(keys) ? keys : []);
-        } catch {
-            // non-fatal
+            const res = await api.get("/departments/capabilities");
+            const payload = res.data?.data ?? res.data;
+            setDepartmentCapabilities(normalizeCapabilities(payload));
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setError(
+                e?.response?.data?.message ||
+                e?.message ||
+                "Failed to fetch department capabilities."
+            );
         }
     }, []);
 
@@ -348,13 +373,13 @@ export function useDepartments() {
 
     useEffect(() => {
         fetchDepartments();
-        fetchDepartmentKeys();
-    }, [fetchDepartments, fetchDepartmentKeys]);
+        fetchDepartmentCapabilities();
+    }, [fetchDepartments, fetchDepartmentCapabilities]);
 
     const clearError = useCallback(() => setError(null), []);
     return {
         departments,
-        departmentKeys,
+        departmentCapabilities,
         pagination,
         isLoading,
         isSubmitting,
@@ -362,7 +387,7 @@ export function useDepartments() {
 
         clearError,
         fetchDepartments,
-        fetchDepartmentKeys,
+        fetchDepartmentCapabilities,
         createDepartment,
         updateDepartment,
         deleteDepartment,

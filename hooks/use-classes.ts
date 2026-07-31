@@ -26,6 +26,7 @@ export interface ChurchClass {
     classType: ClassTypeRef;
     status: ClassStatus;
     description: string;
+    documentUrl: string | null;
     startDate: string;
     endDate: string;
     facilitator: ClassFacilitator | null;
@@ -44,6 +45,7 @@ export interface CreateClassPayload {
     name: string;
     classTypeId: string;
     description: string;
+    documentUrl?: string;
     facilitatorId: string;
     startDate: string;
     endDate: string;

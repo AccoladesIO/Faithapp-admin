@@ -7,7 +7,7 @@ import {
     BookOpen, Plus, X,
     Trash2, Pencil, Eye, RefreshCw, Users, Calendar,
     CheckCircle2, ShieldAlert, Check, ClipboardList,
-    LockKeyhole, UnlockKeyhole,
+    LockKeyhole, UnlockKeyhole, FileText,
 } from "lucide-react";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { DismissibleError } from "@/components/ui/dismissible-error";
@@ -328,7 +328,7 @@ function SundaySchoolPage() {
     // ── Sessions state ────────────────────────────────────────────────────────
     const [selectedClassId, setSelectedClassId] = useState<string>("");
     const [showCreateSession, setShowCreateSession] = useState(false);
-    const [sessionForm, setSessionForm] = useState({ classId: "", sessionDate: "", notes: "" });
+    const [sessionForm, setSessionForm] = useState({ classId: "", sessionDate: "", notes: "", documentUrl: "" });
     const [sessionFormMsg, setSessionFormMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
     const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
 
@@ -478,8 +478,9 @@ function SundaySchoolPage() {
                 classId: sessionForm.classId,
                 sessionDate: sessionForm.sessionDate,
                 ...(sessionForm.notes ? { notes: sessionForm.notes } : {}),
+                ...(sessionForm.documentUrl ? { documentUrl: sessionForm.documentUrl } : {}),
             });
-            setSessionForm({ classId: selectedClassId, sessionDate: "", notes: "" });
+            setSessionForm({ classId: selectedClassId, sessionDate: "", notes: "", documentUrl: "" });
             setShowCreateSession(false);
             setSessionFormMsg({ type: "ok", text: "Session created." });
             setTimeout(() => setSessionFormMsg(null), 3000);
@@ -1003,7 +1004,7 @@ function SundaySchoolPage() {
                         </div>
                         <button
                             onClick={() => {
-                                setSessionForm({ classId: selectedClassId, sessionDate: "", notes: "" });
+                                setSessionForm({ classId: selectedClassId, sessionDate: "", notes: "", documentUrl: "" });
                                 setSessionFormMsg(null);
                                 setShowCreateSession(true);
                             }}
@@ -1059,8 +1060,22 @@ function SundaySchoolPage() {
                                                     <td className="p-4">
                                                         <SessionStatusBadge status={session.status} />
                                                     </td>
-                                                    <td className="p-4 text-xs text-[#8A817C] font-light max-w-[200px] truncate">
-                                                        {session.notes ?? <span className="italic opacity-40">—</span>}
+                                                    <td className="p-4 text-xs text-[#8A817C] font-light max-w-[200px]">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="truncate">{session.notes ?? <span className="italic opacity-40">—</span>}</span>
+                                                            {session.documentUrl && (
+                                                                <a
+                                                                    href={session.documentUrl}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    title="Lesson material"
+                                                                    className="shrink-0 text-[#8A817C] hover:text-[#121212] transition-colors"
+                                                                >
+                                                                    <FileText className="w-3.5 h-3.5" />
+                                                                </a>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                     <td className="p-4 text-right">
                                                         {deletingSessionId === session.id ? (
@@ -1198,6 +1213,15 @@ function SundaySchoolPage() {
                                                             onChange={(e) => setSessionForm((p) => ({ ...p, notes: e.target.value }))}
                                                             placeholder="Any notes for this session..."
                                                             className="w-full p-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg resize-none"
+                                                        />
+                                                    </Field>
+                                                    <Field label="Lesson Material Link (optional)">
+                                                        <input
+                                                            type="url"
+                                                            value={sessionForm.documentUrl}
+                                                            onChange={(e) => setSessionForm((p) => ({ ...p, documentUrl: e.target.value }))}
+                                                            placeholder="https://drive.google.com/..."
+                                                            className={inputCls}
                                                         />
                                                     </Field>
                                                     <button type="submit" disabled={ss.isSubmitting} className={submitCls}>

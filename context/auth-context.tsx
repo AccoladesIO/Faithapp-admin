@@ -36,6 +36,7 @@ const AuthContext = createContext<AuthState | null>(null);
 const REFRESH_LEAD_MS = 60 * 1000;
 
 const log = (label: string, detail?: string) => {
+    if (process.env.NODE_ENV === "production") return;
     const now = new Date();
     const time = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     const base = `[Auth ${time}] ${label}`;

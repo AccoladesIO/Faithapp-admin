@@ -34,6 +34,7 @@ export interface SSSession {
     classId: string;
     sessionDate: string;
     notes: string | null;
+    documentUrl: string | null;
     status: "OPEN" | "CLOSED";
     createdAt: string;
     updatedAt: string;
@@ -248,6 +249,7 @@ export function useSundaySchool(defaultLimit = 10) {
         classId: string;
         sessionDate: string;
         notes?: string;
+        documentUrl?: string;
     }): Promise<SSSession> => {
         setIsSubmitting(true);
         setError(null);

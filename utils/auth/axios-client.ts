@@ -1,5 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { tokenStore } from "./token-store";
+import { authLog } from "./auth-log";
 
 type RetriableConfig = InternalAxiosRequestConfig & {
     _retry?: boolean;
@@ -36,19 +37,13 @@ export const commitAuthPayload = (payload: AuthPayload) => {
         minute: "2-digit",
         second: "2-digit",
     });
-    console.log(
-        `[Auth ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}]`,
-        `💾 Token committed — expires_in: ${payload.expires_in}s — expires at: ${expiresAtTime}`
-    );
+    authLog(`💾 Token committed — expires_in: ${payload.expires_in}s — expires at: ${expiresAtTime}`);
 };
 
 let refreshPromise: Promise<string> | null = null;
 
 const doRefresh = async (): Promise<string> => {
-    console.log(
-        `[Auth ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}]`,
-        "📡 Sending refresh request to /auth/refresh..."
-    );
+    authLog("📡 Sending refresh request to /auth/refresh...");
 
     // The httpOnly cookie is sent automatically via withCredentials — no manual token needed
     const res = await axios.post(
@@ -65,10 +60,7 @@ const doRefresh = async (): Promise<string> => {
 
 export const refreshAccessToken = (): Promise<string> => {
     if (refreshPromise) {
-        console.log(
-            `[Auth ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}]`,
-            "⏳ Refresh already in progress — reusing existing promise"
-        );
+        authLog("⏳ Refresh already in progress — reusing existing promise");
     } else {
         refreshPromise = doRefresh().finally(() => {
             refreshPromise = null;
@@ -85,24 +77,15 @@ api.interceptors.response.use(
             throw error;
         }
         if (error.response?.status === 401) {
-            console.log(
-                `[Auth ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}]`,
-                `⚠️  401 on ${config.url} — attempting token refresh before retry`
-            );
+            authLog(`⚠️  401 on ${config.url} — attempting token refresh before retry`);
             config._retry = true;
             try {
                 const newToken = await refreshAccessToken();
                 config.headers.set('Authorization', `Bearer ${newToken}`);
-                console.log(
-                    `[Auth ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}]`,
-                    `🔁 Retrying ${config.url} with new token`
-                );
+                authLog(`🔁 Retrying ${config.url} with new token`);
                 return api(config);
             } catch (refreshErr) {
-                console.log(
-                    `[Auth ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}]`,
-                    "❌ Refresh failed on 401 retry — clearing session"
-                );
+                authLog("❌ Refresh failed on 401 retry — clearing session");
                 tokenStore.clear();
                 throw refreshErr;
             }

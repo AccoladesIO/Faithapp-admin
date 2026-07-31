@@ -50,22 +50,34 @@ interface WorkerProfileRow {
     member: { firstname: string; lastname: string };
 }
 
-// Scoped to the Evangelism department specifically, since that's the only
-// valid reassignment target the backend accepts.
+// Scoped to whichever department(s) hold the MANAGE_EVANGELISM_CONVERTS
+// capability — more than one department can hold it, so this merges workers
+// across all of them (deduped by worker profile id) rather than assuming a
+// single "the Evangelism department" like the old key-based lookup did.
 export async function fetchEvangelismWorkerOptions(): Promise<EvangelismWorkerOption[]> {
     const deptRes = await api.get("/departments");
-    const departments: Array<{ id: string; key: string }> = deptRes.data?.data ?? [];
-    const evangelism = departments.find((d) => d.key === "EVANGELISM");
-    if (!evangelism) return [];
+    const departments: Array<{ id: string; capabilities: string[] }> = deptRes.data?.data ?? [];
+    const evangelismDepts = departments.filter((d) =>
+        d.capabilities?.includes("MANAGE_EVANGELISM_CONVERTS")
+    );
+    if (evangelismDepts.length === 0) return [];
 
-    const res = await api.get(`/departments/${evangelism.id}/workers?limit=100`);
-    const outer = res.data?.data;
-    const rows: WorkerProfileRow[] = Array.isArray(outer?.data) ? outer.data : [];
-    return rows.map((r) => ({
-        workerProfileId: r.id,
-        firstname: r.member.firstname,
-        lastname: r.member.lastname,
-    }));
+    const results = await Promise.all(
+        evangelismDepts.map((d) => api.get(`/departments/${d.id}/workers?limit=100`))
+    );
+    const byId = new Map<string, EvangelismWorkerOption>();
+    for (const res of results) {
+        const outer = res.data?.data;
+        const rows: WorkerProfileRow[] = Array.isArray(outer?.data) ? outer.data : [];
+        for (const r of rows) {
+            byId.set(r.id, {
+                workerProfileId: r.id,
+                firstname: r.member.firstname,
+                lastname: r.member.lastname,
+            });
+        }
+    }
+    return Array.from(byId.values());
 }
 
 export function useEvangelismAdmin() {

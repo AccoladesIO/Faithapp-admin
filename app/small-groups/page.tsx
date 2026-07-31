@@ -9,6 +9,7 @@ import {
     SmallGroupPayload,
     SmallGroupMemberRow,
     SmallGroupAttendanceRow,
+    ListPagination,
 } from "@/hooks/use-small-groups";
 import { MemberSearchSelect } from "@/components/ui/member-search-select";
 import { DismissibleError } from "@/components/ui/dismissible-error";
@@ -141,13 +142,20 @@ function GroupFormPanel({ editing, onClose, onSave, isSubmitting }: Readonly<{
     );
 }
 
-function DetailPanel({ group, roster, attendance, isLoading, onClose, onRemoveMember }: Readonly<{
+function DetailPanel({
+    group, roster, attendance, rosterPagination, attendancePagination,
+    isLoading, onClose, onRemoveMember, onRosterPage, onAttendancePage,
+}: Readonly<{
     group: SmallGroup;
     roster: SmallGroupMemberRow[];
     attendance: SmallGroupAttendanceRow[];
+    rosterPagination: ListPagination | null;
+    attendancePagination: ListPagination | null;
     isLoading: boolean;
     onClose: () => void;
     onRemoveMember: (memberId: string) => void;
+    onRosterPage: (page: number) => void;
+    onAttendancePage: (page: number) => void;
 }>) {
     const [tab, setTab] = useState<"roster" | "attendance">("roster");
 
@@ -185,31 +193,39 @@ function DetailPanel({ group, roster, attendance, isLoading, onClose, onRemoveMe
                     {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-10 bg-[#F4F1EA] rounded-lg" />)}
                 </div>
             ) : tab === "roster" ? (
-                roster.length === 0 ? (
-                    <p className="text-xs text-[#8A817C] text-center py-6">No members yet.</p>
-                ) : (
-                    <div className="space-y-1.5">
-                        {roster.map((r) => (
-                            <div key={r.id} className="flex items-center justify-between bg-[#F4F1EA]/50 rounded-lg px-3 py-2 text-xs">
-                                <span className="text-[#121212] font-medium">{r.member.firstname} {r.member.lastname}</span>
-                                <button onClick={() => onRemoveMember(r.member.id)} className="text-[#8A817C] hover:text-red-600 transition-colors" title="Remove from group">
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )
-            ) : attendance.length === 0 ? (
-                <p className="text-xs text-[#8A817C] text-center py-6">No attendance recorded yet.</p>
-            ) : (
-                <div className="space-y-1.5">
-                    {attendance.map((a) => (
-                        <div key={a.id} className="flex items-center justify-between bg-[#F4F1EA]/50 rounded-lg px-3 py-2 text-xs">
-                            <span className="text-[#121212] font-medium">{a.member.firstname} {a.member.lastname}</span>
-                            <span className="text-[#8A817C] font-mono">{fmtDate(a.meetingDate)} — {a.status}</span>
+                <>
+                    {roster.length === 0 ? (
+                        <p className="text-xs text-[#8A817C] text-center py-6">No members yet.</p>
+                    ) : (
+                        <div className="space-y-1.5">
+                            {roster.map((r) => (
+                                <div key={r.id} className="flex items-center justify-between bg-[#F4F1EA]/50 rounded-lg px-3 py-2 text-xs">
+                                    <span className="text-[#121212] font-medium">{r.member.firstname} {r.member.lastname}</span>
+                                    <button onClick={() => onRemoveMember(r.member.id)} className="text-[#8A817C] hover:text-red-600 transition-colors" title="Remove from group">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
+                    )}
+                    <PaginationBar pagination={rosterPagination} onPage={onRosterPage} label="members" />
+                </>
+            ) : (
+                <>
+                    {attendance.length === 0 ? (
+                        <p className="text-xs text-[#8A817C] text-center py-6">No attendance recorded yet.</p>
+                    ) : (
+                        <div className="space-y-1.5">
+                            {attendance.map((a) => (
+                                <div key={a.id} className="flex items-center justify-between bg-[#F4F1EA]/50 rounded-lg px-3 py-2 text-xs">
+                                    <span className="text-[#121212] font-medium">{a.member.firstname} {a.member.lastname}</span>
+                                    <span className="text-[#8A817C] font-mono">{fmtDate(a.meetingDate)} — {a.status}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <PaginationBar pagination={attendancePagination} onPage={onAttendancePage} label="records" />
+                </>
             )}
         </div>
     );
@@ -228,6 +244,8 @@ const SmallGroupsPage = withAuth(function SmallGroupsPage() {
     const [detailFor, setDetailFor] = useState<SmallGroup | null>(null);
     const [roster, setRoster] = useState<SmallGroupMemberRow[]>([]);
     const [attendance, setAttendance] = useState<SmallGroupAttendanceRow[]>([]);
+    const [rosterPagination, setRosterPagination] = useState<ListPagination | null>(null);
+    const [attendancePagination, setAttendancePagination] = useState<ListPagination | null>(null);
     const [detailLoading, setDetailLoading] = useState(false);
 
     useEffect(() => { fetchGroups(1); }, [fetchGroups]);
@@ -254,11 +272,27 @@ const SmallGroupsPage = withAuth(function SmallGroupsPage() {
         setDetailLoading(true);
         try {
             const [r, a] = await Promise.all([fetchRoster(g.id), fetchAttendanceHistory(g.id)]);
-            setRoster(r);
-            setAttendance(a);
+            setRoster(r.data);
+            setRosterPagination(r.pagination);
+            setAttendance(a.data);
+            setAttendancePagination(a.pagination);
         } finally {
             setDetailLoading(false);
         }
+    };
+
+    const loadRosterPage = async (page: number) => {
+        if (!detailFor) return;
+        const r = await fetchRoster(detailFor.id, page);
+        setRoster(r.data);
+        setRosterPagination(r.pagination);
+    };
+
+    const loadAttendancePage = async (page: number) => {
+        if (!detailFor) return;
+        const a = await fetchAttendanceHistory(detailFor.id, page);
+        setAttendance(a.data);
+        setAttendancePagination(a.pagination);
     };
 
     const handleRemoveMember = async (memberId: string) => {
@@ -398,9 +432,13 @@ const SmallGroupsPage = withAuth(function SmallGroupsPage() {
                             group={detailFor}
                             roster={roster}
                             attendance={attendance}
+                            rosterPagination={rosterPagination}
+                            attendancePagination={attendancePagination}
                             isLoading={detailLoading}
                             onClose={closePanel}
                             onRemoveMember={handleRemoveMember}
+                            onRosterPage={loadRosterPage}
+                            onAttendancePage={loadAttendancePage}
                         />
                     </div>
                 )}

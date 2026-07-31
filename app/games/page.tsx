@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { withAuth } from "@/utils/auth/with-auth";
 import {
@@ -11,6 +11,7 @@ import {
     Plus,
     Trash2,
     ListChecks,
+    MonitorPlay,
 } from "lucide-react";
 import { useGames, Game, GamePayload } from "@/hooks/use-games";
 import { useAuth } from "@/context/auth-context";
@@ -45,6 +46,31 @@ const GamesPage = withAuth(() => {
     const [draft, setDraft] = useState<GamePayload>(EMPTY_DRAFT);
 
     useEffect(() => { fetchGames(1); }, [fetchGames]);
+
+    const pageRef = useRef(1);
+    useEffect(() => { pageRef.current = pagination?.page ?? 1; }, [pagination]);
+
+    useEffect(() => {
+        // A game's status (DRAFT/LIVE_SESSION_ACTIVE) can change on another
+        // page (starting/ending a session) while this list is sitting in the
+        // browser's back-forward cache — bfcache restores the DOM exactly as
+        // it was, with no re-mount and no network request — or just sitting
+        // in a background tab. Either way, without this the status/Resume
+        // button can go stale until a hard refresh.
+        function refreshIfRestored(e?: PageTransitionEvent) {
+            if (e && !e.persisted) return;
+            fetchGames(pageRef.current);
+        }
+        function handleVisibility() {
+            if (document.visibilityState === "visible") refreshIfRestored();
+        }
+        window.addEventListener("pageshow", refreshIfRestored);
+        document.addEventListener("visibilitychange", handleVisibility);
+        return () => {
+            window.removeEventListener("pageshow", refreshIfRestored);
+            document.removeEventListener("visibilitychange", handleVisibility);
+        };
+    }, [fetchGames]);
 
     useEffect(() => {
         if (selected) {
@@ -149,7 +175,13 @@ const GamesPage = withAuth(() => {
                                         </td>
                                     </tr>
                                 )}
-                                {!isLoading && games.map((game) => (
+                                {!isLoading && games.map((game) => {
+                                    // activeSessionCode comes straight from GameSession
+                                    // (the source of truth for "is this live right now"),
+                                    // not the denormalized Game.status — treat it as
+                                    // authoritative in case the two ever drift apart.
+                                    const isLive = !!game.activeSessionCode;
+                                    return (
                                     <tr
                                         key={game.id}
                                         onClick={() => setSelected(selected?.id === game.id ? null : game)}
@@ -157,21 +189,34 @@ const GamesPage = withAuth(() => {
                                     >
                                         <td className="px-4 py-3 text-sm font-medium text-[#121212] truncate max-w-[240px]">{game.title}</td>
                                         <td className="px-4 py-3 hidden sm:table-cell">
-                                            <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${STATUS_STYLE[game.status]}`}>
-                                                {STATUS_LABEL[game.status]}
+                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${isLive ? STATUS_STYLE.LIVE_SESSION_ACTIVE : STATUS_STYLE[game.status]}`}>
+                                                {isLive && <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />}
+                                                {isLive ? STATUS_LABEL.LIVE_SESSION_ACTIVE : STATUS_LABEL[game.status]}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); router.push(`/games/${game.id}`); }}
-                                                className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#8A817C] hover:text-[#121212]"
-                                            >
-                                                <ListChecks className="w-3 h-3" />
-                                                Questions
-                                            </button>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-end gap-3">
+                                                {isLive && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); router.push(`/games/present/${game.activeSessionCode}`); }}
+                                                        className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-red-700 hover:text-red-800"
+                                                    >
+                                                        <MonitorPlay className="w-3 h-3" />
+                                                        Resume Control
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); router.push(`/games/${game.id}`); }}
+                                                    className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#8A817C] hover:text-[#121212]"
+                                                >
+                                                    <ListChecks className="w-3 h-3" />
+                                                    Questions
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
-                                ))}
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
