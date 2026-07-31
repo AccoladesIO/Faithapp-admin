@@ -88,8 +88,8 @@ export default withAuth(function AccountingPeriodsPage() {
 
                             <DismissibleError message={error} />
 
-            <div className="flex gap-6 items-start">
-                <div className="flex-1 min-w-0 bg-white border border-[#121212]/10 rounded-xl overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className={`${(showCreate || selected) ? "lg:col-span-7" : "lg:col-span-12"} bg-white border border-[#121212]/10 rounded-xl overflow-hidden`}>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -126,34 +126,36 @@ export default withAuth(function AccountingPeriodsPage() {
 
                 {/* Create panel */}
                 {showCreate && (
-                    <div className="w-[320px] shrink-0 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
+                    <div className="lg:col-span-5 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212] flex items-center space-x-2"><CalendarDays className="w-3.5 h-3.5" /><span>New Period</span></p>
-                            <button onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-[#8A817C]" /></button>
+                            <button type="button" onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-[#8A817C]" /></button>
                         </div>
                         <DismissibleError message={actionError} />
-                        <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Year *</label>
-                            <input type="number" value={form.year} onChange={(e) => setForm((f) => ({ ...f, year: Number(e.target.value) }))} min={2000} max={2099}
-                                className="w-full h-10 px-3 border border-[#121212]/10 text-xs font-mono text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Month *</label>
-                            <select value={form.month} onChange={(e) => setForm((f) => ({ ...f, month: Number(e.target.value) }))}
-                                className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
-                                {MONTHS.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
-                            </select>
-                        </div>
-                        <button onClick={handleCreate} disabled={isSubmitting}
-                            className="w-full h-10 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest rounded-xl disabled:opacity-40">
-                            {isSubmitting ? "Creating…" : "Create Period"}
-                        </button>
+                        <form onSubmit={(e) => { e.preventDefault(); handleCreate(); }} className="space-y-4">
+                            <div>
+                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Year *</label>
+                                <input required type="number" value={form.year} onChange={(e) => setForm((f) => ({ ...f, year: Number(e.target.value) }))} min={2000} max={2099}
+                                    className="w-full h-10 px-3 border border-[#121212]/10 text-xs font-mono text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Month *</label>
+                                <select required value={form.month} onChange={(e) => setForm((f) => ({ ...f, month: Number(e.target.value) }))}
+                                    className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
+                                    {MONTHS.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                                </select>
+                            </div>
+                            <button type="submit" disabled={isSubmitting}
+                                className="w-full h-10 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest rounded-xl disabled:opacity-40">
+                                {isSubmitting ? "Creating…" : "Create Period"}
+                            </button>
+                        </form>
                     </div>
                 )}
 
                 {/* Detail panel */}
                 {selected && !showCreate && (
-                    <div className="w-[320px] shrink-0 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-5">
+                    <div className="lg:col-span-5 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-5">
                         <div className="flex items-center justify-between">
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212]">
                                 {selected.year}-{String(selected.month).padStart(2, "0")}

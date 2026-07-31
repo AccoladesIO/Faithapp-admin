@@ -263,46 +263,48 @@ export default withAuth(function PledgesPage() {
                         <div className="bg-white border border-[#121212]/10 rounded-xl p-4 space-y-3">
                             <div className="flex items-center justify-between">
                                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[#121212] flex items-center space-x-1"><HandHeart className="w-3 h-3" /><span>New Campaign</span></p>
-                                <button onClick={() => setShowCampaignForm(false)}><X className="w-3.5 h-3.5 text-[#8A817C]" /></button>
+                                <button type="button" onClick={() => setShowCampaignForm(false)}><X className="w-3.5 h-3.5 text-[#8A817C]" /></button>
                             </div>
-                            <div>
-                                <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">Name *</label>
-                                <input type="text" value={campaignForm.name} onChange={(e) => setCampaignForm((f) => ({ ...f, name: e.target.value }))}
-                                    className="w-full h-8 px-2 border border-[#121212]/10 text-[10px] text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none" />
-                            </div>
-                            <div>
-                                <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">Fund *</label>
-                                <select value={campaignForm.fundId} onChange={(e) => setCampaignForm((f) => ({ ...f, fundId: e.target.value }))}
-                                    className="w-full h-8 px-2 border border-[#121212]/10 text-[10px] text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none">
-                                    <option value="">Select fund</option>
-                                    {funds.filter((f) => f.isActive).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">Target Amount *</label>
-                                <div className="relative">
-                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-[#8A817C] select-none pointer-events-none">{currencySymbol}</span>
-                                    <input type="text" inputMode="decimal" value={formatCurrencyInput(campaignForm.targetAmount)} placeholder="0"
-                                        onChange={(e) => setCampaignForm((f) => ({ ...f, targetAmount: parseCurrencyInput(e.target.value) }))}
-                                        className="w-full h-8 pl-5 pr-2 border border-[#121212]/10 text-[10px] font-mono text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none" />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
+                            <form onSubmit={(e) => { e.preventDefault(); handleCreateCampaign(); }} className="space-y-3">
                                 <div>
-                                    <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">Start Date *</label>
-                                    <input type="date" value={campaignForm.startDate} onChange={(e) => setCampaignForm((f) => ({ ...f, startDate: e.target.value }))}
+                                    <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">Name *</label>
+                                    <input required type="text" value={campaignForm.name} onChange={(e) => setCampaignForm((f) => ({ ...f, name: e.target.value }))}
                                         className="w-full h-8 px-2 border border-[#121212]/10 text-[10px] text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">End Date *</label>
-                                    <input type="date" value={campaignForm.endDate} onChange={(e) => setCampaignForm((f) => ({ ...f, endDate: e.target.value }))}
-                                        className="w-full h-8 px-2 border border-[#121212]/10 text-[10px] text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none" />
+                                    <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">Fund *</label>
+                                    <select required value={campaignForm.fundId} onChange={(e) => setCampaignForm((f) => ({ ...f, fundId: e.target.value }))}
+                                        className="w-full h-8 px-2 border border-[#121212]/10 text-[10px] text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none">
+                                        <option value="">Select fund</option>
+                                        {funds.filter((f) => f.isActive).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                                    </select>
                                 </div>
-                            </div>
-                            <button onClick={handleCreateCampaign} disabled={isSubmitting || !campaignForm.name || !campaignForm.fundId || !campaignForm.targetAmount || !campaignForm.startDate || !campaignForm.endDate}
-                                className="w-full h-8 bg-[#121212] text-white text-[10px] font-semibold uppercase tracking-widest rounded-lg disabled:opacity-40">
-                                {isSubmitting ? "…" : "Create"}
-                            </button>
+                                <div>
+                                    <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">Target Amount *</label>
+                                    <div className="relative">
+                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-[#8A817C] select-none pointer-events-none">{currencySymbol}</span>
+                                        <input required type="text" inputMode="decimal" value={formatCurrencyInput(campaignForm.targetAmount)} placeholder="0"
+                                            onChange={(e) => setCampaignForm((f) => ({ ...f, targetAmount: parseCurrencyInput(e.target.value) }))}
+                                            className="w-full h-8 pl-5 pr-2 border border-[#121212]/10 text-[10px] font-mono text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none" />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">Start Date *</label>
+                                        <input required type="date" value={campaignForm.startDate} onChange={(e) => setCampaignForm((f) => ({ ...f, startDate: e.target.value }))}
+                                            className="w-full h-8 px-2 border border-[#121212]/10 text-[10px] text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">End Date *</label>
+                                        <input required type="date" value={campaignForm.endDate} onChange={(e) => setCampaignForm((f) => ({ ...f, endDate: e.target.value }))}
+                                            className="w-full h-8 px-2 border border-[#121212]/10 text-[10px] text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none" />
+                                    </div>
+                                </div>
+                                <button type="submit" disabled={isSubmitting || !campaignForm.name || !campaignForm.fundId || !campaignForm.targetAmount || !campaignForm.startDate || !campaignForm.endDate}
+                                    className="w-full h-8 bg-[#121212] text-white text-[10px] font-semibold uppercase tracking-widest rounded-lg disabled:opacity-40">
+                                    {isSubmitting ? "…" : "Create"}
+                                </button>
+                            </form>
                         </div>
                     )}
                 </div>
@@ -341,12 +343,13 @@ export default withAuth(function PledgesPage() {
                                 <div className="bg-white border border-[#121212]/10 rounded-xl p-4 space-y-3">
                                     <div className="flex items-center justify-between">
                                         <p className="text-[10px] font-semibold uppercase tracking-widest text-[#121212]">Add Pledge</p>
-                                        <button onClick={() => setShowPledgeForm(false)}><X className="w-3.5 h-3.5 text-[#8A817C]" /></button>
+                                        <button type="button" onClick={() => setShowPledgeForm(false)}><X className="w-3.5 h-3.5 text-[#8A817C]" /></button>
                                     </div>
+                                    <form onSubmit={(e) => { e.preventDefault(); handleCreatePledge(); }} className="space-y-3">
                                     <div className="space-y-2">
                                         <div className="flex items-center space-x-1">
                                             {(["member", "guest"] as const).map((mode) => (
-                                                <button key={mode}
+                                                <button key={mode} type="button"
                                                     onClick={() => { setPledgeMode(mode); setPledgeForm((f) => ({ ...f, memberId: undefined, guestName: undefined })); setSelectedMember(null); setMemberSearch(""); }}
                                                     className={`h-6 px-3 rounded-full text-[9px] font-semibold uppercase tracking-widest transition-colors ${pledgeMode === mode ? "bg-[#121212] text-white" : "bg-[#F4F1EA] text-[#8A817C] hover:bg-[#F4F1EA]/80"}`}>
                                                     {mode === "member" ? "Member" : "Guest"}
@@ -367,7 +370,7 @@ export default withAuth(function PledgesPage() {
                                                         className="w-full h-8 px-2 pr-6 border border-[#121212]/10 text-[10px] text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none"
                                                     />
                                                     {selectedMember && (
-                                                        <button onMouseDown={() => { setSelectedMember(null); setMemberSearch(""); setPledgeForm((f) => ({ ...f, memberId: undefined })); }}
+                                                        <button type="button" onMouseDown={() => { setSelectedMember(null); setMemberSearch(""); setPledgeForm((f) => ({ ...f, memberId: undefined })); }}
                                                             className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A817C] hover:text-[#121212]">
                                                             <X className="w-3 h-3" />
                                                         </button>
@@ -375,7 +378,7 @@ export default withAuth(function PledgesPage() {
                                                     {showMemberDrop && memberResults.length > 0 && (
                                                         <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-[#121212]/10 rounded-lg shadow-md max-h-36 overflow-y-auto">
                                                             {memberResults.map((m) => (
-                                                                <button key={m.id}
+                                                                <button key={m.id} type="button"
                                                                     onMouseDown={() => { const name = `${m.firstname} ${m.lastname}`; setSelectedMember({ id: m.id, name }); setPledgeForm((f) => ({ ...f, memberId: m.id })); setMemberSearch(""); setShowMemberDrop(false); }}
                                                                     className="w-full text-left px-3 py-2 text-[10px] text-[#121212] hover:bg-[#F4F1EA]/60">
                                                                     {m.firstname} {m.lastname}
@@ -388,7 +391,7 @@ export default withAuth(function PledgesPage() {
                                         ) : (
                                             <div>
                                                 <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">Guest Name *</label>
-                                                <input value={pledgeForm.guestName ?? ""} onChange={(e) => setPledgeForm((f) => ({ ...f, guestName: e.target.value || undefined }))}
+                                                <input required value={pledgeForm.guestName ?? ""} onChange={(e) => setPledgeForm((f) => ({ ...f, guestName: e.target.value || undefined }))}
                                                     placeholder="Full name"
                                                     className="w-full h-8 px-2 border border-[#121212]/10 text-[10px] text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none" />
                                             </div>
@@ -399,28 +402,29 @@ export default withAuth(function PledgesPage() {
                                             <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">Amount *</label>
                                             <div className="relative">
                                                 <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-[#8A817C] select-none pointer-events-none">{currencySymbol}</span>
-                                                <input type="text" inputMode="decimal" value={formatCurrencyInput(pledgeForm.totalAmount)} placeholder="0"
+                                                <input required type="text" inputMode="decimal" value={formatCurrencyInput(pledgeForm.totalAmount)} placeholder="0"
                                                     onChange={(e) => setPledgeForm((f) => ({ ...f, totalAmount: parseCurrencyInput(e.target.value) }))}
                                                     className="w-full h-8 pl-5 pr-2 border border-[#121212]/10 text-[10px] font-mono text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none" />
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">Frequency *</label>
-                                            <select value={pledgeForm.frequency} onChange={(e) => setPledgeForm((f) => ({ ...f, frequency: e.target.value as PledgeFrequency }))}
+                                            <select required value={pledgeForm.frequency} onChange={(e) => setPledgeForm((f) => ({ ...f, frequency: e.target.value as PledgeFrequency }))}
                                                 className="w-full h-8 px-2 border border-[#121212]/10 text-[10px] text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none">
                                                 {(Object.entries(FREQ_LABELS) as [PledgeFrequency, string][]).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                                             </select>
                                         </div>
                                         <div>
                                             <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#8A817C] mb-0.5">{pledgeForm.frequency === "ONE_OFF" ? "Day to Redeem *" : "Start Date *"}</label>
-                                            <input type="date" value={pledgeForm.startDate} onChange={(e) => setPledgeForm((f) => ({ ...f, startDate: e.target.value }))}
+                                            <input required type="date" value={pledgeForm.startDate} onChange={(e) => setPledgeForm((f) => ({ ...f, startDate: e.target.value }))}
                                                 className="w-full h-8 px-2 border border-[#121212]/10 text-[10px] text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none" />
                                         </div>
                                     </div>
-                                    <button onClick={handleCreatePledge} disabled={isSubmitting || !(pledgeMode === "member" ? pledgeForm.memberId : pledgeForm.guestName) || !pledgeForm.totalAmount || !pledgeForm.startDate}
+                                    <button type="submit" disabled={isSubmitting || !(pledgeMode === "member" ? pledgeForm.memberId : pledgeForm.guestName) || !pledgeForm.totalAmount || !pledgeForm.startDate}
                                         className="h-8 px-4 bg-[#121212] text-white text-[10px] font-semibold uppercase tracking-widest rounded-lg disabled:opacity-40">
                                         {isSubmitting ? "…" : "Add Pledge"}
                                     </button>
+                                    </form>
                                 </div>
                             )}
 

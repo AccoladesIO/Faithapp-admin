@@ -126,9 +126,9 @@ export default withAuth(function PettyCashPage() {
                 ))}
             </div>
 
-            <div className="flex gap-6 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 {/* Table */}
-                <div className="flex-1 min-w-0">
+                <div className={(showCreate || selected) ? "lg:col-span-7" : "lg:col-span-12"}>
                     <div className="bg-white border border-[#121212]/10 rounded-xl overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
@@ -174,57 +174,59 @@ export default withAuth(function PettyCashPage() {
 
                 {/* Create panel */}
                 {showCreate && (
-                    <div className="w-[360px] shrink-0 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-5">
+                    <div className="lg:col-span-5 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-5">
                         <div className="flex items-center justify-between">
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212] flex items-center space-x-2"><Coins className="w-3.5 h-3.5" /><span>Request Replenishment</span></p>
-                            <button onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-[#8A817C]" /></button>
+                            <button type="button" onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-[#8A817C]" /></button>
                         </div>
                         <DismissibleError message={actionError} />
-                        <div className="space-y-3">
-                            <div>
-                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">From Account *</label>
-                                <select value={form.fromAccountId} onChange={(e) => setForm((f) => ({ ...f, fromAccountId: e.target.value }))}
-                                    className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
-                                    <option value="">Select account</option>
-                                    {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">To Cash Account *</label>
-                                <select value={form.toCashAccountId} onChange={(e) => setForm((f) => ({ ...f, toCashAccountId: e.target.value }))}
-                                    className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
-                                    <option value="">Select account</option>
-                                    {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Amount *</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#8A817C] select-none pointer-events-none">{currencySymbol}</span>
-                                    <input type="text" inputMode="decimal" value={formatCurrencyInput(form.amount)} placeholder="0"
-                                        onChange={(e) => setForm((f) => ({ ...f, amount: parseCurrencyInput(e.target.value) }))}
-                                        className="w-full h-10 pl-7 pr-3 border border-[#121212]/10 text-xs font-mono text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
+                        <form onSubmit={(e) => { e.preventDefault(); handleCreate(); }} className="space-y-5">
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">From Account *</label>
+                                    <select required value={form.fromAccountId} onChange={(e) => setForm((f) => ({ ...f, fromAccountId: e.target.value }))}
+                                        className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
+                                        <option value="">Select account</option>
+                                        {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">To Cash Account *</label>
+                                    <select required value={form.toCashAccountId} onChange={(e) => setForm((f) => ({ ...f, toCashAccountId: e.target.value }))}
+                                        className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
+                                        <option value="">Select account</option>
+                                        {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Amount *</label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#8A817C] select-none pointer-events-none">{currencySymbol}</span>
+                                        <input required type="text" inputMode="decimal" value={formatCurrencyInput(form.amount)} placeholder="0"
+                                            onChange={(e) => setForm((f) => ({ ...f, amount: parseCurrencyInput(e.target.value) }))}
+                                            className="w-full h-10 pl-7 pr-3 border border-[#121212]/10 text-xs font-mono text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Notes</label>
+                                    <textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={2}
+                                        className="w-full px-3 py-2 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none resize-none" />
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Notes</label>
-                                <textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={2}
-                                    className="w-full px-3 py-2 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none resize-none" />
-                            </div>
-                        </div>
-                        <button onClick={handleCreate} disabled={isSubmitting || !form.fromAccountId || !form.toCashAccountId || !form.amount}
-                            className="w-full h-10 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest rounded-xl disabled:opacity-40">
-                            {isSubmitting ? "Requesting…" : "Submit Request"}
-                        </button>
+                            <button type="submit" disabled={isSubmitting || !form.fromAccountId || !form.toCashAccountId || !form.amount}
+                                className="w-full h-10 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest rounded-xl disabled:opacity-40">
+                                {isSubmitting ? "Requesting…" : "Submit Request"}
+                            </button>
+                        </form>
                     </div>
                 )}
 
                 {/* Detail panel */}
                 {selected && !showCreate && (
-                    <div className="w-[340px] shrink-0 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-5">
+                    <div className="lg:col-span-5 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-5">
                         <div className="flex items-center justify-between">
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212]">Replenishment</p>
-                            <button onClick={() => setSelected(null)}><X className="w-4 h-4 text-[#8A817C]" /></button>
+                            <button type="button" onClick={() => setSelected(null)}><X className="w-4 h-4 text-[#8A817C]" /></button>
                         </div>
                         <DismissibleError message={actionError} />
                         <div className="space-y-2 text-xs">

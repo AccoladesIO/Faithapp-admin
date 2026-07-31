@@ -101,96 +101,98 @@ function CreateEntryPanel({ isSubmitting, openPeriods, accounts, onClose, onSubm
     }
 
     return (
-        <div className="w-[420px] shrink-0 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-5">
+        <div className="lg:col-span-5 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-5">
             <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-widest text-[#121212]">New Journal Entry</p>
-                <button onClick={onClose}><X className="w-4 h-4 text-[#8A817C]" /></button>
+                <button type="button" onClick={onClose}><X className="w-4 h-4 text-[#8A817C]" /></button>
             </div>
 
             <DismissibleError message={error} />
 
-            <div className="space-y-3">
-                <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Accounting Period *</label>
-                    <select value={form.accountingPeriodId} onChange={(e) => setForm((f) => ({ ...f, accountingPeriodId: e.target.value }))}
-                        className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
-                        <option value="">Select period</option>
-                        {openPeriods.map((p) => (
-                            <option key={p.id} value={p.id}>{p.year}-{String(p.month).padStart(2, "0")}</option>
-                        ))}
-                    </select>
+            <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-5">
+                <div className="space-y-3">
+                    <div>
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Accounting Period *</label>
+                        <select required value={form.accountingPeriodId} onChange={(e) => setForm((f) => ({ ...f, accountingPeriodId: e.target.value }))}
+                            className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
+                            <option value="">Select period</option>
+                            {openPeriods.map((p) => (
+                                <option key={p.id} value={p.id}>{p.year}-{String(p.month).padStart(2, "0")}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Entry Date *</label>
+                        <input required type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                            className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Description *</label>
+                        <input required value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                            placeholder="Entry description"
+                            className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Reference</label>
+                        <input value={form.reference} onChange={(e) => setForm((f) => ({ ...f, reference: e.target.value }))}
+                            placeholder="Optional reference"
+                            className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
+                    </div>
                 </div>
-                <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Entry Date *</label>
-                    <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-                        className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
-                </div>
-                <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Description *</label>
-                    <input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                        placeholder="Entry description"
-                        className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
-                </div>
-                <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Reference</label>
-                    <input value={form.reference} onChange={(e) => setForm((f) => ({ ...f, reference: e.target.value }))}
-                        placeholder="Optional reference"
-                        className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
-                </div>
-            </div>
 
-            <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8A817C]">Lines</p>
-                    <button onClick={addLine} className="text-[10px] font-semibold uppercase tracking-widest text-[#121212] flex items-center space-x-1">
-                        <Plus className="w-3 h-3" /><span>Add</span>
-                    </button>
-                </div>
-                {form.lines.map((line, i) => (
-                    <div key={i} className="grid grid-cols-[1fr_80px_80px_24px] gap-2 items-center">
-                        <select value={line.accountId} onChange={(e) => updateLine(i, { accountId: e.target.value })}
-                            className="h-8 px-2 border border-[#121212]/10 text-[10px] text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none">
-                            <option value="">Account</option>
-                            {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
-                        </select>
-                        <select value={line.entryType} onChange={(e) => updateLine(i, { entryType: e.target.value as LineType })}
-                            className="h-8 px-2 border border-[#121212]/10 text-[10px] text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none">
-                            <option value="DEBIT">DR</option>
-                            <option value="CREDIT">CR</option>
-                        </select>
-                        <div className="relative">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-[#8A817C] select-none pointer-events-none">{currencySymbol}</span>
-                            <input type="text" inputMode="decimal" value={formatCurrencyInput(line.amount)} placeholder="0"
-                                onChange={(e) => updateLine(i, { amount: parseCurrencyInput(e.target.value) })}
-                                className="h-8 pl-4 pr-2 border border-[#121212]/10 text-[10px] font-mono text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none" />
-                        </div>
-                        <button onClick={() => removeLine(i)} disabled={form.lines.length <= 2}
-                            className="text-[#8A817C] hover:text-red-500 disabled:opacity-20">
-                            <Trash2 className="w-3.5 h-3.5" />
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8A817C]">Lines</p>
+                        <button type="button" onClick={addLine} className="text-[10px] font-semibold uppercase tracking-widest text-[#121212] flex items-center space-x-1">
+                            <Plus className="w-3 h-3" /><span>Add</span>
                         </button>
                     </div>
-                ))}
-                <div className={`flex justify-between text-[10px] font-mono font-semibold pt-1 ${isBalanced ? "text-green-700" : "text-red-600"}`}>
-                    <span>DR {formatCurrency(debitTotal)}</span>
-                    <span>{isBalanced ? "✓ Balanced" : "✗ Unbalanced"}</span>
-                    <span>CR {formatCurrency(creditTotal)}</span>
-                </div>
-            </div>
-
-            {validationErrors.length > 0 && (
-                <ul className="space-y-1 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    {validationErrors.map((msg) => (
-                        <li key={msg} className="text-[11px] text-amber-800 flex items-start gap-1.5">
-                            <span className="mt-0.5 shrink-0">·</span>{msg}
-                        </li>
+                    {form.lines.map((line, i) => (
+                        <div key={i} className="grid grid-cols-[1fr_80px_80px_24px] gap-2 items-center">
+                            <select required value={line.accountId} onChange={(e) => updateLine(i, { accountId: e.target.value })}
+                                className="h-8 px-2 border border-[#121212]/10 text-[10px] text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none">
+                                <option value="">Account</option>
+                                {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
+                            </select>
+                            <select value={line.entryType} onChange={(e) => updateLine(i, { entryType: e.target.value as LineType })}
+                                className="h-8 px-2 border border-[#121212]/10 text-[10px] text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none">
+                                <option value="DEBIT">DR</option>
+                                <option value="CREDIT">CR</option>
+                            </select>
+                            <div className="relative">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-[#8A817C] select-none pointer-events-none">{currencySymbol}</span>
+                                <input required type="text" inputMode="decimal" value={formatCurrencyInput(line.amount)} placeholder="0"
+                                    onChange={(e) => updateLine(i, { amount: parseCurrencyInput(e.target.value) })}
+                                    className="h-8 pl-4 pr-2 border border-[#121212]/10 text-[10px] font-mono text-[#121212] bg-[#F4F1EA]/30 rounded-lg focus:outline-none" />
+                            </div>
+                            <button type="button" onClick={() => removeLine(i)} disabled={form.lines.length <= 2}
+                                className="text-[#8A817C] hover:text-red-500 disabled:opacity-20">
+                                <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
                     ))}
-                </ul>
-            )}
+                    <div className={`flex justify-between text-[10px] font-mono font-semibold pt-1 ${isBalanced ? "text-green-700" : "text-red-600"}`}>
+                        <span>DR {formatCurrency(debitTotal)}</span>
+                        <span>{isBalanced ? "✓ Balanced" : "✗ Unbalanced"}</span>
+                        <span>CR {formatCurrency(creditTotal)}</span>
+                    </div>
+                </div>
 
-            <button onClick={handleSubmit} disabled={isSubmitting || !canSubmit}
-                className="w-full h-10 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest rounded-xl disabled:opacity-40">
-                {isSubmitting ? "Creating…" : "Create Entry"}
-            </button>
+                {validationErrors.length > 0 && (
+                    <ul className="space-y-1 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        {validationErrors.map((msg) => (
+                            <li key={msg} className="text-[11px] text-amber-800 flex items-start gap-1.5">
+                                <span className="mt-0.5 shrink-0">·</span>{msg}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+
+                <button type="submit" disabled={isSubmitting || !canSubmit}
+                    className="w-full h-10 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest rounded-xl disabled:opacity-40">
+                    {isSubmitting ? "Creating…" : "Create Entry"}
+                </button>
+            </form>
         </div>
     );
 }
@@ -213,12 +215,12 @@ interface EntryDetailPanelProps {
 function EntryDetailPanel({ entry, isDetailLoading, isSubmitting, actionError, onClose, onApprove, onReject, onResubmit, onDelete, onVoid }: EntryDetailPanelProps) {
     const cfg = STATUS_CONFIG[entry.status];
     return (
-        <div className="w-[380px] shrink-0 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-5">
+        <div className="lg:col-span-5 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-5">
             <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-widest text-[#121212] flex items-center space-x-2">
                     <BookOpen className="w-3.5 h-3.5" /><span>Entry Detail</span>
                 </p>
-                <button onClick={onClose}><X className="w-4 h-4 text-[#8A817C]" /></button>
+                <button type="button" onClick={onClose}><X className="w-4 h-4 text-[#8A817C]" /></button>
             </div>
 
             <DismissibleError message={actionError} />
@@ -399,8 +401,8 @@ export default withAuth(function JournalEntriesPage() {
                 <button onClick={() => { setDraftFilters({}); applyFilters({}); }} className="h-10 px-4 border border-[#121212]/10 text-xs font-semibold uppercase tracking-widest text-[#8A817C] rounded-xl">Reset</button>
             </div>
 
-            <div className={`flex gap-6 ${showCreate || selected ? "items-start" : ""}`}>
-                <div className="flex-1 min-w-0">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className={(showCreate || selected) ? "lg:col-span-7" : "lg:col-span-12"}>
                     <div className="bg-white border border-[#121212]/10 rounded-xl overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">

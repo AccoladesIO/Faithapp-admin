@@ -127,8 +127,8 @@ export default withAuth(function ExternalPayeesPage() {
 
                             <DismissibleError message={error} />
 
-            <div className="flex gap-6 items-start">
-                <div className="flex-1 min-w-0 bg-white border border-[#121212]/10 rounded-xl overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className={`${(showCreate || editing) ? "lg:col-span-7" : "lg:col-span-12"} bg-white border border-[#121212]/10 rounded-xl overflow-hidden`}>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -162,48 +162,50 @@ export default withAuth(function ExternalPayeesPage() {
 
                 {/* Create panel */}
                 {showCreate && (
-                    <div className="w-[360px] shrink-0 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
+                    <div className="lg:col-span-5 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212] flex items-center space-x-2"><Users2 className="w-3.5 h-3.5" /><span>New Payee</span></p>
-                            <button onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-[#8A817C]" /></button>
+                            <button type="button" onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-[#8A817C]" /></button>
                         </div>
                         <DismissibleError message={actionError} />
-                        <div>
-                            <label className={labelCls}>Name *</label>
-                            <input value={form.name} placeholder="Payee name"
-                                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                                className={inputCls} />
-                        </div>
-                        <div>
-                            <label className={labelCls}>Type *</label>
-                            <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as ExternalPayeeType }))}
-                                className={selectCls}>
-                                {PAYEE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                            </select>
-                        </div>
-                        {textFields.map(({ label, key, placeholder }) => (
-                            <div key={key}>
-                                <label className={labelCls}>{label}</label>
-                                <input value={(form[key] ?? "") as string} placeholder={placeholder}
-                                    onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                        <form onSubmit={(e) => { e.preventDefault(); handleCreate(); }} className="space-y-4">
+                            <div>
+                                <label className={labelCls}>Name *</label>
+                                <input required value={form.name} placeholder="Payee name"
+                                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                                     className={inputCls} />
                             </div>
-                        ))}
-                        <div>
-                            <label className={labelCls}>Notes</label>
-                            <textarea value={form.notes ?? ""} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={2}
-                                className="w-full px-3 py-2 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none resize-none" />
-                        </div>
-                        <button onClick={handleCreate} disabled={isSubmitting || !form.name}
-                            className="w-full h-10 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest rounded-xl disabled:opacity-40">
-                            {isSubmitting ? "Creating…" : "Create Payee"}
-                        </button>
+                            <div>
+                                <label className={labelCls}>Type *</label>
+                                <select required value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as ExternalPayeeType }))}
+                                    className={selectCls}>
+                                    {PAYEE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                            </div>
+                            {textFields.map(({ label, key, placeholder }) => (
+                                <div key={key}>
+                                    <label className={labelCls}>{label}</label>
+                                    <input value={(form[key] ?? "") as string} placeholder={placeholder}
+                                        onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                                        className={inputCls} />
+                                </div>
+                            ))}
+                            <div>
+                                <label className={labelCls}>Notes</label>
+                                <textarea value={form.notes ?? ""} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={2}
+                                    className="w-full px-3 py-2 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none resize-none" />
+                            </div>
+                            <button type="submit" disabled={isSubmitting || !form.name}
+                                className="w-full h-10 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest rounded-xl disabled:opacity-40">
+                                {isSubmitting ? "Creating…" : "Create Payee"}
+                            </button>
+                        </form>
                     </div>
                 )}
 
                 {/* Edit panel */}
                 {editing && !showCreate && (
-                    <div className="w-[360px] shrink-0 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
+                    <div className="lg:col-span-5 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212]">Edit Payee</p>
                             <button onClick={() => setEditing(null)}><X className="w-4 h-4 text-[#8A817C]" /></button>

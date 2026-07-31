@@ -113,8 +113,8 @@ export default withAuth(function AccountsPage() {
                 ))}
             </div>
 
-            <div className="flex gap-6 items-start">
-                <div className="flex-1 min-w-0 bg-white border border-[#121212]/10 rounded-xl overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className={`${(showCreate || editing) ? "lg:col-span-7" : "lg:col-span-12"} bg-white border border-[#121212]/10 rounded-xl overflow-hidden`}>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -152,65 +152,67 @@ export default withAuth(function AccountsPage() {
 
                 {/* Create panel */}
                 {showCreate && (
-                    <div className="w-[360px] shrink-0 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
+                    <div className="lg:col-span-5 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212] flex items-center space-x-2"><BarChart3 className="w-3.5 h-3.5" /><span>New Account</span></p>
-                            <button onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-[#8A817C]" /></button>
+                            <button type="button" onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-[#8A817C]" /></button>
                         </div>
                         <DismissibleError message={actionError} />
-                        {[
-                            { label: "Code *", key: "code", placeholder: "e.g. 1001" },
-                            { label: "Name *", key: "name", placeholder: "Account name" },
-                        ].map(({ label, key, placeholder }) => (
-                            <div key={key}>
-                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">{label}</label>
-                                <input value={(form[key as keyof CreateAccountPayload] as string) ?? ""} placeholder={placeholder}
-                                    onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                                    className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
+                        <form onSubmit={(e) => { e.preventDefault(); handleCreate(); }} className="space-y-4">
+                            {[
+                                { label: "Code *", key: "code", placeholder: "e.g. 1001" },
+                                { label: "Name *", key: "name", placeholder: "Account name" },
+                            ].map(({ label, key, placeholder }) => (
+                                <div key={key}>
+                                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">{label}</label>
+                                    <input required value={(form[key as keyof CreateAccountPayload] as string) ?? ""} placeholder={placeholder}
+                                        onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                                        className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
+                                </div>
+                            ))}
+                            <div>
+                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Subtype *</label>
+                                <select required value={form.subtype} onChange={(e) => setForm((f) => ({ ...f, subtype: e.target.value as AccountSubtype }))}
+                                    className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
+                                    {SUBTYPES.map((s) => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
+                                </select>
                             </div>
-                        ))}
-                        <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Subtype *</label>
-                            <select value={form.subtype} onChange={(e) => setForm((f) => ({ ...f, subtype: e.target.value as AccountSubtype }))}
-                                className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
-                                {SUBTYPES.map((s) => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Type *</label>
-                            <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as AccountType }))}
-                                className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
-                                {(["ASSET", "LIABILITY", "INCOME", "EXPENSE"] as AccountType[]).map((t) => (
-                                    <option key={t} value={t}>{t}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Normal Balance *</label>
-                            <select value={form.normalBalance} onChange={(e) => setForm((f) => ({ ...f, normalBalance: e.target.value as NormalBalance }))}
-                                className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
-                                <option value="DEBIT">Debit</option>
-                                <option value="CREDIT">Credit</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Fund (optional)</label>
-                            <select value={form.fundId} onChange={(e) => setForm((f) => ({ ...f, fundId: e.target.value }))}
-                                className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
-                                <option value="">No fund</option>
-                                {funds.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                            </select>
-                        </div>
-                        <button onClick={handleCreate} disabled={isSubmitting || !form.name || !form.code}
-                            className="w-full h-10 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest rounded-xl disabled:opacity-40">
-                            {isSubmitting ? "Creating…" : "Create Account"}
-                        </button>
+                            <div>
+                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Type *</label>
+                                <select required value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as AccountType }))}
+                                    className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
+                                    {(["ASSET", "LIABILITY", "INCOME", "EXPENSE"] as AccountType[]).map((t) => (
+                                        <option key={t} value={t}>{t}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Normal Balance *</label>
+                                <select required value={form.normalBalance} onChange={(e) => setForm((f) => ({ ...f, normalBalance: e.target.value as NormalBalance }))}
+                                    className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
+                                    <option value="DEBIT">Debit</option>
+                                    <option value="CREDIT">Credit</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Fund (optional)</label>
+                                <select value={form.fundId} onChange={(e) => setForm((f) => ({ ...f, fundId: e.target.value }))}
+                                    className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
+                                    <option value="">No fund</option>
+                                    {funds.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                                </select>
+                            </div>
+                            <button type="submit" disabled={isSubmitting || !form.name || !form.code}
+                                className="w-full h-10 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest rounded-xl disabled:opacity-40">
+                                {isSubmitting ? "Creating…" : "Create Account"}
+                            </button>
+                        </form>
                     </div>
                 )}
 
                 {/* Edit panel */}
                 {editing && !showCreate && (
-                    <div className="w-[340px] shrink-0 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
+                    <div className="lg:col-span-5 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212]">Edit Account</p>
                             <button onClick={() => setEditing(null)}><X className="w-4 h-4 text-[#8A817C]" /></button>
