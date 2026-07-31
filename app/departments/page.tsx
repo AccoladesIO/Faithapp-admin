@@ -14,6 +14,7 @@ import {
     DepartmentLead,
     DepartmentWorker,
     DepartmentPagination,
+    CapabilityOption,
 } from "@/hooks/use-departments";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
 import { DismissibleError } from "@/components/ui/dismissible-error";
@@ -34,10 +35,17 @@ const formatKey = (key: string) =>
 
 function CapabilityBadges({
     capabilities,
+    labels,
     compact = false,
     maxVisible = 3,
-}: Readonly<{ capabilities?: string[] | null; compact?: boolean; maxVisible?: number }>) {
+}: Readonly<{
+    capabilities?: string[] | null;
+    labels?: Record<string, string>;
+    compact?: boolean;
+    maxVisible?: number;
+}>) {
     const safeCapabilities = Array.isArray(capabilities) ? capabilities : [];
+    const describe = (cap: string) => labels?.[cap] ?? formatKey(cap);
     if (safeCapabilities.length === 0) {
         return <span className="text-[#8A817C]/50 italic text-xs">None</span>;
     }
@@ -45,17 +53,21 @@ function CapabilityBadges({
         const visible = safeCapabilities.slice(0, maxVisible);
         const hiddenCount = Math.max(safeCapabilities.length - visible.length, 0);
         return (
-            <div className="flex items-center gap-1 flex-nowrap overflow-hidden" title={safeCapabilities.map(formatKey).join(", ")}>
+            <div className="flex items-center gap-1 flex-nowrap overflow-hidden">
                 {visible.map((cap) => (
                     <span
                         key={cap}
+                        title={describe(cap)}
                         className="inline-block px-2 py-0.5 bg-[#F4F1EA] border border-[#121212]/5 text-[#121212] text-[9px] font-bold uppercase tracking-wider rounded whitespace-nowrap"
                     >
                         {formatKey(cap)}
                     </span>
                 ))}
                 {hiddenCount > 0 && (
-                    <span className="inline-block px-2 py-0.5 bg-transparent border border-[#121212]/10 text-[#8A817C] text-[9px] font-bold uppercase tracking-wider rounded whitespace-nowrap">
+                    <span
+                        title={safeCapabilities.slice(maxVisible).map(describe).join(", ")}
+                        className="inline-block px-2 py-0.5 bg-transparent border border-[#121212]/10 text-[#8A817C] text-[9px] font-bold uppercase tracking-wider rounded whitespace-nowrap"
+                    >
                         +{hiddenCount} more
                     </span>
                 )}
@@ -67,6 +79,7 @@ function CapabilityBadges({
             {safeCapabilities.map((cap) => (
                 <span
                     key={cap}
+                    title={describe(cap)}
                     className="inline-block px-2 py-0.5 bg-[#F4F1EA] border border-[#121212]/5 text-[#121212] text-[9px] font-bold uppercase tracking-wider rounded"
                 >
                     {formatKey(cap)}
@@ -79,25 +92,29 @@ function CapabilityBadges({
 function CapabilityPicker({ selected, onChange, options }: Readonly<{
     selected: string[];
     onChange: (next: string[]) => void;
-    options: string[];
+    options: CapabilityOption[];
 }>) {
     const toggle = (cap: string) => {
         onChange(selected.includes(cap) ? selected.filter((c) => c !== cap) : [...selected, cap]);
     };
+    if (options.length === 0) {
+        return <p className="text-[10px] text-[#8A817C] italic">Loading options…</p>;
+    }
     return (
         <div className="flex flex-wrap gap-1.5">
-            {options.map((cap) => (
+            {options.map((opt) => (
                 <button
-                    key={cap}
+                    key={opt.value}
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); toggle(cap); }}
+                    title={opt.label}
+                    onClick={(e) => { e.stopPropagation(); toggle(opt.value); }}
                     className={`px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider rounded transition-colors border ${
-                        selected.includes(cap)
+                        selected.includes(opt.value)
                             ? "bg-[#121212] text-white border-[#121212]"
                             : "bg-[#F4F1EA] text-[#8A817C] border-[#121212]/5 hover:text-[#121212]"
                     }`}
                 >
-                    {formatKey(cap)}
+                    {formatKey(opt.value)}
                 </button>
             ))}
         </div>
@@ -137,7 +154,7 @@ export default withAuth(function DepartmentsPage() {
         isLoading,
         isSubmitting,
         error,
-fetchDepartments,
+        fetchDepartments,
         createDepartment,
         updateDepartment,
         deleteDepartment,
@@ -146,6 +163,11 @@ fetchDepartments,
         fetchDepartmentLeads,
         fetchDepartmentWorkers,
     } = useDepartments();
+
+    const capabilityLabels = useMemo(
+        () => Object.fromEntries(departmentCapabilities.map((opt) => [opt.value, opt.label])),
+        [departmentCapabilities]
+    );
 
     // ── Table state ───────────────────────────────────────────────────────────
     const [searchQuery, setSearchQuery] = useState("");
@@ -178,6 +200,12 @@ fetchDepartments,
     // "assign lead" select — department worker counts are inherently small,
     // unlike the global member pool this used to be filtered from.
     const [leadEligibleWorkers, setLeadEligibleWorkers] = useState<DepartmentWorker[]>([]);
+
+    // ── Capabilities edit (panel) ─────────────────────────────────────────────
+    const [capEditing, setCapEditing] = useState(false);
+    const [capForm, setCapForm] = useState<string[]>([]);
+    const [capSuccess, setCapSuccess] = useState<string | null>(null);
+    const [capError, setCapError] = useState<string | null>(null);
 
     // ── Assign/remove lead ────────────────────────────────────────────────────
     const [assignType, setAssignType] = useState<"head" | "assistant">("head");
@@ -249,11 +277,36 @@ fetchDepartments,
         setLeadError(null);
         setAssignMemberId("");
         setAssignType("head");
+        setCapEditing(false);
+        setCapError(null);
         loadLeads(dept.id);
         loadWorkers(dept.id, 1);
         setLeadEligibleWorkers([]);
         fetchDepartmentWorkers(dept.id, 1, 500).then(({ workers }) => setLeadEligibleWorkers(workers));
     }, [loadLeads, loadWorkers, fetchDepartmentWorkers]);
+
+    // ── Edit capabilities (panel) ─────────────────────────────────────────────
+    const startCapEdit = () => {
+        setCapForm(Array.isArray(selectedDept?.capabilities) ? selectedDept.capabilities : []);
+        setCapEditing(true);
+        setCapError(null);
+        setCapSuccess(null);
+    };
+
+    const handleSaveCapabilities = async () => {
+        if (!selectedDept) return;
+        setCapError(null);
+        try {
+            const updated = await updateDepartment(selectedDept.id, { capabilities: capForm });
+            setSelectedDept(updated);
+            setCapEditing(false);
+            setCapSuccess("Capabilities updated successfully.");
+            setTimeout(() => setCapSuccess(null), 3000);
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setCapError(e?.message ?? "Failed to update capabilities.");
+        }
+    };
 
     // ── Create ────────────────────────────────────────────────────────────────
     const handleCreate = async (e: React.FormEvent) => {
@@ -357,6 +410,7 @@ fetchDepartments,
         setSelectedDept(null);
         setEditingId(null);
         setDeletingId(null);
+        setCapEditing(false);
     };
 
     const panelOpen = showCreateForm || selectedDept !== null;
@@ -429,13 +483,13 @@ fetchDepartments,
                                         </div>
                                     </th>
                                     <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">
-                                        Department
-                                    </th>
-                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">
                                         Capabilities
                                     </th>
                                     <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">
                                         Leadership
+                                    </th>
+                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] text-right">
+                                        Actions
                                     </th>
                                 </tr>
                             </thead>
@@ -489,14 +543,15 @@ fetchDepartments,
                                                 )}
                                             </td>
                                             <td className="p-4 max-w-[220px]">
-                                                {editingId === dept.id ? (
-                                                    <CapabilityPicker
-                                                        selected={editForm.capabilities}
-                                                        onChange={(next) => setEditForm((p) => ({ ...p, capabilities: next }))}
-                                                        options={departmentCapabilities}
-                                                    />
-                                                ) : (
-                                                    <CapabilityBadges capabilities={dept.capabilities} />
+                                                <CapabilityBadges capabilities={dept.capabilities} labels={capabilityLabels} compact maxVisible={2} />
+                                                {editingId === dept.id && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); selectDept(dept); setPanelTab("details"); }}
+                                                        className="text-[9px] font-semibold uppercase tracking-wider text-[#8A817C] hover:text-[#121212] mt-1"
+                                                    >
+                                                        Edit in detail panel →
+                                                    </button>
                                                 )}
                                             </td>
                                             <td className="p-4 text-xs font-mono text-[#8A817C]">
@@ -652,6 +707,7 @@ fetchDepartments,
                                     </label>
                                     <textarea
                                         rows={3}
+                                        required
                                         value={createForm.description}
                                         onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
                                         placeholder="Detail core operational responsibilities..."
@@ -705,7 +761,7 @@ fetchDepartments,
                             {selectedDept.name}
                         </h2>
                         <div className="flex items-center gap-3 mt-2">
-                            <CapabilityBadges capabilities={selectedDept.capabilities} />
+                            <CapabilityBadges capabilities={selectedDept.capabilities} labels={capabilityLabels} />
                         </div>
 
                         {/* Tabs */}
@@ -739,6 +795,71 @@ fetchDepartments,
                                         {selectedDept.description}
                                     </p>
                                 )}
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#121212] flex items-center space-x-2">
+                                            <ShieldCheck className="w-4 h-4 text-[#8A817C]" />
+                                            <span>Capabilities</span>
+                                        </h3>
+                                        {!capEditing && (
+                                            <button
+                                                type="button"
+                                                onClick={startCapEdit}
+                                                title="Edit capabilities"
+                                                className="p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/20 rounded-md transition-colors"
+                                            >
+                                                <Pencil className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {capSuccess && (
+                                        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-100 rounded-lg text-xs text-green-700 mb-3">
+                                            <CheckCircle2 className="w-4 h-4 shrink-0" />
+                                            {capSuccess}
+                                        </div>
+                                    )}
+                                    {capError && (
+                                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700 mb-3">
+                                            <ShieldAlert className="w-4 h-4 shrink-0" />
+                                            {capError}
+                                        </div>
+                                    )}
+
+                                    {capEditing ? (
+                                        <div className="space-y-3">
+                                            <CapabilityPicker
+                                                selected={capForm}
+                                                onChange={setCapForm}
+                                                options={departmentCapabilities}
+                                            />
+                                            <p className="text-[10px] text-[#8A817C]">
+                                                Workers in this department (primary or secondary) get access to whatever these unlock — a department can hold more than one.
+                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSaveCapabilities}
+                                                    disabled={isSubmitting}
+                                                    className="flex items-center gap-1.5 h-8 px-3 bg-[#121212] text-white text-[10px] font-semibold uppercase tracking-wider rounded-md hover:bg-[#121212]/90 transition-colors disabled:opacity-50"
+                                                >
+                                                    <Check className="w-3.5 h-3.5" />
+                                                    Save
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setCapEditing(false); setCapError(null); }}
+                                                    className="h-8 px-3 text-[10px] font-semibold uppercase tracking-wider text-[#8A817C] hover:text-[#121212] rounded-md border border-[#121212]/10 transition-colors"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <CapabilityBadges capabilities={selectedDept.capabilities} labels={capabilityLabels} />
+                                    )}
+                                </div>
 
                                 <div>
                                     <h3 className="text-xs font-bold uppercase tracking-wider text-[#121212] mb-3 flex items-center space-x-2">

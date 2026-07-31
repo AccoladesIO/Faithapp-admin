@@ -96,9 +96,30 @@ const normalizeCapabilities = (value: unknown): string[] => {
     return [];
 };
 
+export interface CapabilityOption {
+    value: string;
+    label: string;
+}
+
+// GET /departments/capabilities returns the shared EnumOption shape ({ value, label }[])
+const normalizeCapabilityOptions = (value: unknown): CapabilityOption[] => {
+    let raw: unknown[] = [];
+    if (Array.isArray(value)) {
+        raw = value;
+    } else if (Array.isArray((value as { data?: unknown })?.data)) {
+        raw = (value as { data: unknown[] }).data;
+    }
+    return raw.filter(
+        (item): item is CapabilityOption =>
+            !!item && typeof item === "object" &&
+            typeof (item as CapabilityOption).value === "string" &&
+            typeof (item as CapabilityOption).label === "string"
+    );
+};
+
 export function useDepartments() {
     const [departments, setDepartments] = useState<Department[]>([]);
-    const [departmentCapabilities, setDepartmentCapabilities] = useState<string[]>([]);
+    const [departmentCapabilities, setDepartmentCapabilities] = useState<CapabilityOption[]>([]);
     const [pagination, setPagination] = useState<DepartmentPagination | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -144,7 +165,7 @@ export function useDepartments() {
         try {
             const res = await api.get("/departments/capabilities");
             const payload = res.data?.data ?? res.data;
-            setDepartmentCapabilities(normalizeCapabilities(payload));
+            setDepartmentCapabilities(normalizeCapabilityOptions(payload));
         } catch (err: unknown) {
             const e = err as ApiError;
             setError(
