@@ -76,8 +76,8 @@ export default withAuth(function FundsPage() {
 
                             <DismissibleError message={error} />
 
-            <div className="flex gap-6 items-start">
-                <div className="flex-1 min-w-0 bg-white border border-[#121212]/10 rounded-xl overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className={`${(showCreate || editing) ? "lg:col-span-7" : "lg:col-span-12"} bg-white border border-[#121212]/10 rounded-xl overflow-hidden`}>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -119,40 +119,42 @@ export default withAuth(function FundsPage() {
 
                 {/* Create panel */}
                 {showCreate && (
-                    <div className="w-[340px] shrink-0 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
+                    <div className="lg:col-span-5 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212] flex items-center space-x-2"><Landmark className="w-3.5 h-3.5" /><span>New Fund</span></p>
-                            <button onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-[#8A817C]" /></button>
+                            <button type="button" onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-[#8A817C]" /></button>
                         </div>
                         <DismissibleError message={actionError} />
-                        <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Name *</label>
-                            <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Fund name"
-                                className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Type *</label>
-                            <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as FundType }))}
-                                className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
-                                <option value="UNRESTRICTED">Unrestricted</option>
-                                <option value="RESTRICTED">Restricted</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Description</label>
-                            <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2}
-                                className="w-full px-3 py-2 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none resize-none" />
-                        </div>
-                        <button onClick={handleCreate} disabled={isSubmitting || !form.name}
-                            className="w-full h-10 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest rounded-xl disabled:opacity-40">
-                            {isSubmitting ? "Creating…" : "Create Fund"}
-                        </button>
+                        <form onSubmit={(e) => { e.preventDefault(); handleCreate(); }} className="space-y-4">
+                            <div>
+                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Name *</label>
+                                <input required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Fund name"
+                                    className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Type *</label>
+                                <select required value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as FundType }))}
+                                    className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
+                                    <option value="UNRESTRICTED">Unrestricted</option>
+                                    <option value="RESTRICTED">Restricted</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Description</label>
+                                <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2}
+                                    className="w-full px-3 py-2 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none resize-none" />
+                            </div>
+                            <button type="submit" disabled={isSubmitting || !form.name}
+                                className="w-full h-10 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest rounded-xl disabled:opacity-40">
+                                {isSubmitting ? "Creating…" : "Create Fund"}
+                            </button>
+                        </form>
                     </div>
                 )}
 
                 {/* Edit panel */}
                 {editing && !showCreate && (
-                    <div className="w-[340px] shrink-0 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
+                    <div className="lg:col-span-5 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212]">Edit Fund</p>
                             <button onClick={() => setEditing(null)}><X className="w-4 h-4 text-[#8A817C]" /></button>

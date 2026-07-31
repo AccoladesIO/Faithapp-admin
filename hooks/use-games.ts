@@ -15,6 +15,9 @@ export interface Game {
     churchClass: { id: string; name: string } | null;
     createdAt: string;
     updatedAt: string;
+    // Non-null only while status is LIVE_SESSION_ACTIVE — lets the list/detail
+    // views offer a "Resume" action instead of the admin re-copying a code.
+    activeSessionCode: string | null;
 }
 
 export interface GamePagination {
@@ -61,14 +64,27 @@ export interface LeaderboardEntry {
 
 export interface GameSessionStatePayload {
     sessionCode: string;
+    gameTitle: string;
     status: GameSessionStatus;
     currentQuestionIndex: number | null;
     totalQuestions: number;
     currentQuestion: PublicGameQuestion | null;
+    // Epoch ms — tick the countdown from this locally instead of trusting
+    // secondsRemaining, which is only a snapshot as of the last broadcast.
+    currentQuestionStartedAt: number | null;
     secondsRemaining: number | null;
     answeredCount: number;
     participantCount: number;
     leaderboard: LeaderboardEntry[];
+}
+
+/** Ticks the question countdown locally so it counts down every second
+ * instead of jumping only when a new socket broadcast arrives. */
+export function calcGameSecondsRemaining(payload: GameSessionStatePayload | null, nowMs: number): number | null {
+    if (!payload?.currentQuestion) return null;
+    if (payload.currentQuestionStartedAt === null) return payload.currentQuestion.timeLimitSeconds;
+    const elapsed = (nowMs - payload.currentQuestionStartedAt) / 1000;
+    return Math.max(0, Math.ceil(payload.currentQuestion.timeLimitSeconds - elapsed));
 }
 
 export interface GamePayload {
@@ -331,4 +347,23 @@ export function useGameSessionControl(sessionCode: string | null) {
     }, [sessionCode]);
 
     return { isSaving, error, nextQuestion, endSession, fetchState };
+}
+
+/**
+ * Public, unauthenticated state fetch for the projector/screen presentation
+ * view — hits the participant route (marked @Public() on the backend) so a
+ * second laptop with just the join code can render it without an admin login.
+ */
+export function useGamePresentationState(sessionCode: string | null) {
+    const fetchState = useCallback(async (): Promise<GameSessionStatePayload | null> => {
+        if (!sessionCode) return null;
+        try {
+            const res = await api.get(`/games/sessions/${sessionCode}/state`);
+            return res.data?.data ?? res.data;
+        } catch {
+            return null;
+        }
+    }, [sessionCode]);
+
+    return { fetchState };
 }

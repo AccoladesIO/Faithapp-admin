@@ -34,6 +34,13 @@ export interface SmallGroupPayload {
     meetingLocation?: string;
 }
 
+export interface ListPagination {
+    page: number;
+    limit: number;
+    totalPages: number;
+    totalCount: number;
+}
+
 type ApiError = { response?: { data?: { message?: string } }; message?: string };
 
 export function useSmallGroupsAdmin() {
@@ -111,9 +118,13 @@ export function useSmallGroupsAdmin() {
         }
     }, []);
 
-    const fetchRoster = useCallback(async (id: string): Promise<SmallGroupMemberRow[]> => {
-        const res = await api.get(`/admin/small-groups/${id}/members`);
-        return res.data.data ?? [];
+    const fetchRoster = useCallback(async (id: string, page = 1, limit = 20): Promise<{ data: SmallGroupMemberRow[]; pagination: ListPagination }> => {
+        const res = await api.get(`/admin/small-groups/${id}/members?page=${page}&limit=${limit}`);
+        const outer = res.data.data;
+        return {
+            data: outer.data ?? [],
+            pagination: { page: outer.page, limit: outer.limit, totalPages: outer.totalPages, totalCount: outer.totalCount },
+        };
     }, []);
 
     const removeMember = useCallback(async (id: string, memberId: string) => {
@@ -127,9 +138,13 @@ export function useSmallGroupsAdmin() {
         }
     }, []);
 
-    const fetchAttendanceHistory = useCallback(async (id: string): Promise<SmallGroupAttendanceRow[]> => {
-        const res = await api.get(`/admin/small-groups/${id}/attendance`);
-        return res.data.data ?? [];
+    const fetchAttendanceHistory = useCallback(async (id: string, page = 1, limit = 20): Promise<{ data: SmallGroupAttendanceRow[]; pagination: ListPagination }> => {
+        const res = await api.get(`/admin/small-groups/${id}/attendance?page=${page}&limit=${limit}`);
+        const outer = res.data.data;
+        return {
+            data: outer.data ?? [],
+            pagination: { page: outer.page, limit: outer.limit, totalPages: outer.totalPages, totalCount: outer.totalCount },
+        };
     }, []);
 
     return {

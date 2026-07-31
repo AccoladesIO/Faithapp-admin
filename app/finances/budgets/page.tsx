@@ -130,8 +130,8 @@ export default withAuth(function BudgetsPage() {
                 ))}
             </div>
 
-            <div className="flex gap-6 items-start">
-                <div className="flex-1 min-w-0">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className={(showCreate || editing) ? "lg:col-span-7" : "lg:col-span-12"}>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                         {isLoading ? Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />) :
                             budgets.length === 0 ? (
@@ -190,71 +190,73 @@ export default withAuth(function BudgetsPage() {
 
                 {/* Create panel */}
                 {showCreate && (
-                    <div className="w-[360px] shrink-0 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
+                    <div className="lg:col-span-5 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212] flex items-center space-x-2"><Target className="w-3.5 h-3.5" /><span>New Budget</span></p>
-                            <button onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-[#8A817C]" /></button>
+                            <button type="button" onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-[#8A817C]" /></button>
                         </div>
                         <DismissibleError message={actionError} />
-                        <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Name *</label>
-                            <input type="text" value={form.name} placeholder="Budget name"
-                                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                                className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Amount *</label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#8A817C] select-none pointer-events-none">{currencySymbol}</span>
-                                <input type="text" inputMode="decimal" value={formatCurrencyInput(form.amount)} placeholder="0"
-                                    onChange={(e) => setForm((f) => ({ ...f, amount: parseCurrencyInput(e.target.value) }))}
-                                    className="w-full h-10 pl-7 pr-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none font-mono" />
-                            </div>
-                        </div>
-                        {[
-                            { label: "Start Date *", key: "startDate", placeholder: "" },
-                            { label: "End Date *", key: "endDate", placeholder: "" },
-                        ].map(({ label, key, placeholder }) => (
-                            <div key={key}>
-                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">{label}</label>
-                                <input type="date" value={(form[key as keyof CreateBudgetPayload] as string) || ""} placeholder={placeholder}
-                                    onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                        <form onSubmit={(e) => { e.preventDefault(); handleCreate(); }} className="space-y-4">
+                            <div>
+                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Name *</label>
+                                <input required type="text" value={form.name} placeholder="Budget name"
+                                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                                     className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
                             </div>
-                        ))}
-                        <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Period *</label>
-                            <select value={form.period} onChange={(e) => setForm((f) => ({ ...f, period: e.target.value as BudgetPeriod }))}
-                                className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
-                                {PERIOD_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Account *</label>
-                            <select value={form.accountId} onChange={(e) => setForm((f) => ({ ...f, accountId: e.target.value }))}
-                                className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
-                                <option value="">Select account</option>
-                                {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Fund *</label>
-                            <select value={form.fundId} onChange={(e) => setForm((f) => ({ ...f, fundId: e.target.value }))}
-                                className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
-                                <option value="">Select fund</option>
-                                {funds.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.type})</option>)}
-                            </select>
-                        </div>
-                        <button onClick={handleCreate} disabled={isSubmitting || !form.name || !form.accountId || !form.fundId || !form.amount || !form.startDate || !form.endDate}
-                            className="w-full h-10 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest rounded-xl disabled:opacity-40">
-                            {isSubmitting ? "Creating…" : "Create Budget"}
-                        </button>
+                            <div>
+                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Amount *</label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#8A817C] select-none pointer-events-none">{currencySymbol}</span>
+                                    <input required type="text" inputMode="decimal" value={formatCurrencyInput(form.amount)} placeholder="0"
+                                        onChange={(e) => setForm((f) => ({ ...f, amount: parseCurrencyInput(e.target.value) }))}
+                                        className="w-full h-10 pl-7 pr-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none font-mono" />
+                                </div>
+                            </div>
+                            {[
+                                { label: "Start Date *", key: "startDate", placeholder: "" },
+                                { label: "End Date *", key: "endDate", placeholder: "" },
+                            ].map(({ label, key, placeholder }) => (
+                                <div key={key}>
+                                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">{label}</label>
+                                    <input required type="date" value={(form[key as keyof CreateBudgetPayload] as string) || ""} placeholder={placeholder}
+                                        onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                                        className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none" />
+                                </div>
+                            ))}
+                            <div>
+                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Period *</label>
+                                <select required value={form.period} onChange={(e) => setForm((f) => ({ ...f, period: e.target.value as BudgetPeriod }))}
+                                    className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
+                                    {PERIOD_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Account *</label>
+                                <select required value={form.accountId} onChange={(e) => setForm((f) => ({ ...f, accountId: e.target.value }))}
+                                    className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
+                                    <option value="">Select account</option>
+                                    {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1">Fund *</label>
+                                <select required value={form.fundId} onChange={(e) => setForm((f) => ({ ...f, fundId: e.target.value }))}
+                                    className="w-full h-10 px-3 border border-[#121212]/10 text-xs text-[#121212] bg-[#F4F1EA]/30 rounded-xl focus:outline-none">
+                                    <option value="">Select fund</option>
+                                    {funds.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.type})</option>)}
+                                </select>
+                            </div>
+                            <button type="submit" disabled={isSubmitting || !form.name || !form.accountId || !form.fundId || !form.amount || !form.startDate || !form.endDate}
+                                className="w-full h-10 bg-[#121212] text-white text-xs font-semibold uppercase tracking-widest rounded-xl disabled:opacity-40">
+                                {isSubmitting ? "Creating…" : "Create Budget"}
+                            </button>
+                        </form>
                     </div>
                 )}
 
                 {/* Edit panel */}
                 {editing && !showCreate && (
-                    <div className="w-[360px] shrink-0 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
+                    <div className="lg:col-span-5 bg-white border border-[#121212]/10 rounded-xl p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <p className="text-xs font-semibold uppercase tracking-widest text-[#121212]">Edit Budget</p>
                             <button onClick={() => setEditing(null)}><X className="w-4 h-4 text-[#8A817C]" /></button>

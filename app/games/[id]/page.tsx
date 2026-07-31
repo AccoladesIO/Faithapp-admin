@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { withAuth } from "@/utils/auth/with-auth";
 import {
-    ArrowLeft, Plus, Trash2, ArrowUp, ArrowDown, Radio, Pencil, X,
+    ArrowLeft, Plus, Trash2, ArrowUp, ArrowDown, Radio, Pencil, X, MonitorPlay,
 } from "lucide-react";
 import { useGameDetail, GameQuestion, QuestionPayload } from "@/hooks/use-games";
 import { DismissibleError } from "@/components/ui/dismissible-error";
@@ -34,16 +34,25 @@ function QuestionForm({
         setDraft((p) => ({ ...p, options: [...p.options, ""] }));
     }
     function removeOption(index: number) {
-        setDraft((p) => ({
-            ...p,
-            options: p.options.filter((_, i) => i !== index),
-            correctOptionIndex: p.correctOptionIndex >= index && p.correctOptionIndex > 0
-                ? p.correctOptionIndex - 1 : p.correctOptionIndex,
-        }));
+        setDraft((p) => {
+            // Deleting the option currently marked correct must deselect it,
+            // not silently reassign "correct" to whichever option happens to
+            // shift into that slot — canSubmit below blocks saving until the
+            // admin explicitly re-picks one.
+            let correctOptionIndex = p.correctOptionIndex;
+            if (index === p.correctOptionIndex) correctOptionIndex = -1;
+            else if (index < p.correctOptionIndex) correctOptionIndex -= 1;
+            return {
+                ...p,
+                options: p.options.filter((_, i) => i !== index),
+                correctOptionIndex,
+            };
+        });
     }
 
     const canSubmit = draft.questionText.trim().length > 0
         && draft.options.filter((o) => o.trim()).length >= 2
+        && draft.correctOptionIndex >= 0
         && draft.correctOptionIndex < draft.options.length;
 
     return (
@@ -133,6 +142,27 @@ function GameQuestionsContent() {
 
     useEffect(() => { fetchAll(); }, [fetchAll]);
 
+    useEffect(() => {
+        // Starting/ending a session flips this game's status elsewhere —
+        // bfcache can restore this page exactly as it was (no re-mount, no
+        // network request) when the admin navigates back here, or it can
+        // just be sitting in a background tab. Either way, without this the
+        // "Resume Live Session" button can go stale.
+        function refreshIfRestored(e?: PageTransitionEvent) {
+            if (e && !e.persisted) return;
+            fetchAll();
+        }
+        function handleVisibility() {
+            if (document.visibilityState === "visible") refreshIfRestored();
+        }
+        window.addEventListener("pageshow", refreshIfRestored);
+        document.addEventListener("visibilitychange", handleVisibility);
+        return () => {
+            window.removeEventListener("pageshow", refreshIfRestored);
+            document.removeEventListener("visibilitychange", handleVisibility);
+        };
+    }, [fetchAll]);
+
     async function handleAdd() {
         const ok = await addQuestion({
             ...addDraft,
@@ -179,7 +209,14 @@ function GameQuestionsContent() {
 
     async function handleStartSession() {
         const session = await startSession();
-        if (session) router.push(`/games/present/${session.sessionCode}`);
+        if (session) {
+            // Starting a session flips this game's status server-side —
+            // without this, Next's client router cache can keep showing the
+            // games list's/detail's old DRAFT status if the admin navigates
+            // back to it soon after.
+            router.refresh();
+            router.push(`/games/present/${session.sessionCode}`);
+        }
     }
 
     return (
@@ -196,13 +233,23 @@ function GameQuestionsContent() {
                         </p>
                     </div>
                 </div>
-                <button
-                    onClick={handleStartSession}
-                    disabled={isSaving || isLoading || questions.length === 0}
-                    className="h-9 px-5 bg-red-600 text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-red-700 transition-colors disabled:opacity-40"
-                >
-                    Start Live Session
-                </button>
+                {game?.activeSessionCode ? (
+                    <button
+                        onClick={() => router.push(`/games/present/${game.activeSessionCode}`)}
+                        className="flex items-center gap-1.5 h-9 px-5 bg-red-600 text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                        <MonitorPlay className="w-3.5 h-3.5" />
+                        Resume Live Session
+                    </button>
+                ) : (
+                    <button
+                        onClick={handleStartSession}
+                        disabled={isSaving || isLoading || questions.length === 0}
+                        className="h-9 px-5 bg-red-600 text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-red-700 transition-colors disabled:opacity-40"
+                    >
+                        Start Live Session
+                    </button>
+                )}
             </div>
 
             <DismissibleError message={error} />

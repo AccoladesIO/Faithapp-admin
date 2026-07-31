@@ -5,7 +5,7 @@ import { withAuth } from "@/utils/auth/with-auth";
 import { useRouter } from "next/navigation";
 import {
     GraduationCap, Plus, X, Check, Pencil, Trash2, RefreshCw,
-    Users, UserPlus,
+    Users, UserPlus, FileText,
     ShieldAlert, CheckCircle2, MousePointerClick, UserRoundPlus,
 } from "lucide-react";
 import { PaginationBar } from "@/components/ui/pagination-bar";
@@ -391,6 +391,7 @@ const defaultForm: CreateClassPayload = {
     name: "",
     classTypeId: "",
     description: "",
+    documentUrl: "",
     facilitatorId: "",
     startDate: "",
     endDate: "",
@@ -503,7 +504,10 @@ const ClassesPage = () => {
         setCreateError(null);
         setCreateSuccess(null);
         try {
-            await createClass(createForm);
+            await createClass({
+                ...createForm,
+                documentUrl: createForm.documentUrl?.trim() || undefined,
+            });
             setCreateSuccess("Class created successfully.");
             setTimeout(() => {
                 setCreateSuccess(null);
@@ -985,6 +989,19 @@ const ClassesPage = () => {
 
                                     <div>
                                         <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
+                                            Study Material Link (optional)
+                                        </label>
+                                        <input
+                                            type="url"
+                                            value={createForm.documentUrl ?? ""}
+                                            onChange={(e) => setCreateForm((p) => ({ ...p, documentUrl: e.target.value }))}
+                                            placeholder="https://drive.google.com/..."
+                                            className="w-full h-10 px-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-1.5">
                                             Facilitator
                                         </label>
                                         <PersonCombobox
@@ -1060,6 +1077,17 @@ const ClassesPage = () => {
                                         <p className="text-xs text-[#121212]/80 font-light leading-relaxed bg-[#F4F1EA]/30 p-4 border border-[#121212]/5 rounded-lg">
                                             {selectedClass.description || "No description provided."}
                                         </p>
+                                        {selectedClass.documentUrl && (
+                                            <a
+                                                href={selectedClass.documentUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-2 p-3 bg-[#F4F1EA]/20 border border-[#121212]/5 rounded-lg text-xs font-semibold text-[#121212] hover:text-[#8A817C] transition-colors"
+                                            >
+                                                <FileText className="w-3.5 h-3.5 shrink-0" />
+                                                View Study Material
+                                            </a>
+                                        )}
                                         <div className="space-y-3 text-xs">
                                             {/* Facilitator — editable */}
                                             <div className="p-4 bg-[#F4F1EA]/20 border border-[#121212]/5 rounded-lg">

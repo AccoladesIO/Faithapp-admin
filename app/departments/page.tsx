@@ -14,6 +14,7 @@ import {
     DepartmentLead,
     DepartmentWorker,
     DepartmentPagination,
+    CapabilityOption,
 } from "@/hooks/use-departments";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
 import { DismissibleError } from "@/components/ui/dismissible-error";
@@ -27,6 +28,98 @@ const fullName = (o: { firstname: string; lastname: string }) =>
 
 const formatKey = (key: string) =>
     key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+// ─── Capability picker ────────────────────────────────────────────────────────
+// Toggle-able pill buttons for the fixed, code-defined capability list — used
+// both in the create/edit forms and (read-only) as badges on the table row.
+
+function CapabilityBadges({
+    capabilities,
+    labels,
+    compact = false,
+    maxVisible = 3,
+}: Readonly<{
+    capabilities?: string[] | null;
+    labels?: Record<string, string>;
+    compact?: boolean;
+    maxVisible?: number;
+}>) {
+    const safeCapabilities = Array.isArray(capabilities) ? capabilities : [];
+    const describe = (cap: string) => labels?.[cap] ?? formatKey(cap);
+    if (safeCapabilities.length === 0) {
+        return <span className="text-[#8A817C]/50 italic text-xs">None</span>;
+    }
+    if (compact) {
+        const visible = safeCapabilities.slice(0, maxVisible);
+        const hiddenCount = Math.max(safeCapabilities.length - visible.length, 0);
+        return (
+            <div className="flex items-center gap-1 flex-nowrap overflow-hidden">
+                {visible.map((cap) => (
+                    <span
+                        key={cap}
+                        title={describe(cap)}
+                        className="inline-block px-2 py-0.5 bg-[#F4F1EA] border border-[#121212]/5 text-[#121212] text-[9px] font-bold uppercase tracking-wider rounded whitespace-nowrap"
+                    >
+                        {formatKey(cap)}
+                    </span>
+                ))}
+                {hiddenCount > 0 && (
+                    <span
+                        title={safeCapabilities.slice(maxVisible).map(describe).join(", ")}
+                        className="inline-block px-2 py-0.5 bg-transparent border border-[#121212]/10 text-[#8A817C] text-[9px] font-bold uppercase tracking-wider rounded whitespace-nowrap"
+                    >
+                        +{hiddenCount} more
+                    </span>
+                )}
+            </div>
+        );
+    }
+    return (
+        <div className="flex flex-wrap gap-1">
+            {safeCapabilities.map((cap) => (
+                <span
+                    key={cap}
+                    title={describe(cap)}
+                    className="inline-block px-2 py-0.5 bg-[#F4F1EA] border border-[#121212]/5 text-[#121212] text-[9px] font-bold uppercase tracking-wider rounded"
+                >
+                    {formatKey(cap)}
+                </span>
+            ))}
+        </div>
+    );
+}
+
+function CapabilityPicker({ selected, onChange, options }: Readonly<{
+    selected: string[];
+    onChange: (next: string[]) => void;
+    options: CapabilityOption[];
+}>) {
+    const toggle = (cap: string) => {
+        onChange(selected.includes(cap) ? selected.filter((c) => c !== cap) : [...selected, cap]);
+    };
+    if (options.length === 0) {
+        return <p className="text-[10px] text-[#8A817C] italic">Loading options…</p>;
+    }
+    return (
+        <div className="flex flex-wrap gap-1.5">
+            {options.map((opt) => (
+                <button
+                    key={opt.value}
+                    type="button"
+                    title={opt.label}
+                    onClick={(e) => { e.stopPropagation(); toggle(opt.value); }}
+                    className={`px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider rounded transition-colors border ${
+                        selected.includes(opt.value)
+                            ? "bg-[#121212] text-white border-[#121212]"
+                            : "bg-[#F4F1EA] text-[#8A817C] border-[#121212]/5 hover:text-[#121212]"
+                    }`}
+                >
+                    {formatKey(opt.value)}
+                </button>
+            ))}
+        </div>
+    );
+}
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -44,22 +137,24 @@ function SkeletonRow({ cols }: { cols: number }) {
 
 // ─── Default forms ────────────────────────────────────────────────────────────
 
-const defaultCreateForm = { name: "", description: "", key: "" };
+const defaultCreateForm: { name: string; description: string; capabilities: string[] } = {
+    name: "", description: "", capabilities: [],
+};
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-type SortKey = "name" | "key" | "createdAt";
+type SortKey = "name" | "createdAt";
 type SortOrder = "asc" | "desc";
 type PanelTab = "details" | "workers";
 
 export default withAuth(function DepartmentsPage() {
     const {
         departments,
-        departmentKeys,
+        departmentCapabilities,
         isLoading,
         isSubmitting,
         error,
-fetchDepartments,
+        fetchDepartments,
         createDepartment,
         updateDepartment,
         deleteDepartment,
@@ -68,6 +163,11 @@ fetchDepartments,
         fetchDepartmentLeads,
         fetchDepartmentWorkers,
     } = useDepartments();
+
+    const capabilityLabels = useMemo(
+        () => Object.fromEntries(departmentCapabilities.map((opt) => [opt.value, opt.label])),
+        [departmentCapabilities]
+    );
 
     // ── Table state ───────────────────────────────────────────────────────────
     const [searchQuery, setSearchQuery] = useState("");
@@ -101,6 +201,12 @@ fetchDepartments,
     // unlike the global member pool this used to be filtered from.
     const [leadEligibleWorkers, setLeadEligibleWorkers] = useState<DepartmentWorker[]>([]);
 
+    // ── Capabilities edit (panel) ─────────────────────────────────────────────
+    const [capEditing, setCapEditing] = useState(false);
+    const [capForm, setCapForm] = useState<string[]>([]);
+    const [capSuccess, setCapSuccess] = useState<string | null>(null);
+    const [capError, setCapError] = useState<string | null>(null);
+
     // ── Assign/remove lead ────────────────────────────────────────────────────
     const [assignType, setAssignType] = useState<"head" | "assistant">("head");
     const [assignMemberId, setAssignMemberId] = useState("");
@@ -124,7 +230,7 @@ fetchDepartments,
             result = result.filter(
                 (d) =>
                     d.name.toLowerCase().includes(q) ||
-                    d.key.toLowerCase().includes(q) ||
+                    (Array.isArray(d.capabilities) ? d.capabilities : []).some((c) => c.toLowerCase().includes(q)) ||
                     d.id.toLowerCase().includes(q)
             );
         }
@@ -171,11 +277,36 @@ fetchDepartments,
         setLeadError(null);
         setAssignMemberId("");
         setAssignType("head");
+        setCapEditing(false);
+        setCapError(null);
         loadLeads(dept.id);
         loadWorkers(dept.id, 1);
         setLeadEligibleWorkers([]);
         fetchDepartmentWorkers(dept.id, 1, 500).then(({ workers }) => setLeadEligibleWorkers(workers));
     }, [loadLeads, loadWorkers, fetchDepartmentWorkers]);
+
+    // ── Edit capabilities (panel) ─────────────────────────────────────────────
+    const startCapEdit = () => {
+        setCapForm(Array.isArray(selectedDept?.capabilities) ? selectedDept.capabilities : []);
+        setCapEditing(true);
+        setCapError(null);
+        setCapSuccess(null);
+    };
+
+    const handleSaveCapabilities = async () => {
+        if (!selectedDept) return;
+        setCapError(null);
+        try {
+            const updated = await updateDepartment(selectedDept.id, { capabilities: capForm });
+            setSelectedDept(updated);
+            setCapEditing(false);
+            setCapSuccess("Capabilities updated successfully.");
+            setTimeout(() => setCapSuccess(null), 3000);
+        } catch (err: unknown) {
+            const e = err as ApiError;
+            setCapError(e?.message ?? "Failed to update capabilities.");
+        }
+    };
 
     // ── Create ────────────────────────────────────────────────────────────────
     const handleCreate = async (e: React.FormEvent) => {
@@ -199,7 +330,11 @@ fetchDepartments,
     // ── Edit ──────────────────────────────────────────────────────────────────
     const startEdit = (dept: Department) => {
         setEditingId(dept.id);
-        setEditForm({ name: dept.name, description: dept.description ?? "", key: dept.key });
+        setEditForm({
+            name: dept.name,
+            description: dept.description ?? "",
+            capabilities: Array.isArray(dept.capabilities) ? dept.capabilities : [],
+        });
     };
 
     const handleUpdate = async (deptId: string) => {
@@ -275,6 +410,7 @@ fetchDepartments,
         setSelectedDept(null);
         setEditingId(null);
         setDeletingId(null);
+        setCapEditing(false);
     };
 
     const panelOpen = showCreateForm || selectedDept !== null;
@@ -321,7 +457,7 @@ fetchDepartments,
                     <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-[#8A817C]" />
                     <input
                         type="text"
-                        placeholder="Search by name, key, or ID..."
+                        placeholder="Search by name, capability, or ID..."
                         value={searchQuery}
                         onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                         className="w-full h-11 pl-11 pr-4 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
@@ -346,14 +482,8 @@ fetchDepartments,
                                             <ArrowUpDown className="w-3 h-3" />
                                         </div>
                                     </th>
-                                    <th
-                                        onClick={() => handleSort("key")}
-                                        className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C] cursor-pointer hover:text-[#121212] select-none"
-                                    >
-                                        <div className="flex items-center space-x-1.5">
-                                            <span>Key</span>
-                                            <ArrowUpDown className="w-3 h-3" />
-                                        </div>
+                                    <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">
+                                        Capabilities
                                     </th>
                                     <th className="p-4 text-[11px] font-semibold uppercase tracking-wider text-[#8A817C]">
                                         Leadership
@@ -412,19 +542,16 @@ fetchDepartments,
                                                     </>
                                                 )}
                                             </td>
-                                            <td className="p-4">
-                                                {editingId === dept.id ? (
-                                                    <input
-                                                        list="dept-key-presets"
-                                                        value={editForm.key}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        onChange={(e) => setEditForm((p) => ({ ...p, key: e.target.value.toUpperCase() }))}
-                                                        className="h-8 px-2 bg-[#F4F1EA]/60 border border-[#121212]/20 text-xs text-[#121212] focus:outline-none rounded w-32"
-                                                    />
-                                                ) : (
-                                                    <span className="inline-block px-2 py-0.5 bg-[#F4F1EA] border border-[#121212]/5 text-[#121212] text-[9px] font-bold uppercase tracking-wider rounded">
-                                                        {formatKey(dept.key)}
-                                                    </span>
+                                            <td className="p-4 max-w-[220px]">
+                                                <CapabilityBadges capabilities={dept.capabilities} labels={capabilityLabels} compact maxVisible={2} />
+                                                {editingId === dept.id && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); selectDept(dept); setPanelTab("details"); }}
+                                                        className="text-[9px] font-semibold uppercase tracking-wider text-[#8A817C] hover:text-[#121212] mt-1"
+                                                    >
+                                                        Edit in detail panel →
+                                                    </button>
                                                 )}
                                             </td>
                                             <td className="p-4 text-xs font-mono text-[#8A817C]">
@@ -580,6 +707,7 @@ fetchDepartments,
                                     </label>
                                     <textarea
                                         rows={3}
+                                        required
                                         value={createForm.description}
                                         onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
                                         placeholder="Detail core operational responsibilities..."
@@ -589,23 +717,15 @@ fetchDepartments,
 
                                 <div>
                                     <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#8A817C] mb-2">
-                                        Department Key
+                                        Capabilities
                                     </label>
-                                    <input
-                                        required
-                                        list="dept-key-presets"
-                                        value={createForm.key}
-                                        onChange={(e) => setCreateForm((p) => ({ ...p, key: e.target.value.toUpperCase() }))}
-                                        placeholder="Pick a preset or type a custom key…"
-                                        className="w-full h-11 px-3 bg-[#F4F1EA]/40 border border-[#121212]/10 text-sm text-[#121212] font-light focus:outline-none focus:border-[#121212] rounded-lg"
+                                    <CapabilityPicker
+                                        selected={createForm.capabilities}
+                                        onChange={(next) => setCreateForm((p) => ({ ...p, capabilities: next }))}
+                                        options={departmentCapabilities}
                                     />
-                                    <datalist id="dept-key-presets">
-                                        {departmentKeys.map((k) => (
-                                            <option key={k} value={k}>{formatKey(k)}</option>
-                                        ))}
-                                    </datalist>
-                                    <p className="text-[10px] text-[#8A817C] mt-1">
-                                        Not tied to a fixed list — type any key to create a new access category, or pick an existing one.
+                                    <p className="text-[10px] text-[#8A817C] mt-2">
+                                        Workers in this department (primary or secondary) get access to whatever these unlock — a department can hold more than one.
                                     </p>
                                 </div>
 
@@ -641,9 +761,7 @@ fetchDepartments,
                             {selectedDept.name}
                         </h2>
                         <div className="flex items-center gap-3 mt-2">
-                            <span className="inline-block px-2 py-0.5 bg-[#F4F1EA] border border-[#121212]/5 text-[#121212] text-[9px] font-bold uppercase tracking-wider rounded">
-                                {formatKey(selectedDept.key)}
-                            </span>
+                            <CapabilityBadges capabilities={selectedDept.capabilities} labels={capabilityLabels} />
                         </div>
 
                         {/* Tabs */}
@@ -677,6 +795,71 @@ fetchDepartments,
                                         {selectedDept.description}
                                     </p>
                                 )}
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#121212] flex items-center space-x-2">
+                                            <ShieldCheck className="w-4 h-4 text-[#8A817C]" />
+                                            <span>Capabilities</span>
+                                        </h3>
+                                        {!capEditing && (
+                                            <button
+                                                type="button"
+                                                onClick={startCapEdit}
+                                                title="Edit capabilities"
+                                                className="p-1.5 text-[#8A817C] hover:text-[#121212] border border-[#121212]/5 hover:border-[#121212]/20 rounded-md transition-colors"
+                                            >
+                                                <Pencil className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {capSuccess && (
+                                        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-100 rounded-lg text-xs text-green-700 mb-3">
+                                            <CheckCircle2 className="w-4 h-4 shrink-0" />
+                                            {capSuccess}
+                                        </div>
+                                    )}
+                                    {capError && (
+                                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700 mb-3">
+                                            <ShieldAlert className="w-4 h-4 shrink-0" />
+                                            {capError}
+                                        </div>
+                                    )}
+
+                                    {capEditing ? (
+                                        <div className="space-y-3">
+                                            <CapabilityPicker
+                                                selected={capForm}
+                                                onChange={setCapForm}
+                                                options={departmentCapabilities}
+                                            />
+                                            <p className="text-[10px] text-[#8A817C]">
+                                                Workers in this department (primary or secondary) get access to whatever these unlock — a department can hold more than one.
+                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSaveCapabilities}
+                                                    disabled={isSubmitting}
+                                                    className="flex items-center gap-1.5 h-8 px-3 bg-[#121212] text-white text-[10px] font-semibold uppercase tracking-wider rounded-md hover:bg-[#121212]/90 transition-colors disabled:opacity-50"
+                                                >
+                                                    <Check className="w-3.5 h-3.5" />
+                                                    Save
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setCapEditing(false); setCapError(null); }}
+                                                    className="h-8 px-3 text-[10px] font-semibold uppercase tracking-wider text-[#8A817C] hover:text-[#121212] rounded-md border border-[#121212]/10 transition-colors"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <CapabilityBadges capabilities={selectedDept.capabilities} labels={capabilityLabels} />
+                                    )}
+                                </div>
 
                                 <div>
                                     <h3 className="text-xs font-bold uppercase tracking-wider text-[#121212] mb-3 flex items-center space-x-2">
